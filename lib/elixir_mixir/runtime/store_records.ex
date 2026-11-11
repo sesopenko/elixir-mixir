@@ -15,7 +15,7 @@ defmodule ElixirMixir.Runtime.StoreRecords do
          :ok <- Values.validate(outcome, :reply, %{limits | reply_bytes: limits.response_bytes}),
          :ok <- validate_puts(puts, limits) do
       resulting = records |> Map.drop(deletes) |> Map.merge(puts)
-      with :ok <- references(puts, resulting), do: capacity(resulting, limits)
+      with :ok <- references(puts, resulting), do: validate_capacity(resulting, limits)
     else
       {:error, _error} = error -> error
       _invalid -> {:error, Error.new("INVALID_ARGUMENT")}
@@ -95,7 +95,9 @@ defmodule ElixirMixir.Runtime.StoreRecords do
   defp record_bytes({:effect, _}, limits), do: limits.event_bytes + limits.metadata_bytes
   defp record_bytes(_key, limits), do: limits.metadata_bytes
 
-  defp capacity(records, limits) do
+  @doc "Validates every retained table ceiling before recovery can compile or rewrite records."
+  @spec validate_capacity(map(), map()) :: :ok | {:error, Error.t()}
+  def validate_capacity(records, limits) do
     ceilings = %{
       artifact: limits.artifact_slots,
       worker: limits.workers,
@@ -106,10 +108,14 @@ defmodule ElixirMixir.Runtime.StoreRecords do
       edge: limits.workers * limits.workers
     }
 
-    counts = Enum.frequencies_by(Map.keys(Map.delete(records, :meta)), &elem(&1, 0))
+    counts = Enum.frequencies_by(Map.keys(Map.delete(records, :meta)), &table/1)
 
-    if Enum.all?(counts, fn {tag, count} -> count <= Map.fetch!(ceilings, tag) end),
+    if Enum.all?(counts, fn {tag, count} -> count <= Map.get(ceilings, tag, 0) end),
       do: :ok,
       else: {:error, Error.new("LIMIT_EXCEEDED")}
   end
+
+  defp table({tag, _id}), do: tag
+  defp table({:edge, _source, _target}), do: :edge
+  defp table(_key), do: :unknown
 end

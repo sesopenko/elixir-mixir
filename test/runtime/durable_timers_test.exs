@@ -111,6 +111,18 @@ defmodule ElixirMixir.Runtime.DurableTimersTest do
     assert F.data(ctx, ctx.target)["count"] == 1
   end
 
+  test "large backward UTC jumps rearm within the timer ceiling without changing the deadline",
+       ctx do
+    {:ok, _} = F.invoke(ctx, ctx.source, %{"effects" => [schedule(ctx.target, 500)]})
+    assert_receive {:armed, _, 500}
+    original = F.pending(ctx)
+    Agent.update(ctx.clock, &(&1 - 4_294_967_296))
+    F.fire(ctx)
+    assert_receive {:armed, _, delay}
+    assert delay <= 60_000
+    assert F.pending(ctx) == original
+  end
+
   defp schedule(target, delay),
     do: %{"type" => "schedule", "to" => target, "event" => %{}, "delay_ms" => delay}
 end

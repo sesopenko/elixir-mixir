@@ -118,28 +118,33 @@ defmodule ElixirMixir.Runtime.DurableWorkers do
     artifact =
       case ArtifactRegistry.fetch(record["artifact_id"]) do
         {:ok, artifact} -> Map.take(artifact, [:id, :module, :revision, :state_schema])
-        {:error, _} -> %{id: record["artifact_id"], revision: 0, state_schema: 0}
+        {:error, _} -> %{id: safe_id(record["artifact_id"]), revision: 0, state_schema: 0}
       end
 
     data = if is_map(checkpoint), do: checkpoint["data"]
     valid_data = if Values.validate(data, :state, state.limits) == :ok, do: data
 
     worker = %{
-      worker_id: id,
+      worker_id: safe_id(id),
+      quarantine_reason: nil,
       artifact: artifact,
       config:
         if(Values.validate(record["config"], :config, state.limits) == :ok,
           do: record["config"],
           else: %{}
         ),
-      desired_status: record["desired_status"],
+      desired_status:
+        if(record["desired_status"] in ["running", "stopped"],
+          do: record["desired_status"],
+          else: nil
+        ),
       status: record["observed_status"],
       worker_revision: positive_revision(record["worker_revision"]),
       state_revision:
         if(is_map(checkpoint), do: positive_revision(checkpoint["state_revision"]), else: 0),
       committed_data: valid_data,
       restarts: valid_restarts(record["restarts"]),
-      request_id: record["request_id"],
+      request_id: safe_id(record["request_id"]),
       restart_token: nil,
       restart_timer: nil,
       pid: nil,
@@ -154,14 +159,33 @@ defmodule ElixirMixir.Runtime.DurableWorkers do
 
   defp classify(worker, id, record, checkpoint, limits) do
     cond do
-      not valid_record?(id, record, limits) -> %{worker | status: "quarantined"}
-      record["desired_status"] == "stopped" -> %{worker | status: "stopped"}
-      not Map.has_key?(worker.artifact, :module) -> %{worker | status: "quarantined"}
-      worker.committed_data == nil -> %{worker | status: "quarantined"}
-      not valid_checkpoint?(checkpoint, worker.artifact) -> %{worker | status: "quarantined"}
-      true -> observed(worker)
+      not valid_record?(id, record, limits) ->
+        quarantine(worker, "INVALID_WORKER_RECORD")
+
+      record["desired_status"] == "stopped" ->
+        %{worker | status: "stopped"}
+
+      not Map.has_key?(worker.artifact, :module) ->
+        quarantine(worker, "ARTIFACT_UNAVAILABLE")
+
+      worker.committed_data == nil ->
+        quarantine(worker, "INVALID_STATE")
+
+      not matching_schema?(checkpoint, worker.artifact) ->
+        quarantine(worker, "STATE_SCHEMA_MISMATCH")
+
+      not valid_checkpoint?(checkpoint, worker.artifact, limits) ->
+        quarantine(worker, "INVALID_CHECKPOINT")
+
+      true ->
+        observed(worker)
     end
   end
+
+  defp quarantine(worker, reason),
+    do: %{worker | status: "quarantined", quarantine_reason: reason}
+
+  defp safe_id(id), do: if(Values.valid_id?(id), do: id)
 
   defp observed(%{status: status} = worker) when status in ["failed", "quarantined"], do: worker
 
@@ -178,13 +202,27 @@ defmodule ElixirMixir.Runtime.DurableWorkers do
 
   defp valid_restarts(_values), do: []
 
-  defp valid_checkpoint?(checkpoint, artifact) do
-    is_map(checkpoint) and checkpoint["schema"] == artifact.state_schema and
-      is_integer(checkpoint["state_revision"]) and checkpoint["state_revision"] > 0
+  defp matching_schema?(checkpoint, artifact),
+    do: is_map(checkpoint) and checkpoint["schema"] == artifact.state_schema
+
+  defp valid_checkpoint?(checkpoint, artifact, limits) do
+    is_map(checkpoint) and record_value?(checkpoint, limits.state_bytes, limits) and
+      checkpoint["schema"] == artifact.state_schema and
+      is_integer(checkpoint["state_revision"]) and checkpoint["state_revision"] > 0 and
+      Values.valid_id?(checkpoint["last_operation_id"]) and
+      is_integer(checkpoint["checkpoint_at"]) and checkpoint["checkpoint_at"] >= 0
   end
 
+  defp record_value?(value, bytes, limits),
+    do:
+      Values.validate(value, :reply, %{
+        limits
+        | reply_bytes: bytes + limits.metadata_bytes,
+          depth: limits.depth + 4
+      }) == :ok
+
   defp valid_record?(id, record, limits) do
-    Values.valid_id?(id) and Values.valid_id?(record["artifact_id"]) and
+    record_value?(record, limits.config_bytes, limits) and valid_identifiers?(id, record) and
       Values.validate(record["config"], :config, limits) == :ok and
       record["desired_status"] in ["running", "stopped"] and
       record["observed_status"] in ["running", "stopped", "restarting", "failed", "quarantined"] and
@@ -192,8 +230,13 @@ defmodule ElixirMixir.Runtime.DurableWorkers do
       valid_budget?(record["restarts"])
   end
 
+  defp valid_identifiers?(id, record),
+    do:
+      Values.valid_id?(id) and
+        Values.valid_id?(record["artifact_id"]) and Values.valid_id?(record["request_id"])
+
   defp valid_budget?(values) when is_list(values),
-    do: length(values) <= 3 and Enum.all?(values, &is_integer/1)
+    do: length(values) <= 3 and Enum.all?(values, &(is_integer(&1) and &1 >= 0))
 
   defp valid_budget?(_values), do: false
 end

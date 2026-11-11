@@ -11,6 +11,7 @@ defmodule ElixirMixir.Runtime.Store do
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.StoreRecords
+  alias ElixirMixir.Runtime.Values
 
   @type change :: %{
           required(:puts) => map(),
@@ -115,7 +116,7 @@ defmodule ElixirMixir.Runtime.Store do
 
   defp initialize(_db, %{meta: meta}) do
     if is_map(meta) and meta["format_version"] == 1 and
-         is_binary(meta["lineage_id"]) and is_integer(meta["generation"]) and
+         Values.valid_id?(meta["lineage_id"]) and is_integer(meta["generation"]) and
          meta["generation"] >= 0 and is_integer(meta["next_audit_sequence"]) and
          meta["next_audit_sequence"] >= 0,
        do: :ok,

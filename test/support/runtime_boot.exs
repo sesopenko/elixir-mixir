@@ -22,11 +22,21 @@ limits =
 Application.put_env(:elixir_mixir, :limits, limits)
 Application.put_env(:elixir_mixir, :test_recovery_pause, Map.get(opts, "pause_recovery", false))
 
-if opts["pause_delivery"] do
-  Application.put_env(:elixir_mixir, :manager,
-    delivery_timer: fn _message, _delay -> make_ref() end
-  )
-end
+manager =
+  if opts["pause_delivery"], do: [delivery_timer: fn _message, _delay -> make_ref() end], else: []
+
+manager =
+  if opts["pause_validation"],
+    do:
+      Keyword.put(manager, :durability_barrier, fn phase ->
+        if phase == :recovery_before_validation,
+          do: ElixirMixir.TestSupport.CallbackBarrier.wait("recovery_validation")
+
+        :ok
+      end),
+    else: manager
+
+Application.put_env(:elixir_mixir, :manager, manager)
 
 {:ok, _barrier} = ElixirMixir.TestSupport.CallbackBarrier.start_link([])
 {:ok, _} = Application.ensure_all_started(:elixir_mixir)

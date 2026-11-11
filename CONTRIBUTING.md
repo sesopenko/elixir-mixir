@@ -308,7 +308,7 @@ are integrated with the store, together with event transitions and implementatio
 effect batches commit atomically with state; durable delivery resumes
 after healthy routes are restored. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
-Use memory mode for current running-application experiments.
+Use memory mode for disposable experiments or opt into retained storage explicitly.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
 
 Worker staging tests exercise prepare/publish/abort directly with a trusted host
@@ -454,3 +454,38 @@ See the [retained-store restart example](README.md#try-durable-worker-definition
 Trusted `Manager` constructor timer/clock/barrier options support deterministic
 tests; production defaults use OTP timers and UTC. Test-only subprocess controls
 can hold timers while testing intent acceptance and cancellation independently.
+
+
+Recovery fault isolation has a real-HTTP matrix for corrupted source/hash/contract,
+state/schema/reference, inactive artifacts and malformed effect/worker metadata:
+
+```sh
+mix test test/runtime/recovery_quarantine_test.exs --warnings-as-errors
+mix test test/integration/phase02_quarantine_test.exs --warnings-as-errors
+```
+
+Each case owns its store, sends SIGKILL to its BEAM, edits the closed store through
+test-only CubDB setup, then reopens it. Tests assert original damaged records,
+healthy peer state and continued events, compact audits, diagnostic pagination and
+explicit stop/define/start repair. Backend corruption helpers never ship as MCP
+tools. The growing suite also retains failed-migration and exhausted-restart-budget
+coverage. Never change a live database outside its authoritative Store process.
+
+`runtime_inspect` with `detail: "recovery"` paginates the last boot's quarantine
+records independently of worker/edge pages. Use its returned cursor with that same
+detail; generation changes or another boot invalidate it. Even the minimum 1,024-byte
+wire budget supports diagnostic pages, including long IDs and explicit reason
+omission. Normal summaries may still need a larger budget. Counts and diagnostic
+rows describe boot recovery; current worker inspection describes later repairs.
+Malformed identifiers are omitted rather than exposing arbitrary disk text.
+Recovery audits contain IDs/codes/reasons, never copied source/state or host paths,
+and are bounded by the history ceiling without advancing application generation.
+
+Global format/lineage errors, unusable storage and table overflow fail closed.
+Every table ceiling is checked before recompilation or interrupted-request writes.
+Readiness opens only after healthy routes, queue accounting and the next wakeup
+are reconstructed. Large backward UTC jumps rearm in bounded timer intervals while
+preserving the original deadline. To retain damaged checkpoint evidence before
+explicit repair, stop the runtime and copy its directory. Stop preserves the
+checkpoint; a subsequent explicit start initializes and replaces it. Source
+artifacts remain retained. See the [repair guidance](README.md#try-durable-worker-definitions-in-progress).

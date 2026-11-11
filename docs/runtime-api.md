@@ -34,7 +34,7 @@ Arguments are optional; omission is equivalent to an empty object:
 | Argument | Contract |
 | --- | --- |
 | `worker_id` | ASCII identifier `[a-zA-Z0-9_-]{1,64}`; selects a retained worker, or `WORKER_NOT_FOUND` |
-| `detail` | `summary` (default) or `state`; state detail includes bounded committed state for a running worker |
+| `detail` | `summary` (default), `state`, or `recovery`; state includes bounded committed worker state; recovery paginates quarantine diagnostics |
 | `limit` | Integer from 1 through configured page maximum (default maximum 100) |
 | `cursor` | Opaque string from a previous runtime page; bound to this runtime, generation and detail |
 
@@ -56,7 +56,7 @@ edges each paginate in sorted order with independent positions inside next_curso
 Use the returned cursor with the same detail until next_cursor is null; limit may
 change. A mutation/lifecycle change invalidates earlier generation cursors; a cursor
 from another runtime or detail is also invalid. INVALID_ARGUMENT includes a hint to
-restart pagination without cursor. Worker-specific reads cannot take a cursor.
+restart pagination without cursor. Worker-specific reads cannot take a cursor or use recovery detail.
 Client reconnect alone does not invalidate cursors or advance generation.
 
 Large read payloads may omit limits, artifact metadata or state with explicit
@@ -706,3 +706,56 @@ the output. Logger metadata includes effect ID and request correlation for recip
 deduplication. This is at-least-once external IO; direct generated callback IO also
 remains outside kernel state transactions. Internal state deduplication does not
 make arbitrary external systems exactly-once.
+
+
+### Recovery diagnostics and repair
+
+Boot validates retained artifacts, worker/checkpoint metadata and complete effect
+records before scheduling work. Invalid source/hash/contract/compilation, unavailable
+references, mismatched schema and invalid state quarantine affected workers while
+healthy routes recover. Invalid or orphaned intent records remain retained, count
+toward queue capacity and never dispatch. Quarantined hosts are not automatically
+restarted. Failed workers with an exhausted persisted restart budget retain that
+status instead of gaining another budget on boot.
+
+After reconstruction, `/health` returns 200 and summary inspection reports
+`health: "degraded"` when quarantines exist. `recovery` includes `degraded`,
+`quarantine_count`, artifact `quarantined`, `workers_quarantined`, `workers_failed`,
+`effects_quarantined`, bounded diagnostic samples, lineage and boot identity.
+The separate `storage` object reports format and mode. Worker summaries may include
+`quarantine_reason`, for example `ARTIFACT_UNAVAILABLE`, `INVALID_STATE`,
+`STATE_SCHEMA_MISMATCH` or `INVALID_WORKER_RECORD`. Invalid IDs are omitted; no
+arbitrary disk text, original source, store path or raw exception stack is returned.
+
+Use `runtime_inspect` with `{"detail":"recovery","limit":100}` for all diagnostic
+rows. Results contain `quarantines`, `quarantine_count`, `next_cursor` and `truncated`.
+Each row has `kind` (`artifact`, `worker` or `effect`), `id`, stable error `code` and
+optional bounded `reason`. `id_omitted` or `reason_omitted` explicitly marks an
+omission. Pages fit the complete MCP encoding even at the minimum 1,024-byte
+response ceiling; follow the returned cursor with the same recovery detail until
+null. These cursors bind to boot and generation, independently of worker/edge page
+cursors. A stale or cross-view cursor returns `INVALID_ARGUMENT`. Last-boot counts
+and rows remain a recovery snapshot; inspect individual workers for later repairs.
+
+Compact `recovery_quarantined` audits preserve diagnostic evidence under the
+existing history bound. Worker diagnostics also appear in worker-filtered
+`runtime_events`. Recovery never copies full source/state into audits, rewrites
+quarantined originals or increments application generation merely to record a
+boot result. Readiness stays closed until validation, healthy routing, queue
+accounting and wakeup reconstruction finish; tools return `RUNTIME_RECOVERING`
+before mutation admission during that interval.
+
+Repair requires explicit intent: stop the affected worker, define/select a valid
+artifact and start under the same logical ID with supplied configuration. Stop
+preserves its checkpoint and cancels source intents; explicit start initializes
+and replaces the checkpoint. Original source artifacts remain retained. Copy the
+store with the runtime stopped before repair if the damaged checkpoint itself
+must be retained for investigation. No automatic boot migration occurs. A failed
+explicit migration still leaves the old committed selection/state intact.
+
+Unsupported global format/lineage, unavailable storage or any retained table above
+configured capacity prevents readiness without rewriting records or falling back
+to memory. Capacity validation precedes recompilation and interrupted-request
+reconciliation. Store authority death closes availability. A far-future deadline
+after a large backward clock jump uses bounded wakeup intervals and repeated UTC
+checks; the stored absolute deadline remains unchanged.

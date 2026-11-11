@@ -11,9 +11,10 @@ defmodule ElixirMixir.Runtime.Inspection do
     valid =
       Map.keys(args) -- ["worker_id", "detail", "limit", "cursor"] == [] and
         optional?(args, "worker_id", &Values.valid_id?/1) and
-        optional?(args, "detail", &(&1 in ["summary", "state"])) and
-        optional?(args, "limit", &(is_integer(&1) and &1 > 0 and &1 <= limits.page_max)) and
-        valid_cursor?(args)
+        optional?(args, "detail", &(&1 in ["summary", "state", "recovery"])) and
+        optional?(args, "limit", &valid_limit?(&1, limits)) and
+        valid_cursor?(args) and
+        compatible_detail?(args)
 
     if valid, do: :ok, else: {:error, Error.new("INVALID_ARGUMENT")}
   end
@@ -27,12 +28,20 @@ defmodule ElixirMixir.Runtime.Inspection do
       Map.keys(args) -- ["after", "limit", "worker_id"] == [] and
         optional?(args, "worker_id", &Values.valid_id?/1) and
         optional?(args, "after", &(is_integer(&1) and &1 >= 0)) and
-        optional?(args, "limit", &(is_integer(&1) and &1 > 0 and &1 <= limits.page_max))
+        optional?(args, "limit", &valid_limit?(&1, limits))
 
     if valid, do: :ok, else: {:error, Error.new("INVALID_ARGUMENT")}
   end
 
   def events(_args, _limits), do: {:error, Error.new("INVALID_ARGUMENT")}
+
+  defp valid_limit?(value, limits),
+    do: is_integer(value) and value > 0 and value <= limits.page_max
+
+  defp compatible_detail?(%{"detail" => "recovery"} = args),
+    do: not Map.has_key?(args, "worker_id")
+
+  defp compatible_detail?(_args), do: true
 
   defp valid_cursor?(args) do
     optional?(args, "cursor", &(is_binary(&1) and byte_size(&1) in 1..256)) and

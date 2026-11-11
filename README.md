@@ -257,6 +257,23 @@ must be at most 60 seconds. Internal delivery consumes its retained ID atomicall
 a stale wakeup cannot repeat its committed transition. Each newly accepted caller
 operation can still create new work, including reuse after request retention expires.
 
+A broken retained implementation or checkpoint is quarantined while healthy
+workers recover. Health becomes ready after reconstruction; runtime inspection
+reports `health: "degraded"` when quarantine evidence exists. Ask the agent:
+
+> Inspect recovery diagnostics using detail recovery and follow every returned
+> cursor. Report affected worker or artifact IDs and reasons. Do not change them yet.
+
+Quarantined code receives no automatic restart attempts. To repair an affected
+worker, inspect it, stop it, define a valid implementation, then explicitly start
+that implementation under the same worker ID. Starting again initializes from the
+configuration you supply. Recovery preserves damaged records; explicit repair can
+replace the worker definition and checkpoint. Original source artifacts remain
+retained. Copy the store while the runtime is stopped if you need to preserve all
+damaged state before repair. Unsupported format, unusable storage or retained
+records exceeding configured limits prevent readiness; the runtime never falls
+back to empty memory state.
+
 See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress),
 the [runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay)
 and the [restart plan](docs/sdlc/phase02-restart/plan.md) for the current boundary.

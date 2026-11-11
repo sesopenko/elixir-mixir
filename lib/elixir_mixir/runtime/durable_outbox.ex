@@ -5,7 +5,9 @@ defmodule ElixirMixir.Runtime.DurableOutbox do
   alias ElixirMixir.Runtime.Effects
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
+  alias ElixirMixir.Runtime.RecoveryDiagnostics
   alias ElixirMixir.Runtime.Store
+  alias ElixirMixir.Runtime.Values
 
   @doc "Serializes an owner-bound reservation, excluding all transient handles."
   @spec batch(GenServer.server(), reference() | :none) :: {:ok, map()} | {:error, Error.t()}
@@ -39,11 +41,36 @@ defmodule ElixirMixir.Runtime.DurableOutbox do
   @doc "Selects valid pending intents without dispatching malformed retained records."
   @spec pending(map(), Limits.t()) :: [{String.t(), map()}]
   def pending(records, limits) do
-    for {{:effect, id}, record} <- records, valid?(id, record, limits), do: {id, record}
+    for {{:effect, id}, record} <- records,
+        valid?(id, record, limits) and source_retained?(record, records),
+        do: {id, record}
   end
 
+  @doc "Reports every malformed or orphaned retained intent without changing its evidence."
+  @spec quarantines(map(), Limits.t()) :: [map()]
+  def quarantines(records, limits) do
+    for {{:effect, id}, record} <- records,
+        not (valid?(id, record, limits) and source_retained?(record, records)),
+        do: RecoveryDiagnostics.entry("effect", id, "INVALID_TRANSITION")
+  end
+
+  defp source_retained?(%{"source" => source}, records),
+    do: Map.has_key?(records, {:worker, source})
+
+  defp source_retained?(_record, _records), do: false
+
   defp valid?(id, %{"status" => "pending", "effect" => effect} = record, limits) do
-    with true <- valid_context?(record, limits),
+    with :ok <-
+           Values.validate(record, :reply, %{
+             limits
+             | reply_bytes: limits.event_bytes + limits.metadata_bytes,
+               depth: limits.depth + 4
+           }),
+         true <-
+           Enum.sort(Map.keys(record)) ==
+             ~w(artifact_revision correlation_id due_at effect operation_id path remaining_hops source status target),
+         true <- is_integer(record["artifact_revision"]) and record["artifact_revision"] > 0,
+         true <- valid_context?(record, limits),
          true <- valid_path?(record["path"], limits),
          :ok <- Effects.validate([effect], limits) do
       record["target"] == effect["to"] and
@@ -58,13 +85,13 @@ defmodule ElixirMixir.Runtime.DurableOutbox do
   defp valid_context?(record, limits) do
     is_integer(record["due_at"]) and record["due_at"] >= 0 and
       is_integer(record["remaining_hops"]) and record["remaining_hops"] in 0..limits.effect_hops and
-      is_binary(record["operation_id"]) and is_binary(record["source"]) and
-      is_binary(record["correlation_id"])
+      Values.valid_id?(record["operation_id"]) and Values.valid_id?(record["source"]) and
+      Values.valid_id?(record["correlation_id"])
   end
 
   defp valid_path?(path, limits) do
     is_list(path) and length(path) in 1..(limits.effect_hops + 1) and
-      Enum.all?(path, &(is_integer(&1) and &1 > 0))
+      Enum.all?(path, &(is_integer(&1) and &1 in 1..limits.effects))
   end
 
   defp scheduled?(%{"effect" => %{"type" => "schedule"}}), do: true

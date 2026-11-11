@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through durable-delivery verified; remaining checkpoints and application recovery
+Status: store-foundation through recovery-quarantine verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -406,7 +406,70 @@ Codex demonstration and evidence review.
 
 ## recovery-quarantine
 
-Pending. Owning [task](tasks/recovery-quarantine.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `180d853` was committed and pushed.
+
+- `mix test test/runtime/recovery_quarantine_test.exs --warnings-as-errors`: 8 passed.
+- `mix test test/integration/phase02_quarantine_test.exs --warnings-as-errors`: 15 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 118 passed.
+- Full `mix check`: 276 tests, 2 doctests; no warnings, strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors/skips.
+- Plan verifier, public-document file links and diff checks pass. `.githooks`
+  remains installed and repeats the entire quality gate before this checkpoint.
+
+Ten real HTTP cases create a healthy/broken worker pair, accumulate totals 4/9,
+SIGKILL the owned BEAM, damage one source/hash/contract/state/schema/reference,
+inactive artifact, intent payload, intent metadata or worker metadata record in
+the closed directory, then reopen it. Healthy state restores and another event
+reaches total 6. Damaged records remain exact through recovery; unavailable workers
+have no route and inspection reports degraded recovery. Invalid intent records
+remain retained and counted while being excluded from dispatch. Compact diagnostic
+audits contain no copied source or private path text. Worker-filtered events expose
+quarantine outcomes, including a specific schema-mismatch reason.
+
+Affected workers reject a changed definition before stop. Explicit stop preserves
+the checkpoint, then define/start with a valid artifact initializes new state and
+processes amount 3. Damaged source artifacts remain retained after repair. As
+documented, explicit initialization can replace old checkpoint evidence; an operator
+can copy a closed store first. Recovery itself never silently migrates or rewrites
+broken source/state/intent records, and no automatic retry of quarantined hosts is
+armed. Prior migration-failure and exhausted restart-budget tests stay green.
+
+A minimum-response case retains 21 invalid inactive/selected artifacts and one
+affected worker. Recovery returns healthy readiness and all 22 diagnostic rows
+through `detail: "recovery"` pages at 1,024 bytes. Unit pages cover maximum-length
+IDs, explicit reason omission, complete duplicate MCP encoding and stale generation/
+boot cursor rejection. Original source, store paths and raw exception stacks are
+omitted. Last-boot diagnostic rows are a snapshot; individual worker inspection
+reflects subsequent repair. Normal summary snapshots retain their existing bounded
+omission/error behavior if a configured response cannot contain them.
+
+A trusted pre-validation barrier proves health 503, recovery reads and mutations
+returning `RUNTIME_RECOVERING`, and no admitted request or store change while held.
+Releasing it reconstructs healthy routing, diagnostics, queue counts and a bounded
+wakeup before readiness opens. A lowered global worker limit closes authority
+without changing metadata or definitions. A separate request-table overflow with
+a real retained artifact proves zero compilation attempts and no interrupted-request
+rewrite. All table ceilings are checked before recovery work. Unsupported format,
+unusable directory and malformed global lineage fail startup and preserve their
+original evidence. A first HTTP test tried querying ArtifactRegistry after authority
+shutdown; observing closed availability and inspecting the closed store replaced
+that invalid assumption, with compiler-order verification in an isolated unit test.
+
+A regression first proved malformed `artifact_revision` metadata could enter the
+delivery selector. Full envelope/identity/path/payload/reference validation now
+quarantines it without touching original evidence. Another regression proved a
+large backward UTC jump could request a wakeup beyond the timer ceiling. Scheduling
+now uses bounded wakeup intervals and rechecks the unchanged absolute deadline.
+The four timer tests and all prior delivery/restart tests pass. Recovery audits are
+trimmed to the configured history bound and do not advance application generation.
+Validation helpers were split to resolve Credo complexity without suppressions.
+
+README, contributor and API guidance cover ready-with-quarantines, paginated
+inspection, boot-snapshot semantics, explicit repair/evidence retention and global
+failure behavior. Tool names, API version and HTTP transport remain unchanged;
+`recovery` is an additive inspection detail. Claude Code remains explicitly
+untested. A12 and isolated-recovery portions of A08/A14 now have automated evidence;
+release storage and the actual Codex client journey remain pending.
 
 ## release-storage
 
@@ -426,6 +489,7 @@ Source recovery evidence for A01, desired definitions/logical identities/fresh h
 for A02/A05/A06, selected implementation evidence for A03, committed event-state
 evidence for A04, automated no-client recovery
 for A07, timer/effect recovery and internal deduplication evidence for A10/A11,
+isolated quarantine/repair evidence for A12,
 and source/lifecycle/event/delivery boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
 Full acceptance reconciliation, the actual-client portion of A07, and milestone 7
 remain pending. Add an evidence table mapping

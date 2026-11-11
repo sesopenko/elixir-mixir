@@ -106,6 +106,11 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
           do: %{"source" => source, "target" => target, "record" => record}
         ),
       "effects" => for({{:effect, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "audits" =>
+        for(
+          {{:audit, sequence}, record} <- records,
+          do: %{"sequence" => sequence, "record" => record}
+        ),
       "meta" => records[:meta]
     }
   end

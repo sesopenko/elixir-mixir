@@ -5,6 +5,7 @@ defmodule ElixirMixir.Runtime.DurableArtifacts do
   alias ElixirMixir.Runtime.Compiler
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
+  alias ElixirMixir.Runtime.RecoveryDiagnostics
   alias ElixirMixir.Runtime.Values
 
   @doc "Builds the bounded JSON artifact record, retaining original module identity as a string."
@@ -37,10 +38,16 @@ defmodule ElixirMixir.Runtime.DurableArtifacts do
         |> Enum.map(fn {id, record} -> {id, restore(id, record, limits)} end)
 
       failures =
-        for {id, {:error, error}} <- outcomes, do: %{"artifact_id" => id, "code" => error["code"]}
+        for {id, {:error, error}} <- outcomes,
+            do: %{"artifact_id" => if(Values.valid_id?(id), do: id), "code" => error["code"]}
 
       {:ok,
        %{
+         :quarantines =>
+           Enum.map(
+             failures,
+             &RecoveryDiagnostics.entry("artifact", &1["artifact_id"], &1["code"])
+           ),
          "artifacts" => length(artifacts),
          "restored" => length(artifacts) - length(failures),
          "quarantined" => length(failures),

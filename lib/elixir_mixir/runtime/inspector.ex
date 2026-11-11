@@ -6,12 +6,16 @@ defmodule ElixirMixir.Runtime.Inspector do
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
+  alias ElixirMixir.Runtime.RecoveryDiagnostics
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.Runtime.Workers
 
   @doc "Reads actual worker state or a sorted worker/edge page, visibly omitting fields to fit the wire budget."
   @spec inspect_runtime(map(), map()) :: {:ok, map()} | {:error, Error.t()}
+  def inspect_runtime(%{"detail" => "recovery"} = args, state),
+    do: RecoveryDiagnostics.page(args, state)
+
   def inspect_runtime(%{"worker_id" => id} = args, state) do
     with {:ok, worker} <- Workers.find(state.workers, id) do
       data = worker_snapshot(worker, Map.get(args, "detail", "summary"), state)
@@ -38,7 +42,7 @@ defmodule ElixirMixir.Runtime.Inspector do
       graph = edges |> Enum.drop(edge_offset) |> Enum.take(limit)
 
       base = %{
-        "health" => "ok",
+        "health" => if(state.recovery["degraded"], do: "degraded", else: "ok"),
         "recovery" =>
           Map.merge(state.recovery, %{
             "boot_id" => state.boot_id,

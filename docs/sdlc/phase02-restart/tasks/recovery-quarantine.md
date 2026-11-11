@@ -1,6 +1,6 @@
 # recovery-quarantine: Isolate invalid retained application records
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -90,15 +90,22 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `180d853` verified and pushed before
+work. Focused quarantine checks passed (8 tests), HTTP corruption/repair checks
+passed (15 tests), growing MCP/integration suite passed (118 tests), and full
+`mix check` passed (276 tests, 2 doctests, Credo clean, Doctor 100%, Dialyzer zero
+findings). The [evidence entry](../verification.md#recovery-quarantine) records
+ten owned-store corruption/reopen cases, safe HTTP repair, minimum-size diagnostic
+pages, fail-closed global faults, readiness gating and bounded long-deadline wakeups.
+Release storage, the actual Codex demonstration and evidence review remain pending.
 
 ## Relative size
 

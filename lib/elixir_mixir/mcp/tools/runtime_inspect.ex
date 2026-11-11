@@ -10,7 +10,7 @@ defmodule ElixirMixir.MCP.Tools.RuntimeInspect do
 
   schema do
     field(:worker_id, :string)
-    field(:detail, {:enum, ["summary", "state"]})
+    field(:detail, {:enum, ["summary", "state", "recovery"]})
     field(:limit, {:integer, {:range, {1, 100}}})
     field(:cursor, :string)
   end

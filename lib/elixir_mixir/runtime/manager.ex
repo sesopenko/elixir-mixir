@@ -8,6 +8,7 @@ defmodule ElixirMixir.Runtime.Manager do
   """
 
   use GenServer
+  require Logger
 
   alias ElixirMixir.Runtime.Definition
   alias ElixirMixir.Runtime.DurableArtifacts
@@ -26,10 +27,12 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.Inspection
   alias ElixirMixir.Runtime.Inspector
   alias ElixirMixir.Runtime.Limits
+  alias ElixirMixir.Runtime.RecoveryDiagnostics
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.StorageConfig
   alias ElixirMixir.Runtime.Store
+  alias ElixirMixir.Runtime.StoreRecords
   alias ElixirMixir.Runtime.Values
   alias ElixirMixir.Runtime.WorkerRecovery
   alias ElixirMixir.Runtime.Workers
@@ -148,6 +151,7 @@ defmodule ElixirMixir.Runtime.Manager do
       boot_id: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
       lineage_id: nil,
       recovery_task: nil,
+      quarantines: [],
       delivery_timer: nil,
       delivery_retries: %{},
       delivery_clock: Keyword.get(opts, :delivery_timer, &Process.send_after(self(), &1, &2)),
@@ -183,7 +187,9 @@ defmodule ElixirMixir.Runtime.Manager do
 
     task =
       Task.Supervisor.async_nolink(ElixirMixir.CompilerTasks, fn ->
-        with :ok <- DurableOutbox.validate_capacity(records, state.limits),
+        state.durability_barrier.(:recovery_before_validation)
+
+        with :ok <- StoreRecords.validate_capacity(records, state.limits),
              do: DurableArtifacts.recover(records, state.limits)
       end)
 
@@ -359,33 +365,53 @@ defmodule ElixirMixir.Runtime.Manager do
 
     case DurableRecovery.restore(records, state) do
       {:ok, workers, worker_recovery} ->
+        {artifact_rows, recovery} = Map.pop(recovery, :quarantines, [])
+        {worker_rows, worker_recovery} = Map.pop(worker_recovery, :quarantines, [])
+        effect_rows = DurableOutbox.quarantines(records, state.limits)
+        rows = Enum.sort_by(artifact_rows ++ worker_rows ++ effect_rows, &{&1["kind"], &1["id"]})
+
         recovery =
           recovery
           |> Map.merge(worker_recovery)
-          |> Map.put("status", "ready")
-          |> Map.put(
-            "degraded",
-            recovery["degraded"] or worker_recovery["workers_quarantined"] > 0
-          )
+          |> Map.merge(%{
+            "status" => "ready",
+            "degraded" => rows != [],
+            "effects_quarantined" => length(effect_rows),
+            "quarantine_count" => length(rows),
+            "effect_diagnostics" => Enum.take(effect_rows, state.limits.diagnostics)
+          })
 
-        :ok = DurableOutbox.sync(state)
+        :ok = RecoveryDiagnostics.record(state, rows)
+
+        next = %{
+          state
+          | workers: workers,
+            recovery: recovery,
+            recovery_task: nil,
+            quarantines: rows
+        }
+
+        :ok = DurableOutbox.sync(next)
+        next = DurableDelivery.schedule(next)
+
+        EventLog.append(%{
+          "type" => "recovery_completed",
+          "outcome" => "ready",
+          "metadata" => %{"quarantines" => length(rows)}
+        })
+
         if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
-
-        {:noreply,
-         DurableDelivery.schedule(%{
-           state
-           | workers: workers,
-             recovery: recovery,
-             recovery_task: nil
-         })}
+        {:noreply, next}
 
       {:error, _error} ->
         {:stop, :recovery_failed, state}
     end
   end
 
-  def handle_info({ref, {:error, _error}}, %{recovery_task: %{ref: ref}} = state),
-    do: {:stop, :recovery_failed, state}
+  def handle_info({ref, {:error, error}}, %{recovery_task: %{ref: ref}} = state) do
+    Logger.error("Durable recovery failed: #{error["code"]}")
+    {:stop, :recovery_failed, state}
+  end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %{recovery_task: %{ref: ref}} = state),
     do: {:stop, :recovery_failed, state}

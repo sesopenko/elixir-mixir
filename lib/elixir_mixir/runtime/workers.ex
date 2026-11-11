@@ -394,6 +394,11 @@ defmodule ElixirMixir.Runtime.Workers do
       "restart_window_ms" => 10_000
     }
 
+    data =
+      if worker.status == "quarantined" and Map.get(worker, :quarantine_reason),
+        do: Map.put(data, "quarantine_reason", worker.quarantine_reason),
+        else: data
+
     if Map.has_key?(worker, :desired_status),
       do: Map.put(data, "desired_status", worker.desired_status),
       else: data

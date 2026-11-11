@@ -25,7 +25,12 @@ defmodule ElixirMixir.Runtime.DurableDelivery do
         state
 
       {id, record} ->
-        delay = max(0, max(record["due_at"], Map.get(retries, id, 0)) - now)
+        delay =
+          min(
+            state.limits.timer_delay_ms,
+            max(0, max(record["due_at"], Map.get(retries, id, 0)) - now)
+          )
+
         nonce = make_ref()
         ref = state.delivery_clock.({:durable_delivery, id, nonce}, delay)
         %{state | delivery_timer: %{id: id, nonce: nonce, ref: ref}}

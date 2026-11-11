@@ -5,6 +5,7 @@ defmodule ElixirMixir.Runtime.DurableRecovery do
   alias ElixirMixir.Runtime.DurableWorkers
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
+  alias ElixirMixir.Runtime.RecoveryDiagnostics
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.Runtime.WorkerRecovery
 
@@ -29,14 +30,26 @@ defmodule ElixirMixir.Runtime.DurableRecovery do
 
       quarantines =
         for {id, %{status: "quarantined"}} <- workers,
-            do: %{"worker_id" => id, "code" => "INVALID_ARGUMENT"}
+            do:
+              RecoveryDiagnostics.entry(
+                "worker",
+                id,
+                "INVALID_ARGUMENT",
+                workers[id].quarantine_reason
+              )
 
       {:ok, workers,
        %{
+         :quarantines => quarantines,
          "workers" => length(retained),
+         "workers_failed" => Enum.count(workers, fn {_, worker} -> worker.status == "failed" end),
          "workers_restored" => Enum.count(workers, fn {_, worker} -> worker.pid != nil end),
          "workers_quarantined" => length(quarantines),
-         "worker_diagnostics" => Enum.take(quarantines, state.limits.diagnostics)
+         "worker_diagnostics" =>
+           Enum.take(
+             Enum.map(quarantines, &Map.put(&1, "worker_id", &1["id"])),
+             state.limits.diagnostics
+           )
        }}
     else
       {:error, Error.new("LIMIT_EXCEEDED")}
@@ -106,7 +119,7 @@ defmodule ElixirMixir.Runtime.DurableRecovery do
   defp restore_worker(%{status: "running"} = worker, state) do
     case DurableWorkers.start_candidate(worker, true, state) do
       {:ok, candidate} -> candidate
-      {:error, _} -> %{worker | status: "quarantined"}
+      {:error, _} -> %{worker | status: "quarantined", quarantine_reason: "HOST_RESTORE_FAILED"}
     end
   end
 

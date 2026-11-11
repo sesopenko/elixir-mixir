@@ -134,6 +134,13 @@ Any globally configured hooks then apply again.
 
 ## Agent instructions
 
+Work in small, independently reviewable subtasks. Finish the unit tests for a
+subtask and get them passing, then run the full `mix check` gate. Commit that
+working state before beginning the next subtask so changes are easy to roll
+back. Do not move on with unfinished tests, failing gates, or an uncommitted
+completed subtask. See the [subtask workflow rules](rules/50-subtask-workflow.md)
+and [commit-message rules](rules/40-commit-messages.md).
+
 Project instructions live in separate `rules/*.md` files. Their numeric filename
 prefixes determine the order of the generated `AGENTS.md`.
 

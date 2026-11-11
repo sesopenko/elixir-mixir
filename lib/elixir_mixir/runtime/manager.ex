@@ -10,6 +10,7 @@ defmodule ElixirMixir.Runtime.Manager do
   use GenServer
 
   alias ElixirMixir.Runtime.Error
+  alias ElixirMixir.Runtime.Inspection
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.Values
@@ -22,7 +23,7 @@ defmodule ElixirMixir.Runtime.Manager do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
   end
 
-  @doc "Returns the empty runtime status. Arguments must currently be an empty map."
+  @doc "Returns the empty runtime status. Accepts optional worker_id, detail and page limit; no cursor exists yet."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
     GenServer.call(server, {:inspect, args})
@@ -63,7 +64,8 @@ defmodule ElixirMixir.Runtime.Manager do
   @impl true
   def handle_call({:inspect, args}, _from, state) do
     result =
-      if args == %{} do
+      with :ok <- Inspection.validate(args, state.limits),
+           false <- Map.has_key?(args, "worker_id") do
         {:ok,
          envelope(
            %{
@@ -79,7 +81,8 @@ defmodule ElixirMixir.Runtime.Manager do
            state.generation
          )}
       else
-        {:error, envelope(Error.new("INVALID_ARGUMENT"), state.generation)}
+        true -> {:error, envelope(Error.new("WORKER_NOT_FOUND"), state.generation)}
+        {:error, error} -> {:error, envelope(error, state.generation)}
       end
 
     {:reply, bounded(result, state), state}

@@ -1,7 +1,7 @@
 defmodule ElixirMixir.Runtime.Limits do
   @moduledoc """
   Runtime resource ceilings. Overrides may only reduce the Phase 1 defaults.
-  Responses require at least 256 bytes so a bounded error envelope can be returned.
+  Responses require at least 1_024 bytes so a bounded error envelope can be returned.
 
   Heap budgets are expressed in VM words, using the current machine word size.
   """
@@ -54,8 +54,8 @@ defmodule ElixirMixir.Runtime.Limits do
 
     limits = Map.merge(@defaults, overrides)
 
-    if limits.response_bytes < 256 do
-      raise ArgumentError, "response_bytes must allow a bounded error envelope (at least 256)"
+    if limits.response_bytes < 1_024 do
+      raise ArgumentError, "response_bytes must allow a bounded error envelope (at least 1_024)"
     end
 
     if limits.page_default > limits.page_max do

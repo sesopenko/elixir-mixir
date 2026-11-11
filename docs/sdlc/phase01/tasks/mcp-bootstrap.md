@@ -2,6 +2,9 @@
 
 ## Startup and context recovery
 
+Implementation assignment: [resume Phase 1](../../../prompts/phase01-implementation.md).
+Dependency/transport corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md).
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -89,12 +92,31 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-10):
+
+- Reread the governing documents and verified kernel-api commit `14f8d10`, its
+  checked task and actual implementation. Preserved unrelated `scripts/codex.sh`.
+- `mix deps.get` / `mix deps.tree`: resolved and compiled Hermes 0.14.1,
+  Bandit 1.14.1, Plug 1.20.3 and Jason 1.4.5. Correction 03 records why the
+  original HTTP pins could not satisfy bounded ingress and the verified APIs.
+- `mix test test/mcp/bootstrap_test.exs test/integration/mcp_bootstrap_test.exs --warnings-as-errors`:
+  20 tests, zero failures. Includes independent BEAM reconnect, SSE/session framing,
+  fixed/chunked over-limit rejection, exact-limit acceptance, protocol correlation,
+  schema/argument errors, occupied-port failure and actual OS-process cleanup.
+- `mix check`: passed; 1 doctest, 46 tests, zero failures; strict Credo clean,
+  Doctor 100% documentation/typespec coverage and Dialyzer zero errors.
+- Smoke-tested `mix run --no-halt` and default `/health` from a separate command;
+  readiness returned API version 1. Stopped the smoke-test runtime afterward.
+- `git diff --check`: passed. Installed hook path: `.githooks`.
+- Full automated evidence is in [verification.md](../verification.md). Actual Codex
+  demonstration evidence remains explicitly pending. The commit containing this
+  checked task is the checkpoint, with the normal pre-commit hook enabled.
+- Next task only after the verified commit: `artifact-compiler`.

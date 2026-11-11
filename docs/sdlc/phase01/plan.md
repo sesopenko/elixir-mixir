@@ -1,10 +1,12 @@
 # Phase 1 — Live Genesis implementation plan
 
-Status: implementation in progress. The kernel-api checkpoint is complete in the
-commit containing its checked task document; mcp-bootstrap is next. Governing architecture:
+Status: implementation in progress. kernel-api is committed at `14f8d10`;
+mcp-bootstrap is complete in the commit containing its checked task document.
+artifact-compiler is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Implementation assignment: [resume Phase 1](../../prompts/phase01-implementation.md).
 Planning assignment: [complete immutable snapshot](../../prompts/phase01-planning.md).
+HTTP dependency/transport correction: [amendment 03](../../prompts/phase01-dependency-amendment-03.md).
 Dependency correction: [Jason/Decimal compatibility](../../prompts/phase01-dependency-amendment-02.md).
 Approved amendment: [smaller worker tasks and continuous HTTP integration](../../prompts/phase01-planning-amendment-01.md).
 The original planning checkpoints contained no runtime features. Read the amendments
@@ -373,8 +375,8 @@ for duplicated text/structured encoding in the 64 KiB limit.
 
 Verified 2026-11-10 using official release metadata and published package source.
 Use exact direct pins for the first implementation: `hermes_mcp == 0.14.1`,
-`plug == 1.18.1`, `bandit == 1.8.0`, `jason == 1.4.5`; add `:crypto` for SHA-256.
-Their Elixir requirements are respectively `~> 1.18`, `~> 1.10`, `~> 1.13`,
+`plug == 1.20.3`, `bandit == 1.14.1`, `jason == 1.4.5`; add `:crypto` for SHA-256.
+Their Elixir requirements are respectively `~> 1.18`, `~> 1.15`, `~> 1.13`,
 `~> 1.4`, compatible with 1.18.3. Hermes requires Plug `~> 1.18` (optional,
 therefore explicitly enable it), Finch `~> 0.19`, Peri `~> 0.4`, Telemetry `~> 1.2`;
 Bandit also requires Plug `~> 1.18` and allows Telemetry 1.x. Jason's Decimal
@@ -396,8 +398,8 @@ Official sources (source code takes precedence over inconsistent prose examples)
 - [Hermes versioned README](https://hexdocs.pm/hermes_mcp/0.14.1/readme.html)
   documents Plug forwarding; generic Server/transport quick-start examples contain
   obsolete call arities and legacy `/sse` paths. Use actual child specs below.
-- [Bandit release](https://hex.pm/api/packages/bandit/releases/1.8.0),
-  [Plug release](https://hex.pm/api/packages/plug/releases/1.18.1),
+- [Bandit release](https://hex.pm/api/packages/bandit/releases/1.14.1),
+  [Plug release](https://hex.pm/api/packages/plug/releases/1.20.3),
   [Jason release](https://hex.pm/api/packages/jason/releases/1.4.5),
   [Bandit API](https://hexdocs.pm/bandit/1.8.0/Bandit.html).
 - [MCP Streamable HTTP specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports):

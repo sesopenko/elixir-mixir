@@ -11,7 +11,7 @@ defmodule ElixirMixir.Runtime.KernelAPITest do
     defaults = Limits.defaults()
 
     for {key, maximum} <- defaults do
-      minimum = if key == :response_bytes, do: 256, else: 1
+      minimum = if key == :response_bytes, do: 1_024, else: 1
 
       overrides =
         if key == :page_max, do: %{page_max: 1, page_default: 1}, else: %{key => minimum}
@@ -260,7 +260,7 @@ defmodule ElixirMixir.Runtime.KernelAPITest do
   end
 
   test "invalid arguments and oversized staged responses do not advance generation" do
-    manager = manager(limits: %{response_bytes: 512})
+    manager = manager(limits: %{response_bytes: 1_024})
     callback = fn _ -> flunk("invalid operation executed") end
 
     for args <- [%{}, %{"request_id" => ""}, %{"request_id" => "ok", "bad" => self()}, nil] do
@@ -268,12 +268,12 @@ defmodule ElixirMixir.Runtime.KernelAPITest do
                Manager.mutate(manager, "test", args, callback)
     end
 
-    callback = fn _ -> {:ok, %{"reply" => String.duplicate("x", 513)}} end
+    callback = fn _ -> {:ok, %{"reply" => String.duplicate("x", 1_025)}} end
 
     assert {:error, %{"code" => "LIMIT_EXCEEDED", "generation" => 0} = data} =
              Manager.mutate(manager, "test", %{"request_id" => "large"}, callback)
 
-    assert byte_size(Jason.encode!(data)) <= 512
+    assert byte_size(Jason.encode!(data)) <= 1_024
     assert {:error, ^data} = Manager.mutate(manager, "test", %{"request_id" => "large"}, callback)
   end
 

@@ -50,9 +50,31 @@ mix run --no-halt
 ```
 
 Stop it with Ctrl+C twice. The application starts the in-memory runtime Manager
-and does not yet expose an MCP endpoint. Kernel development happens in this repository;
+and the loopback MCP endpoint at `http://127.0.0.1:4100/mcp`. Kernel development happens in this repository;
 future demonstrations will create application behavior through MCP, as described
 in [the architecture](docs/adr/001-architecture.md).
+
+Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
+terminal using the commands in [README](README.md). Client disconnects do not stop
+the BEAM. Only `runtime_inspect` exists at this checkpoint; see the
+[runtime API](docs/runtime-api.md) for headers, schemas and size limits.
+
+The default configuration enables MCP outside tests. `ELIXIR_MIXIR_PORT=4101 mix
+run --no-halt` changes the runtime port; use the same port for health and clients.
+Only IPv4 loopback is accepted. A bind failure prevents MCP startup. Host and
+optional Origin must name the configured loopback port. Hermes payload logging is
+disabled. For future generated-code experiments use a disposable, trusted Linux VM
+without credentials or valuable infrastructure; the runtime is not an Elixir sandbox.
+
+Ordinary unit-test startup has no HTTP listener. The integration suite launches
+independent BEAMs with ephemeral loopback ports, using the compiled test application.
+Its reusable OTP HTTP/SSE client uses `:inets` only in the test environment.
+Fixtures own OS-port cleanup even on test failure; production compilation excludes
+all `test/support` modules and the test-only boot script.
+
+```sh
+mix test test/mcp test/integration --warnings-as-errors
+```
 
 ## In-memory runtime foundation
 
@@ -76,7 +98,7 @@ config :elixir_mixir, :limits, %{ledger_entries: 128, ledger_retention_ms: 60_00
 
 The complete set of names and ceilings is returned by `ElixirMixir.Runtime.Limits.defaults/0`. Unknown names,
 non-integers, non-positive values, and values above Phase 1 ceilings fail startup.
-`page_default` must not exceed `page_max`. `response_bytes` must be at least 256 to
+`page_default` must not exceed `page_max`. `response_bytes` must be at least 1,024 to
 permit a bounded error envelope. Tests can start an isolated Manager with `limits:`
 and an injected monotonic millisecond `clock:`.
 

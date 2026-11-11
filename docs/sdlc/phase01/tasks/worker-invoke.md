@@ -2,6 +2,11 @@
 
 ## Startup and context recovery
 
+Implementation assignment: [resume Phase 1](../../../prompts/phase01-implementation.md).
+Continuation: [amendment 04](../../../prompts/phase01-implementation-amendment-04.md).
+Transport/lifetime: [amendment 05](../../../prompts/phase01-transport-amendment-05.md).
+Dependency corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md).
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -87,12 +92,31 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Reread assignment/plan/task/amendments and verified prerequisite `76f0178`;
+  preserved unrelated `scripts/codex.sh`.
+- `mix test test/runtime/worker_invoke_test.exs --warnings-as-errors`: 9 tests,
+  zero failures. Covers atomic reply/state/revisions, PID preservation, concurrency,
+  failure/timeout/heap/late results, JSON/byte/wire bounds, replay/conflicts,
+  healthy peer and stopped/unknown/non-Manager callers.
+- `mix test test/mcp test/integration --warnings-as-errors`: 39 tests, zero failures.
+  Exactly five tools; counter HTTP journey, active artifact survival after rejected
+  definitions, failure/limit envelopes and full-response preflight pass. A physical
+  HTTP disconnect during controlled accepted work is followed by fresh initialize
+  and same-ID retries: one increment, original result/generation, same host PID.
+- `mix check`: passed; 2 doctests, 96 tests, zero failures; strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- `git diff --check`: passed. Hook path `.githooks`; reviewed task-only changes.
+  Evidence is in [verification.md](../verification.md).
+- The commit containing this checked task is the checkpoint, through the normal
+  pre-commit gate. Nonempty effects remain rejected and recovery remains manual.
+- Next task only after that verified commit: `worker-recovery`.

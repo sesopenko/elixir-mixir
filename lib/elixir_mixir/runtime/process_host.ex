@@ -6,6 +6,7 @@ defmodule ElixirMixir.Runtime.ProcessHost do
   alias ElixirMixir.Runtime.Callback
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
+  alias ElixirMixir.Runtime.Transition
   alias ElixirMixir.Runtime.Values
 
   @doc "Starts a logical host; failed bounded init leaves no running child."
@@ -22,6 +23,14 @@ defmodule ElixirMixir.Runtime.ProcessHost do
     GenServer.call(pid, :snapshot, timeout)
   catch
     :exit, _reason -> {:error, Error.new("WORKER_NOT_RUNNING")}
+  end
+
+  @doc "Invokes a host from its owning Manager with a finite API wait; generated callbacks run in tasks."
+  @spec invoke(pid(), map(), map(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
+  def invoke(pid, event, context, timeout) do
+    GenServer.call(pid, {:invoke, event, context}, timeout)
+  catch
+    :exit, _reason -> {:error, Error.new("CALLBACK_FAILED")}
   end
 
   @impl true
@@ -41,6 +50,23 @@ defmodule ElixirMixir.Runtime.ProcessHost do
     {:reply,
      {:ok, Map.take(state, [:artifact, :data, :worker_revision, :state_revision, :worker_id])},
      state}
+  end
+
+  def handle_call({:invoke, event, context}, {manager, _tag}, %{manager: manager} = state) do
+    outcome =
+      with {:ok, result} <-
+             Callback.run(
+               fn -> state.artifact.module.handle_event(event, state.data) end,
+               state.limits
+             ),
+           {:ok, data, next} <- Transition.stage(result, state, context) do
+        {:commit, data, next}
+      end
+
+    case outcome do
+      {:commit, data, next} -> {:reply, {:ok, data}, next}
+      {:error, error} -> {:reply, {:error, error}, state}
+    end
   end
 
   def handle_call(_unsupported, _from, state),

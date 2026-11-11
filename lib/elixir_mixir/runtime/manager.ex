@@ -42,6 +42,11 @@ defmodule ElixirMixir.Runtime.Manager do
   def stop_worker(args, server \\ __MODULE__),
     do: GenServer.call(server, {:worker, :stop, args}, Limits.defaults().operation_timeout_ms)
 
+  @doc "Commits one bounded worker event at most once per validated request identity."
+  @spec invoke(map(), GenServer.server()) :: result()
+  def invoke(args, server \\ __MODULE__),
+    do: GenServer.call(server, {:worker, :invoke, args}, Limits.defaults().operation_timeout_ms)
+
   @doc "Returns bounded runtime/worker snapshots using kernel-owned state; no cursor exists yet."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
@@ -142,6 +147,9 @@ defmodule ElixirMixir.Runtime.Manager do
 
   defp worker_operation(:stop, args, state, generation),
     do: Workers.stop(args, state.workers, state.limits, generation)
+
+  defp worker_operation(:invoke, args, state, generation),
+    do: Workers.invoke(args, state.workers, state.limits, generation)
 
   defp mutation_arguments(args, limits) when is_map(args) do
     if Values.valid_id?(args["request_id"]) do

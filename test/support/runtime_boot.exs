@@ -12,6 +12,7 @@ limits =
   Map.new(Map.get(opts, "limits", %{}), fn {key, value} -> {Map.fetch!(known, key), value} end)
 
 Application.put_env(:elixir_mixir, :limits, limits)
+{:ok, _barrier} = ElixirMixir.TestSupport.CallbackBarrier.start_link([])
 {:ok, _} = Application.ensure_all_started(:elixir_mixir)
 {:ok, {{127, 0, 0, 1}, port}} = ElixirMixir.MCP.Supervisor.address()
 IO.puts("MIXIR_READY:#{port}:#{System.pid()}")

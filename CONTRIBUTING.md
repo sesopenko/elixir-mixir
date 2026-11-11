@@ -56,7 +56,8 @@ in [the architecture](docs/adr/001-architecture.md).
 
 Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
 terminal using the commands in [README](README.md). Client disconnects do not stop
-the BEAM. `runtime_inspect`, `runtime_define`, `runtime_start` and `runtime_stop` exist at this checkpoint; see the
+the BEAM. `runtime_inspect`, `runtime_define`, `runtime_start`, `runtime_stop` and
+`runtime_invoke` exist at this checkpoint; see the
 [runtime API](docs/runtime-api.md) for headers, schemas and size limits.
 
 The default configuration enables MCP outside tests. `ELIXIR_MIXIR_PORT=4101 mix
@@ -87,7 +88,7 @@ ElixirMixir.Runtime.Manager.inspect_runtime(%{})
 The result includes API version `"1"`, generation zero on startup (advancing on committed mutations/lifecycle changes),
 health, worker summaries and resource/ledger retention limits. Use worker_id and
 detail state for committed state. Artifacts can be defined and workers started/stopped;
-invocation, effects and automatic recovery are pending. Definitions and request outcomes will
+invocation commits bounded atomic transitions; effects and automatic recovery are pending. Definitions and request outcomes will
 remain in memory only; stopping the BEAM loses them.
 
 Configure downward resource overrides before starting the application, for example

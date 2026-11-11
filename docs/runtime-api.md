@@ -1,7 +1,7 @@
 # Runtime API version 1
 
-The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`
-and `runtime_stop`.
+The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`,
+`runtime_stop` and `runtime_invoke`.
 Runtime metadata is in memory; no generated application is seeded at startup.
 
 ## Connection
@@ -52,7 +52,7 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Invocation, event and replacement tools are pending their feature tasks.
+Effects, automatic recovery, event inspection and replacement are pending their feature tasks.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -185,10 +185,51 @@ live PID, advances worker revision/generation and records a correlated crash eve
 Peers, Manager and HTTP remain alive. **Recovery is manual at this checkpoint**:
 call runtime_start with a fresh request_id to reinitialize the failed ID. Automatic
 restart budgets belong to worker-recovery. Phase 1 does not preserve state across
-crashes. No runtime_invoke tool or automatic recovery timer is advertised yet.
+crashes. No automatic recovery timer is advertised yet.
 
 Request replay returns the original outcome and generation without another host or
 stop, even if later operations have changed the worker. Inspect to obtain current
 status. Callbacks use an independent kernel coordinator so killing their owner also
 cancels and joins generated execution and tracked helpers; HTTP client disconnect
 does not kill the host or Manager and therefore does not cancel accepted work.
+
+
+## runtime_invoke
+
+Invoke takes required worker_id, event (a JSON map) and request_id. It calls
+handle_event/2 in an unlinked monitored callback task, bounded by the same 200 ms
+and 8 MiB controls as init. Manager serializes requests; the host stages the full
+callback outcome before publishing a new committed state.
+
+A valid `{:ok, reply, new_state, []}` returns reply, worker_revision, state_revision
+and empty effects. Reply may be any JSON value; event, reply and state each have
+16 KiB encoded/16-level application bounds. Success advances state_revision and
+global generation once, retaining host PID and worker_revision. Both semantic
+limits and complete duplicated/escaped MCP response size are checked before commit.
+
+Malformed tuples, non-JSON reply/state and nonempty effects yield INVALID_TRANSITION;
+size/depth/wire excess yields LIMIT_EXCEEDED. Explicit callback errors, exceptions
+and exits yield CALLBACK_FAILED with a bounded reason (at most 2 KiB UTF-8), without
+raw exception stack traces. A deadline yields CALLBACK_TIMEOUT. Every rejected
+transition preserves the last state, revisions and PID; killed/late callback tasks
+cannot commit. Unknown workers yield WORKER_NOT_FOUND; stopped/failed workers yield
+WORKER_NOT_RUNNING. A healthy peer remains usable after a callback timeout.
+
+At this checkpoint **effects must be empty**. The kernel does not acknowledge or
+execute emit/schedule/log effects until event-effects implements their admission
+and dispatch. Request replay returns the original successful or failed outcome,
+without another callback, increment or effect. Changing payload/operation under
+the same request_id returns REQUEST_ID_CONFLICT.
+
+For the documented counter template, call runtime_invoke with:
+
+```json
+{"worker_id":"counter","event":{"increment":1},"request_id":"counter-increment-1"}
+```
+
+Then inspect the worker's committed state. A lost HTTP connection does not cancel
+accepted Manager work: reinitialize a fresh client and retry the identical request
+with the same request_id to obtain its recorded outcome. JSON-RPC IDs remain a
+separate transport correlation mechanism. Actual HTTP tests close the physical
+connection at a test-only callback barrier, release accepted work, and prove a
+fresh client observes exactly one increment in the same host.

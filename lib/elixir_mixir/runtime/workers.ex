@@ -44,6 +44,21 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
+  @doc "Invokes one running logical worker and retains its revisions only on an accepted transition."
+  @spec invoke(map(), definitions(), Limits.t(), non_neg_integer()) :: mutation()
+  def invoke(args, workers, limits, generation) do
+    with :ok <- keys(args, ~w(worker_id event request_id)),
+         true <- Values.valid_id?(args["worker_id"]),
+         :ok <- Values.validate(args["event"], :event, limits),
+         {:ok, worker} <- find(workers, args["worker_id"]),
+         :ok <- running(worker) do
+      invoke_host(args, worker, workers, limits, generation)
+    else
+      false -> {:error, Error.new("INVALID_ARGUMENT")}
+      error -> error
+    end
+  end
+
   @doc "Marks a monitored running host failed once; automatic recovery is added in worker-recovery."
   @spec down(definitions(), reference(), term()) :: {definitions(), boolean()}
   def down(workers, ref, reason) do
@@ -104,7 +119,8 @@ defmodule ElixirMixir.Runtime.Workers do
       config: args["config"],
       worker_revision: revision,
       state_revision: state_revision,
-      limits: limits
+      limits: limits,
+      manager: self()
     }
 
     case DynamicSupervisor.start_child(ElixirMixir.Runtime.WorkerSupervisor, {ProcessHost, opts}) do
@@ -163,6 +179,34 @@ defmodule ElixirMixir.Runtime.Workers do
       {:error, Error.new("LIMIT_EXCEEDED")}
     end
   end
+
+  defp invoke_host(args, worker, workers, limits, generation) do
+    record("event_accepted", worker, args["request_id"], %{})
+    context = %{generation: generation, request_id: args["request_id"]}
+
+    case ProcessHost.invoke(worker.pid, args["event"], context, limits.operation_timeout_ms) do
+      {:ok, data} ->
+        worker = %{
+          worker
+          | worker_revision: data["worker_revision"],
+            state_revision: data["state_revision"],
+            request_id: args["request_id"]
+        }
+
+        record("event_delivered", worker, args["request_id"], %{
+          "state_revision" => worker.state_revision
+        })
+
+        {:commit, data, Map.put(workers, worker.worker_id, worker)}
+
+      {:error, error} ->
+        record("event_failed", worker, args["request_id"], %{"code" => error["code"]})
+        {:error, error}
+    end
+  end
+
+  defp running(%{status: "running"}), do: :ok
+  defp running(_worker), do: {:error, Error.new("WORKER_NOT_RUNNING")}
 
   defp available(id, workers, limits) do
     case Map.get(workers, id) do

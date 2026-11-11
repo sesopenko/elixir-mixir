@@ -3,6 +3,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   alias ElixirMixir.Runtime.ArtifactRegistry
   alias ElixirMixir.Runtime.EventLog
+  alias ElixirMixir.TestSupport.CallbackBarrier
 
   @doc "Handles bounded JSON control lines until the owning port closes stdin."
   @spec run() :: no_return()
@@ -43,6 +44,9 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
         error
     end
   end
+
+  def request(%{"op" => "barrier_status", "key" => key}), do: CallbackBarrier.status(key)
+  def request(%{"op" => "release_barrier", "key" => key}), do: CallbackBarrier.release(key)
 
   def request(%{"op" => "worker_membership", "id" => id}) do
     case Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id) do

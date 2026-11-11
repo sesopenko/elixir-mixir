@@ -151,12 +151,20 @@ defmodule ElixirMixir.TestSupport.MCPClient do
     |> Jason.decode!()
   end
 
+  @doc "Closes physical HTTP connections without sending a session DELETE or stopping the runtime."
+  @spec disconnect(t()) :: :ok
+  def disconnect(client) do
+    if Process.alive?(client.profile), do: GenServer.stop(client.profile)
+    :ok
+  end
+
   @doc "Closes the MCP stream/session and synchronously stops the standalone HTTP pool."
   @spec close(t()) :: :ok
   def close(client) do
-    if client.session, do: raw(client, :delete, "/mcp")
-    if Process.alive?(client.profile), do: GenServer.stop(client.profile)
-    :ok
+    if not is_nil(client.session) and Process.alive?(client.profile),
+      do: raw(client, :delete, "/mcp")
+
+    disconnect(client)
   end
 
   @doc "Looks up a response header without creating atoms."

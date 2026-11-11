@@ -6,6 +6,7 @@ defmodule ElixirMixir.MCP.Server do
   component(ElixirMixir.MCP.Tools.RuntimeDefine, name: "runtime_define")
   component(ElixirMixir.MCP.Tools.RuntimeInspect, name: "runtime_inspect")
 
+  component(ElixirMixir.MCP.Tools.RuntimeInvoke, name: "runtime_invoke")
   component(ElixirMixir.MCP.Tools.RuntimeStart, name: "runtime_start")
   component(ElixirMixir.MCP.Tools.RuntimeStop, name: "runtime_stop")
 
@@ -18,6 +19,7 @@ defmodule ElixirMixir.MCP.Server do
       "Reuse request_id only for identical retries. All four callbacks are mandatory. " <>
       "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
       "Inspect worker state with worker_id and detail state. Host failure currently requires explicit start. " <>
-      "Invocation is not available yet. Generated code requires a trusted disposable environment."
+      "Use runtime_invoke with worker_id/event/request_id; repeat an identical ID to replay its outcome. " <>
+      "Only empty effects lists are supported until event-effects. Generated code requires a trusted disposable environment."
   end
 end

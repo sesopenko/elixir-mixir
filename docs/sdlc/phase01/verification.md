@@ -116,6 +116,36 @@ Recovery is explicitly manual here: a killed host becomes a retained failed
 definition, and only a fresh explicit start reinitializes it. No automatic restart
 timers, event invocation or effects are claimed at this intermediate checkpoint.
 
+## worker-invoke
+
+Verified 2026-11-11 on Elixir 1.18.3 / OTP 27. The checked task's containing commit
+is this checkpoint, created through the normal full-quality pre-commit hook.
+
+- `mix test test/runtime/worker_invoke_test.exs --warnings-as-errors`: 9 tests,
+  zero failures. Atomic counter replies/state/revisions, stable PID, serialized
+  concurrency, exact replay/conflict, malformed/error/raise/exit/timeout/heap cases,
+  non-JSON values, empty-effects restriction, late-result suppression, healthy peer,
+  unknown/stopped targets, exact and over-limit payloads, and full wire preflight pass.
+- `mix test test/mcp test/integration --warnings-as-errors`: 39 tests, zero failures.
+  Discovery now advertises exactly define/inspect/invoke/start/stop. HTTP tests
+  increment/inspect a counter, preserve active state/artifact after failed definitions,
+  preserve state on invalid/timed-out callbacks and payload/wire rejection, and
+  return matching bounded JSON text/structured envelopes.
+- A test-only callback barrier confirms accepted work before physically closing
+  the HTTP client's connection pool. Releasing that work, initializing a fresh
+  client and replaying the same request ID returns reply 1/state_revision 2 and
+  original generation 3, with exactly one increment and the original host PID.
+  Barrier/controller code exists only in test/support, with no production test tool.
+- `mix check`: passed; 2 doctests, 96 tests, zero failures; strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- `git diff --check`: passed; installed hook path `.githooks`.
+
+Nonempty effects are deliberately INVALID_TRANSITION until event-effects, rather
+than false success acknowledgements. Hosts accept transition messages only from
+their owning Manager. Callback reasons are formatted and capped inside bounded
+generated execution; state commits wait for all validation and response preflight.
+Automatic worker recovery is still the following checkpoint.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
@@ -125,12 +155,12 @@ timers, event invocation or effects are claimed at this intermediate checkpoint.
 | A14 | Loopback binding, configuration/header checks, local smoke startup | Isolated local deployment and actual demonstration |
 | A02 | Automated define over HTTP | Actual Codex creation transcript |
 | A03 | Loaded exports/BEAM/hash and immutable registry, including HTTP define | Complete for compiler substrate |
-| A10 | Failed definitions preserve existing artifacts and generation | Live-worker assertion when workers exist |
+| A10 | Failed definitions preserve active counter artifact/state; subsequent invoke works | Verified automated substrate |
 | A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
-| A05 | HTTP worker state inspection | Invocation and actual Codex observations |
+| A05 | HTTP increment/inspect, revisions and failure preservation | Actual Codex observations |
 | A12 | Real host kill preserves HTTP, Manager and healthy peer | Automatic recovery bounds in worker-recovery |
 | A06–A09, A11 | Foundations only | Owning effect/replacement tasks |
 
-Invocation, automatic recovery, effects, full history/topology inspection, replacement, isolated container/release
+Automatic recovery, effects, full history/topology inspection, replacement, isolated container/release
 setup and the actual Codex transcript remain pending. No worker/domain behavior is
 seeded in the production kernel or claimed by this checkpoint.

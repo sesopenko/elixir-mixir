@@ -312,6 +312,175 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
            })["code"] == "LIMIT_EXCEEDED"
   end
 
+  test "HTTP invocation commits once and rejected definitions cannot alter the active counter",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.counter_source()))
+    started = start_counter(ctx.client, artifact)
+
+    result =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{"amount" => 3},
+        "request_id" => "increment"
+      })
+
+    assert result["reply"] == 3
+    assert result["state_revision"] == 2
+    assert result["effects"] == []
+    before = counter_snapshot(ctx.client)
+    assert before["pid"] == started["pid"]
+    assert before["state"] == %{"count" => 3}
+
+    for {source, id} <- [
+          {"defmodule Generated do", "bad-source"},
+          {"defmodule Generated do end", "missing-callbacks"}
+        ] do
+      assert define(ctx.client, Map.put(args(source), "request_id", id))["code"] in [
+               "COMPILE_FAILED",
+               "CALLBACK_MISSING"
+             ]
+
+      assert counter_snapshot(ctx.client) == before
+    end
+
+    next =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{"amount" => 2},
+        "request_id" => "increment-next"
+      })
+
+    assert next["reply"] == 5
+    assert counter_snapshot(ctx.client)["pid"] == started["pid"]
+  end
+
+  test "HTTP timeout, malformed transitions and payload limits preserve committed counter state",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.counter_source()))
+    start_counter(ctx.client, artifact)
+    before = counter_snapshot(ctx.client)
+
+    for {event, code, id} <- [
+          {%{"mode" => "timeout"}, "CALLBACK_TIMEOUT", "timeout"},
+          {%{"mode" => "effects"}, "INVALID_TRANSITION", "effects"},
+          {%{"mode" => "malformed"}, "INVALID_TRANSITION", "malformed"},
+          {%{"mode" => "reply_non_json"}, "INVALID_TRANSITION", "non-json"},
+          {%{"mode" => "reply_payload", "bytes" => 16_383}, "LIMIT_EXCEEDED", "reply-limit"},
+          {%{"big" => String.duplicate("x", 16_384)}, "LIMIT_EXCEEDED", "event-limit"}
+        ] do
+      outcome =
+        tool(ctx.client, "runtime_invoke", %{
+          "worker_id" => "counter",
+          "event" => event,
+          "request_id" => id
+        })
+
+      assert outcome["code"] == code
+      assert counter_snapshot(ctx.client) == before
+    end
+
+    accepted =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{},
+        "request_id" => "healthy"
+      })
+
+    assert accepted["reply"] == 1
+
+    {response, _client} =
+      Client.call(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{},
+        "request_id" => "healthy"
+      })
+
+    assert byte_size(response.body) <= 65_536
+    assert result(response) == accepted
+  end
+
+  test "disconnect during accepted HTTP work and retry in a fresh client commits exactly one increment",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.counter_source()))
+    started = start_counter(ctx.client, artifact)
+
+    invoke_args = %{
+      "worker_id" => "counter",
+      "event" => %{"mode" => "controlled"},
+      "request_id" => "once-across-disconnect"
+    }
+
+    pending =
+      Task.async(fn ->
+        try do
+          {:unexpected_response, Client.call(ctx.client, "runtime_invoke", invoke_args)}
+        rescue
+          MatchError -> :connection_closed
+        end
+      end)
+
+    assert await_barrier(ctx.fixture, 100)
+    Client.disconnect(ctx.client)
+
+    assert RuntimeFixture.control(ctx.fixture, %{"op" => "release_barrier", "key" => "invoke"})[
+             "released"
+           ]
+
+    assert Task.await(pending, 1_000) == :connection_closed
+
+    client = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{client | session: nil}) end)
+    {_init, _notification, client} = Client.initialize(client)
+    replay = tool(client, "runtime_invoke", invoke_args)
+    assert replay["reply"] == 1
+    assert replay["state_revision"] == 2
+    assert replay["generation"] == 3
+    assert counter_snapshot(client)["state"] == %{"count" => 1}
+    assert counter_snapshot(client)["pid"] == started["pid"]
+    assert tool(client, "runtime_invoke", invoke_args) == replay
+  end
+
+  @tag limits: %{response_bytes: 2_048}
+  test "HTTP full-response preflight rejects an otherwise valid reply without a state change",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.counter_source()))
+    start_counter(ctx.client, artifact)
+    before = counter_snapshot(ctx.client)
+
+    outcome =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{"mode" => "reply_payload", "bytes" => 1_500},
+        "request_id" => "too-large-on-wire"
+      })
+
+    assert outcome["code"] == "LIMIT_EXCEEDED"
+    assert counter_snapshot(ctx.client) == before
+  end
+
+  defp start_counter(client, artifact) do
+    tool(client, "runtime_start", %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => %{},
+      "request_id" => "start-counter"
+    })
+  end
+
+  defp counter_snapshot(client),
+    do: tool(client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+
+  defp await_barrier(_fixture, 0), do: false
+
+  defp await_barrier(fixture, remaining) do
+    if RuntimeFixture.control(fixture, %{"op" => "barrier_status", "key" => "invoke"})["waiting"] do
+      true
+    else
+      Process.sleep(1)
+      await_barrier(fixture, remaining - 1)
+    end
+  end
+
   defp await_worker(_client, _id, _status, 0), do: flunk("worker lifecycle did not settle")
 
   defp await_worker(client, id, status, remaining) do

@@ -3,6 +3,7 @@ defmodule ElixirMixir.MCP.ToolsTest do
 
   alias ElixirMixir.MCP.Result
   alias ElixirMixir.MCP.Tools.RuntimeDefine
+  alias ElixirMixir.MCP.Tools.RuntimeInvoke
   alias ElixirMixir.MCP.Tools.RuntimeStart
   alias ElixirMixir.MCP.Tools.RuntimeStop
   alias ElixirMixir.Runtime.Limits
@@ -23,6 +24,13 @@ defmodule ElixirMixir.MCP.ToolsTest do
     stop = RuntimeStop.input_schema()
     assert Enum.sort(stop["required"]) == ~w(request_id worker_id)
     assert stop["additionalProperties"] == false
+  end
+
+  test "invoke requires a map event and request identity with no unknown keys" do
+    schema = RuntimeInvoke.input_schema()
+    assert Enum.sort(schema["required"]) == ~w(event request_id worker_id)
+    assert schema["properties"]["event"]["type"] == "object"
+    assert schema["additionalProperties"] == false
   end
 
   test "kernel preflight covers the exact full MCP encoding with the largest protocol ID" do

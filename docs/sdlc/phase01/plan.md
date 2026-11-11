@@ -4,7 +4,8 @@ Status: implementation in progress. kernel-api is committed at `14f8d10`;
 mcp-bootstrap is complete in the commit containing its checked task document.
 artifact-compiler is complete in the commit containing its checked task document.
 worker-start is complete in the commit containing its checked task document.
-worker-invoke is next. Governing architecture:
+worker-invoke is complete in the commit containing its checked task document.
+worker-recovery is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).

@@ -1,5 +1,5 @@
 defmodule ElixirMixir.MCP.Tools.RuntimeInvoke do
-  @moduledoc "Invoke one bounded worker event, committing valid state once per request ID; effects are not supported yet."
+  @moduledoc "Invoke one bounded worker event, committing valid state once per request ID; accepted effect IDs acknowledge bounded asynchronous dispatch."
 
   use Hermes.Server.Component, type: :tool
 

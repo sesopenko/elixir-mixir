@@ -2,6 +2,12 @@
 
 ## Startup and context recovery
 
+Implementation: [assignment](../../../prompts/phase01-implementation.md),
+[unattended continuation](../../../prompts/phase01-implementation-amendment-04.md).
+Corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md),
+[05](../../../prompts/phase01-transport-amendment-05.md).
+
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -88,12 +94,38 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Reread the governing assignment/plan/task/amendments and verified prerequisite
+  `b497d26`. Preserved unrelated `scripts/codex.sh`.
+- `mix test test/runtime/event_effects_test.exs --warnings-as-errors`: 13 tests,
+  zero failures. Exact aggregate arithmetic/replay, deterministic IDs, manual timer
+  zero/max delay and stale-fire cancellation, structured logs, full-batch rejection,
+  source/state/wire preflight, exact 256 reservations, capacity/count/byte/delay/hop
+  bounds, missing/stopped targets, recovered target routing, owner death/expiry,
+  reservation ownership/one-time commit and finite unclaimed-delivery expiry pass.
+- `mix test test/mcp test/integration --warnings-as-errors`: 44 tests, zero failures.
+  HTTP counter/aggregator totals, timers/log correlation, invalid batch atomicity,
+  capacity/hop limits, cancellation, missing/stopped targets and target recovery
+  pass. Physical disconnect at a callback barrier followed by fresh-client retries
+  produces one source increment and one aggregate delivery with original accepted IDs.
+- Full `mix check`: passed; 2 doctests and 120 tests, zero failures; strict Credo
+  clean, Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- A full-gate failure exposed asynchronous Registry death cleanup after stop.
+  A regression suspends the Registry partition to reproduce stale routing after
+  acknowledged stop. Host now explicitly unregisters its logical name before
+  stopping, and the regression passes without waiting for a death notification.
+- `git diff --check` and local documentation links pass; `.githooks` stays enabled.
+  The commit containing this checked task is the checkpoint, through the full gate.
+- Dispatcher is in-memory admission authority: its loss shuts down the kernel
+  instead of restarting with empty reservations. Committed source effects remain
+  best effort across the documented Phase 1 host-commit/publication crash gap.
+- Next task after that verified commit: `runtime-inspection`.

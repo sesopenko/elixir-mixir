@@ -10,6 +10,7 @@ defmodule ElixirMixir.Runtime.Manager do
   use GenServer
 
   alias ElixirMixir.Runtime.Definition
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Inspection
   alias ElixirMixir.Runtime.Limits
@@ -83,6 +84,7 @@ defmodule ElixirMixir.Runtime.Manager do
        ledger: RequestLedger.new(limits),
        generation: 0,
        workers: %{},
+       dispatcher: GenServer.whereis(Keyword.get(opts, :dispatcher, EffectDispatcher)),
        restart_timer:
          Keyword.get(opts, :restart_timer, fn message ->
            Process.send_after(self(), message, 100)
@@ -148,7 +150,7 @@ defmodule ElixirMixir.Runtime.Manager do
   end
 
   defp worker_operation(:start, args, state, generation),
-    do: Workers.start(args, state.workers, state.limits, generation)
+    do: Workers.start(args, state.workers, state.limits, generation, state.dispatcher)
 
   defp worker_operation(:stop, args, state, generation),
     do: Workers.stop(args, state.workers, state.limits, generation)
@@ -191,6 +193,34 @@ defmodule ElixirMixir.Runtime.Manager do
 
     {:noreply,
      %{state | workers: workers, generation: state.generation + if(changed, do: 1, else: 0)}}
+  end
+
+  def handle_info({:effect_delivery, dispatcher, id}, %{dispatcher: dispatcher} = state) do
+    case EffectDispatcher.claim(dispatcher, id) do
+      {:ok, item} ->
+        args = %{
+          "worker_id" => item.effect["to"],
+          "event" => item.effect["event"],
+          "request_id" => id
+        }
+
+        inherited = %{
+          correlation_id: item.correlation_id,
+          path: item.path,
+          remaining_hops: item.remaining_hops - 1
+        }
+
+        callback = fn generation ->
+          Workers.invoke(args, state.workers, state.limits, generation, inherited)
+        end
+
+        {result, next} = run(id, Values.request_hash("effect_delivery", args), callback, state)
+        EffectDispatcher.complete(dispatcher, id, result)
+        {:noreply, next}
+
+      :cancelled ->
+        {:noreply, state}
+    end
   end
 
   defp recovery_policy(state), do: %{clock: state.clock, timer: state.restart_timer}

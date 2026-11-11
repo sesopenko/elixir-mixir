@@ -26,11 +26,20 @@ defmodule ElixirMixir.Runtime.ProcessHost do
   end
 
   @doc "Invokes a host from its owning Manager with a finite API wait; generated callbacks run in tasks."
-  @spec invoke(pid(), map(), map(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
+  @spec invoke(pid(), map(), map(), pos_integer()) ::
+          {:ok, map(), reference() | :none} | {:error, Error.t()}
   def invoke(pid, event, context, timeout) do
     GenServer.call(pid, {:invoke, event, context}, timeout)
   catch
     :exit, _reason -> {:error, Error.new("CALLBACK_FAILED")}
+  end
+
+  @doc "Stops an idle host through its Manager, synchronously releasing its logical registration."
+  @spec stop(pid()) :: :ok | {:error, Error.t()}
+  def stop(pid) do
+    GenServer.call(pid, :stop, Limits.defaults().operation_timeout_ms)
+  catch
+    :exit, _reason -> :ok
   end
 
   @impl true
@@ -59,14 +68,19 @@ defmodule ElixirMixir.Runtime.ProcessHost do
                fn -> state.artifact.module.handle_event(event, state.data) end,
                state.limits
              ),
-           {:ok, data, next} <- Transition.stage(result, state, context) do
-        {:commit, data, next}
+           {:ok, data, next, token} <- Transition.stage(result, state, context) do
+        {:commit, data, next, token}
       end
 
     case outcome do
-      {:commit, data, next} -> {:reply, {:ok, data}, next}
+      {:commit, data, next, token} -> {:reply, {:ok, data, token}, next}
       {:error, error} -> {:reply, {:error, error}, state}
     end
+  end
+
+  def handle_call(:stop, {manager, _tag}, %{manager: manager} = state) do
+    Registry.unregister(ElixirMixir.Runtime.ProcessRegistry, state.worker_id)
+    {:stop, :normal, :ok, state}
   end
 
   def handle_call(_unsupported, _from, state),

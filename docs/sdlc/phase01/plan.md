@@ -6,7 +6,8 @@ artifact-compiler is complete in the commit containing its checked task document
 worker-start is complete in the commit containing its checked task document.
 worker-invoke is complete in the commit containing its checked task document.
 worker-recovery is complete in the commit containing its checked task document.
-event-effects is next. Governing architecture:
+event-effects is complete in the commit containing its checked task document.
+runtime-inspection is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).
@@ -162,6 +163,8 @@ Manager or artifact metadata is kernel failure: fail the application rather than
 pretending to recover the graph. No Phase 1 kernel restart recovery guarantee. Manager and artifact registry are
 temporary significant children with root `auto_shutdown: :any_significant`; their
 loss stops authority rather than restarting empty metadata (amendment 05).
+EffectDispatcher uses the same fatal-authority boundary once present: restarting an
+empty dispatcher would discard reservations and invalidate accepted batch ownership.
 
 Manager serializes mutations and assigns operation context. Bounded callback/compiler
 work runs in unlinked, monitored tasks; neither Manager nor MCP executes generated

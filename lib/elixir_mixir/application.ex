@@ -8,6 +8,7 @@ defmodule ElixirMixir.Application do
   alias ElixirMixir.MCP.Config
   alias ElixirMixir.MCP.Supervisor, as: MCPSupervisor
   alias ElixirMixir.Runtime.ArtifactRegistry
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Manager
 
@@ -32,6 +33,7 @@ defmodule ElixirMixir.Application do
         ),
         {Registry, keys: :unique, name: ElixirMixir.Runtime.ProcessRegistry},
         {DynamicSupervisor, strategy: :one_for_one, name: ElixirMixir.Runtime.WorkerSupervisor},
+        Supervisor.child_spec(EffectDispatcher, restart: :temporary, significant: true),
         Supervisor.child_spec(Manager, restart: :temporary, significant: true)
       ] ++ mcp
 

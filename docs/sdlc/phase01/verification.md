@@ -167,6 +167,34 @@ Verified 2026-11-11; the checked task's containing commit is the recovery checkp
   Doctor documentation/typespec coverage 100%, Dialyzer zero errors.
 - `git diff --check` passes; `.githooks` remains enabled for the checkpoint commit.
 
+## event-effects
+
+Verified 2026-11-11; the checked task's containing commit is the effects checkpoint.
+
+- Focused effects suite: 13 tests pass, covering generated counter/aggregator exact
+  totals, request replay and deterministic accepted IDs, delayed events, bounded
+  structured Logger/history, invalid batch atomicity, reservation cleanup on wire
+  failure/owner death/expiry, exact default 256-slot capacity, all effect limits,
+  sixteen-hop termination, missing/stopped destinations, logical routing after
+  target recovery, source stop cancellation and finite unclaimed delivery deadlines.
+- Growing MCP/HTTP suites: 44 tests pass. Define/start/invoke two workers through
+  MCP and inspect exact count/total; delayed delivery and correlated log history;
+  invalid batches, capacity/hop exhaustion and cancelled source timers; missing/
+  stopped target failures and delayed routing to a new target PID after recovery.
+- Physically close HTTP during accepted controlled work, release the callback,
+  initialize a fresh client and replay the same source request twice: the source
+  increments once, aggregator receives once, original accepted IDs replay, source
+  PID and independent BEAM stay alive. Test controls remain outside production lib/.
+- Full `mix check`: 2 doctests and 120 tests pass, strict Credo clean, Doctor 100%
+  documentation/typespec coverage, Dialyzer zero errors. A deterministic regression
+  also proves acknowledged stop releases Registry routing despite delayed death
+  cleanup, with source timers cancelled before stop completion.
+- `git diff --check`, local documentation links and installed `.githooks` verified.
+
+Dispatch remains in-memory and best effort across a host-commit/publication crash
+gap; no durable outbox or exactly-once crash guarantee is claimed. Full public event
+history/topology/pagination belongs to runtime-inspection, immediately next.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
@@ -180,8 +208,9 @@ Verified 2026-11-11; the checked task's containing commit is the recovery checkp
 | A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
 | A05 | HTTP increment/inspect, revisions and failure preservation | Actual Codex observations |
 | A12 | Real host kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
-| A06–A09, A11 | Foundations only | Owning effect/replacement tasks |
+| A06 | Two-worker HTTP arithmetic, logical delivery and bounded relationship counters | Full topology and actual Codex transcript |
+| A07–A09, A11 | Foundations only | Owning replacement task |
 
-Effects, full history/topology inspection, replacement, isolated container/release
+Full history/topology inspection, replacement, isolated container/release
 setup and the actual Codex transcript remain pending. No worker/domain behavior is
 seeded in the production kernel or claimed by this checkpoint.

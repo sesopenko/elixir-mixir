@@ -536,6 +536,254 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
   defp counter_snapshot(client),
     do: tool(client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
 
+  test "HTTP counter effects deliver exact aggregate totals and correlated logs", ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    effect_start(ctx.client, artifact, "aggregate")
+    effect_start(ctx.client, artifact, "counter", %{"forward" => "aggregate"})
+
+    for amount <- [5, 3] do
+      result =
+        tool(ctx.client, "runtime_invoke", %{
+          "worker_id" => "counter",
+          "event" => %{"amount" => amount},
+          "request_id" => "counter-#{amount}"
+        })
+
+      assert [%{"status" => "accepted", "effect_id" => id}] = result["effects"]
+      assert byte_size(id) == 64
+    end
+
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 8 end)
+    assert worker_state(ctx.client, "aggregate")["count"] == 2
+    effect_start(ctx.client, artifact, "emitter")
+
+    batch = [
+      %{"type" => "schedule", "to" => "aggregate", "delay_ms" => 20, "event" => %{"amount" => 4}},
+      %{
+        "type" => "log",
+        "level" => "info",
+        "message" => "HTTP effect log",
+        "metadata" => %{"value" => 7}
+      }
+    ]
+
+    assert length(
+             tool(ctx.client, "runtime_invoke", %{
+               "worker_id" => "emitter",
+               "event" => %{"effects" => batch},
+               "request_id" => "scheduled-log"
+             })["effects"]
+           ) == 2
+
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 12 end)
+    assert worker_state(ctx.client, "aggregate")["count"] == 3
+
+    records =
+      RuntimeFixture.control(ctx.fixture, %{"op" => "events", "args" => %{"limit" => 100}})[
+        "events"
+      ]
+
+    assert Enum.any?(
+             records,
+             &(&1["type"] == "effect_log" and &1["request_id"] == "scheduled-log")
+           )
+
+    before = worker_state(ctx.client, "emitter")
+    malformed = [hd(batch), %{"type" => "unsupported"}]
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "emitter",
+             "event" => %{"effects" => malformed},
+             "request_id" => "bad-batch"
+           })["code"] == "INVALID_TRANSITION"
+
+    assert worker_state(ctx.client, "emitter") == before
+    assert worker_state(ctx.client, "aggregate")["count"] == 3
+  end
+
+  test "physical HTTP disconnect and replay produce one increment and one aggregate delivery",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    effect_start(ctx.client, artifact, "aggregate")
+    first = effect_start(ctx.client, artifact, "counter", %{"forward" => "aggregate"})
+
+    request = %{
+      "worker_id" => "counter",
+      "event" => %{"amount" => 9, "controlled" => true},
+      "request_id" => "effect-disconnect"
+    }
+
+    pending =
+      Task.async(fn ->
+        try do
+          {:unexpected_response, Client.call(ctx.client, "runtime_invoke", request)}
+        rescue
+          MatchError -> :connection_closed
+        end
+      end)
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "barrier_status", "key" => "effects"})[
+        "waiting"
+      ] == true
+    end)
+
+    Client.disconnect(ctx.client)
+    RuntimeFixture.control(ctx.fixture, %{"op" => "release_barrier", "key" => "effects"})
+    assert Task.await(pending, 1_000) == :connection_closed
+    fresh = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{fresh | session: nil}) end)
+    {_init, _notification, fresh} = Client.initialize(fresh)
+    original = tool(fresh, "runtime_invoke", request)
+    assert original["reply"] == 1
+    assert length(original["effects"]) == 1
+    assert tool(fresh, "runtime_invoke", request) == original
+    await_http(fn -> worker_state(fresh, "aggregate")["total"] == 9 end)
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "dispatcher_status"})["pending"] == 0
+    end)
+
+    assert worker_state(fresh, "counter")["count"] == 1
+    assert worker_state(fresh, "aggregate")["count"] == 1
+    assert tool(fresh, "runtime_inspect", %{"worker_id" => "counter"})["pid"] == first["pid"]
+    assert RuntimeFixture.alive?(ctx.fixture)
+  end
+
+  @tag limits: %{pending_effects: 2, effects: 2, effect_hops: 2}
+  test "HTTP effect capacity, hop limits, stopped targets and stop cancellation are observable",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    effect_start(ctx.client, artifact, "counter", %{"forward" => "aggregate"})
+    effect_start(ctx.client, artifact, "aggregate", %{"forward" => "counter"})
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "counter",
+      "event" => %{},
+      "request_id" => "cycle"
+    })
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "dispatcher_status"})["pending"] == 0
+    end)
+
+    assert worker_state(ctx.client, "counter")["count"] +
+             worker_state(ctx.client, "aggregate")["count"] == 3
+
+    records =
+      RuntimeFixture.control(ctx.fixture, %{"op" => "events", "args" => %{"limit" => 100}})[
+        "events"
+      ]
+
+    assert Enum.any?(
+             records,
+             &(&1["type"] == "effect_failed" and &1["metadata"]["code"] == "HOP_LIMIT")
+           )
+
+    effect_start(ctx.client, artifact, "emitter")
+    timer = %{"type" => "schedule", "to" => "aggregate", "delay_ms" => 60_000, "event" => %{}}
+
+    assert length(
+             tool(ctx.client, "runtime_invoke", %{
+               "worker_id" => "emitter",
+               "event" => %{"effects" => [timer, timer]},
+               "request_id" => "fill"
+             })["effects"]
+           ) == 2
+
+    before = worker_state(ctx.client, "emitter")
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "emitter",
+             "event" => %{"effects" => [timer]},
+             "request_id" => "full"
+           })["code"] == "LIMIT_EXCEEDED"
+
+    assert worker_state(ctx.client, "emitter") == before
+    tool(ctx.client, "runtime_stop", %{"worker_id" => "emitter", "request_id" => "cancel-timers"})
+    assert RuntimeFixture.control(ctx.fixture, %{"op" => "dispatcher_status"})["pending"] == 0
+    effect_start(ctx.client, artifact, "sender")
+    tool(ctx.client, "runtime_stop", %{"worker_id" => "aggregate", "request_id" => "stop-target"})
+    effects = Enum.map(["aggregate", "missing"], &%{"type" => "emit", "to" => &1, "event" => %{}})
+
+    accepted =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "sender",
+        "event" => %{"effects" => effects},
+        "request_id" => "bad-targets"
+      })
+
+    assert length(accepted["effects"]) == 2
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "dispatcher_status"})["pending"] == 0
+    end)
+
+    records =
+      RuntimeFixture.control(ctx.fixture, %{"op" => "events", "args" => %{"limit" => 100}})[
+        "events"
+      ]
+
+    codes =
+      for record <- records,
+          record["type"] == "effect_failed" and record["request_id"] == "bad-targets",
+          do: record["metadata"]["code"]
+
+    assert Enum.sort(codes) == ["WORKER_NOT_FOUND", "WORKER_NOT_RUNNING"]
+  end
+
+  test "HTTP delayed delivery resolves the target after its host crashes and restarts", ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    first = effect_start(ctx.client, artifact, "aggregate")
+    effect_start(ctx.client, artifact, "counter")
+
+    timer = %{
+      "type" => "schedule",
+      "to" => "aggregate",
+      "delay_ms" => 300,
+      "event" => %{"amount" => 11}
+    }
+
+    accepted =
+      tool(ctx.client, "runtime_invoke", %{
+        "worker_id" => "counter",
+        "event" => %{"effects" => [timer]},
+        "request_id" => "route-after-crash"
+      })
+
+    assert length(accepted["effects"]) == 1
+    RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "aggregate"})
+    restarted = await_worker(ctx.client, "aggregate", "running", 100)
+    refute restarted["pid"] == first["pid"]
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 11 end)
+    assert worker_state(ctx.client, "aggregate")["count"] == 1
+  end
+
+  defp effect_start(client, artifact, id, config \\ %{}) do
+    tool(client, "runtime_start", %{
+      "worker_id" => id,
+      "artifact_id" => artifact["artifact_id"],
+      "config" => config,
+      "request_id" => "start-#{id}"
+    })
+  end
+
+  defp worker_state(client, id),
+    do: tool(client, "runtime_inspect", %{"worker_id" => id, "detail" => "state"})["state"]
+
+  defp await_http(check, remaining \\ 200)
+  defp await_http(_check, 0), do: flunk("HTTP effect did not settle")
+
+  defp await_http(check, remaining) do
+    if check.(),
+      do: :ok,
+      else:
+        (
+          Process.sleep(5)
+          await_http(check, remaining - 1)
+        )
+  end
+
   defp await_barrier(_fixture, 0), do: false
 
   defp await_barrier(fixture, remaining) do

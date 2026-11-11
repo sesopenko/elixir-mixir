@@ -64,13 +64,33 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
         "reply_non_json" -> {:ok, self(), next, []}
         "state_non_json" -> {:ok, count, %{"pid" => self()}, []}
         "invalid_state" -> {:ok, count, [], []}
-        "effects" -> {:ok, count, next, [%{"type" => "log", "message" => "not supported"}]}
+        "effects" -> {:ok, count, next, [%{"type" => "unsupported"}]}
         "reply_payload" -> {:ok, String.duplicate("x", event["bytes"]), next, []}
         "state_payload" -> {:ok, count, %{"v" => String.duplicate("x", event["bytes"])}, []}
         "reply" -> {:ok, event["value"], next, []}
         "heap" -> {:ok, Enum.to_list(1..1_000_000), next, []}
         "controlled" -> ElixirMixir.TestSupport.CallbackBarrier.wait("invoke"); {:ok, count, next, []}
         _normal -> {:ok, count, next, []}
+      end
+      """
+    )
+  end
+
+  @doc "Returns counting/aggregating workers with declarative effects and test-only callback controls."
+  @spec effects_source() :: String.t()
+  def effects_source do
+    source(
+      init: ~S|{:ok, Map.merge(%{"count" => 0, "total" => 0}, config)}|,
+      event: ~S"""
+      if event["controlled"], do: ElixirMixir.TestSupport.CallbackBarrier.wait("effects")
+      count = state["count"] + 1
+      total = state["total"] + Map.get(event, "amount", 1)
+      next = Map.merge(state, %{"count" => count, "total" => total})
+      effects = if state["forward"], do: [%{"type" => "emit", "to" => state["forward"], "event" => %{"amount" => Map.get(event, "amount", 1)}}], else: Map.get(event, "effects", [])
+      cond do
+        event["failure"] -> {:error, :rejected}
+        event["invalid_state"] -> {:ok, count, %{"pid" => self()}, effects}
+        true -> {:ok, count, next, effects}
       end
       """
     )

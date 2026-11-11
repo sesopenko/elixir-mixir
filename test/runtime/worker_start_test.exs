@@ -54,6 +54,7 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert {:error, %{"code" => "INVALID_ARGUMENT"}} =
              GenServer.call(pid, {:invoke, %{"increment" => 1}})
 
+    assert {:error, %{"code" => "INVALID_ARGUMENT"}} = ProcessHost.stop(pid)
     assert {:ok, snapshot} = ProcessHost.snapshot(pid)
     assert snapshot.data == %{"count" => 7}
   end
@@ -92,6 +93,33 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert next["state_revision"] == 2
     refute next["pid"] == first["pid"]
     assert {:ok, %{"state" => %{"count" => 9}}} = inspect_worker(ctx)
+  end
+
+  test "a completed stop has released logical routing even while death cleanup is delayed", ctx do
+    {:ok, _} = Manager.start_worker(start_args(ctx, %{}), ctx.manager)
+
+    [{_id, partition, _type, _modules}] =
+      Supervisor.which_children(ElixirMixir.Runtime.ProcessRegistry)
+
+    :sys.suspend(partition)
+    pending = Task.async(fn -> Manager.stop_worker(stop_args(ctx), ctx.manager) end)
+
+    outcome =
+      try do
+        case Task.yield(pending, 100) do
+          {:ok, {:ok, _stopped}} = completed ->
+            assert Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker) == []
+            completed
+
+          nil ->
+            nil
+        end
+      after
+        :sys.resume(partition)
+      end
+
+    if is_nil(outcome), do: assert({:ok, _} = Task.await(pending))
+    assert Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker) == []
   end
 
   test "unknown references and malformed arguments do not create definitions", ctx do

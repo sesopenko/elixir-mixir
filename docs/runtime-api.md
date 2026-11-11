@@ -52,7 +52,7 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Effects, event inspection and replacement are pending their feature tasks.
+Full event inspection and replacement are pending their feature tasks.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -220,13 +220,13 @@ handle_event/2 in an unlinked monitored callback task, bounded by the same 200 m
 and 8 MiB controls as init. Manager serializes requests; the host stages the full
 callback outcome before publishing a new committed state.
 
-A valid `{:ok, reply, new_state, []}` returns reply, worker_revision, state_revision
-and empty effects. Reply may be any JSON value; event, reply and state each have
+A valid `{:ok, reply, new_state, effects}` returns reply, worker_revision, state_revision
+and accepted effect IDs. Reply may be any JSON value; event, reply and state each have
 16 KiB encoded/16-level application bounds. Success advances state_revision and
 global generation once, retaining host PID and worker_revision. Both semantic
 limits and complete duplicated/escaped MCP response size are checked before commit.
 
-Malformed tuples, non-JSON reply/state and nonempty effects yield INVALID_TRANSITION;
+Malformed tuples, non-JSON reply/state and unsupported or malformed effects yield INVALID_TRANSITION;
 size/depth/wire excess yields LIMIT_EXCEEDED. Explicit callback errors, exceptions
 and exits yield CALLBACK_FAILED with a bounded reason (at most 2 KiB UTF-8), without
 raw exception stack traces. A deadline yields CALLBACK_TIMEOUT. Every rejected
@@ -234,11 +234,9 @@ transition preserves the last state, revisions and PID; killed/late callback tas
 cannot commit. Unknown workers yield WORKER_NOT_FOUND; stopped/failed workers yield
 WORKER_NOT_RUNNING. A healthy peer remains usable after a callback timeout.
 
-At this checkpoint **effects must be empty**. The kernel does not acknowledge or
-execute emit/schedule/log effects until event-effects implements their admission
-and dispatch. Request replay returns the original successful or failed outcome,
-without another callback, increment or effect. Changing payload/operation under
-the same request_id returns REQUEST_ID_CONFLICT.
+Request replay returns the original successful or failed outcome, without another
+callback, increment or effect. Changing payload/operation under the same request_id
+returns REQUEST_ID_CONFLICT.
 
 For the documented counter template, call runtime_invoke with:
 
@@ -252,3 +250,59 @@ with the same request_id to obtain its recorded outcome. JSON-RPC IDs remain a
 separate transport correlation mechanism. Actual HTTP tests close the physical
 connection at a test-only callback barrier, release accepted work, and prove a
 fresh client observes exactly one increment in the same host.
+
+## Kernel-managed effects
+
+A successful event may return up to 16 effects, with exact string-key shapes:
+
+```json
+{"type":"emit","to":"aggregate","event":{"amount":5}}
+{"type":"schedule","to":"aggregate","delay_ms":100,"event":{"amount":5}}
+{"type":"log","level":"info","message":"incremented","metadata":{"amount":5}}
+```
+
+Events must be JSON maps within 16 KiB/depth 16. Schedule delay is an integer from
+0 through 60,000 milliseconds. Log levels are debug, info, warning or error;
+message is valid UTF-8 within 2 KiB and metadata is a JSON map within 2 KiB/depth 16.
+Unknown keys/types and malformed fields yield INVALID_TRANSITION; excess count,
+bytes, depth, delay or pending capacity yields LIMIT_EXCEEDED. The entire batch,
+reply, next state and full encoded response must pass before state changes. Rejected
+callbacks/transitions produce no logs, timers or downstream events.
+
+Dispatcher reserves batch capacity before host commit. Reservations count against
+256 total pending deliveries/timers, including active deliveries. Uncommitted
+reservations release on host death, validation failure, explicit cleanup or a
+seven-second expiry. Empty batches need no reservation. After the host confirms
+its committed revision, Manager publishes the batch once. A result such as
+`{"effect_id":"<64 lowercase hex characters>","status":"accepted"}` acknowledges
+admission; downstream delivery may still fail. The SHA-256 identity derives from
+the originating request ID and bounded effect path. Internal delivery operations
+have their own request ledger IDs while inheriting originating correlation and
+remaining hop budget. Identical source retries replay their original accepted IDs.
+
+Emit and due timers queue asynchronous messages to Manager, which uses the same
+bounded host transition/ledger path as client invokes. Workers never call each
+other synchronously. Each originating invoke permits 16 deliveries along any
+chain; further effects record HOP_LIMIT without another delivery. Missing/stopped
+or restarting destinations and callback/ledger/deadline failures record effect_failed
+without rolling back the accepted source. The dispatcher does not retry failed
+emissions. Unclaimed delivery messages expire after the operation deadline.
+
+Explicit stop cancels pending effects/timers owned by that source and synchronously
+releases its logical registration before acknowledging completion. Incarnation
+tokens discard already-fired stale timer messages; a delayed destination resolves
+by logical ID at delivery, so a recovered host receives it when running. Source
+crashes do not cancel already committed timers; their eventual delivery or failure
+is recorded. Stop cancels them even if the source has since restarted. Relationship
+counts aggregate successful deliveries only, bounded by retained worker IDs.
+
+Structured logs enter Logger with bounded mixir_metadata plus effect/request IDs,
+and a correlated effect_log history record. Lifecycle history also records effect
+acceptance, scheduling, delivery and failure. Full history/topology tools arrive in
+runtime-inspection; internal EventLog currently supplies automated verification.
+
+All admission, timers and delivery state are in memory. Dispatch is best effort
+once per committed batch, without an exactly-once crash guarantee. A crash between
+host state commit and batch publication can lose effects in Phase 1. Dispatcher
+loss is fatal to the kernel rather than restarting empty admission authority;
+BEAM/kernel recovery and durable outboxes remain later-phase work.

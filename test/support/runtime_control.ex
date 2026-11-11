@@ -2,7 +2,9 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   @moduledoc "Test-only stdin controls for inspecting an independent BEAM without production testing tools."
 
   alias ElixirMixir.Runtime.ArtifactRegistry
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
+  alias ElixirMixir.Runtime.Manager
   alias ElixirMixir.TestSupport.CallbackBarrier
 
   @doc "Handles bounded JSON control lines until the owning port closes stdin."
@@ -64,6 +66,13 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
       [] ->
         %{"registered" => false, "supervised" => false}
     end
+  end
+
+  def request(%{"op" => "dispatcher_status"}) do
+    EffectDispatcher.snapshot(
+      EffectDispatcher,
+      Process.whereis(Manager)
+    )
   end
 
   def request(%{"op" => "recovery_failure", "enabled" => enabled}) when is_boolean(enabled) do

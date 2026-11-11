@@ -3,7 +3,7 @@
 An experimental Elixir/OTP runtime for creating and evolving a live application
 through MCP. The current checkpoint exposes runtime inspection and bounded generated-artifact
 compilation and supervised worker start/invoke/inspect/stop over localhost HTTP, backed by
-an in-memory Manager and request ledger. Event effects and replacement are planned
+an in-memory Manager and request ledger. Replacement is planned
 in [Phase 1](docs/sdlc/phase01/plan.md). Persistence is a later phase.
 
 After the setup in [CONTRIBUTING.md](CONTRIBUTING.md), start the runtime in its own
@@ -30,7 +30,8 @@ codex
 The tools are `runtime_define`, `runtime_start`, `runtime_invoke`, `runtime_inspect`
 and `runtime_stop`.
 Define compiles an inactive artifact; start runs its bounded init in a supervised
-logical worker; invoke commits bounded reply/state transitions with empty effects.
+logical worker; invoke commits bounded reply/state transitions and admits asynchronous
+emit, schedule and structured log effects.
 Host crashes reinitialize within three attempts per rolling ten seconds; exhausted workers require explicit start. Closing and restarting
 Codex leaves the BEAM running; Ctrl+C twice in the runtime terminal stops it.
 The endpoint is an independently running service. Override its port with

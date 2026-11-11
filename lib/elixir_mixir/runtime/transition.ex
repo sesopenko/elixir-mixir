@@ -1,21 +1,25 @@
 defmodule ElixirMixir.Runtime.Transition do
   @moduledoc "Stages complete event outcomes and preflights their wire encoding before host state changes."
 
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Values
 
-  @doc "Validates reply/state and empty effects; returns a staged immutable host state on success only."
-  @spec stage(term(), map(), map()) :: {:ok, map(), map()} | {:error, Error.t()}
-  def stage({:ok, reply, data, []}, host, context) do
+  @doc "Validates reply/state, reserves a complete effect batch and preflights its accepted IDs before commit."
+  @spec stage(term(), map(), map()) ::
+          {:ok, map(), map(), reference() | :none} | {:error, Error.t()}
+  def stage({:ok, reply, data, effects}, host, context) do
     with :ok <- valid_reply(reply, host.limits),
-         :ok <- ProcessHost.valid_state(data, host.limits) do
+         :ok <- ProcessHost.valid_state(data, host.limits),
+         {:ok, token, accepted} <-
+           EffectDispatcher.reserve_batch(host.dispatcher, effects, context, host.limits) do
       outcome = %{
         "reply" => reply,
         "worker_revision" => host.worker_revision,
         "state_revision" => host.state_revision + 1,
-        "effects" => []
+        "effects" => accepted
       }
 
       envelope =
@@ -26,8 +30,9 @@ defmodule ElixirMixir.Runtime.Transition do
         })
 
       if ResponseBudget.fits?(envelope, host.limits) do
-        {:ok, outcome, %{host | data: data, state_revision: host.state_revision + 1}}
+        {:ok, outcome, %{host | data: data, state_revision: host.state_revision + 1}, token}
       else
+        EffectDispatcher.release(host.dispatcher, token)
         {:error, Error.new("LIMIT_EXCEEDED")}
       end
     end

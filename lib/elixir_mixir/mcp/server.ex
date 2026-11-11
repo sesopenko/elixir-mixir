@@ -20,6 +20,6 @@ defmodule ElixirMixir.MCP.Server do
       "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
       "Inspect worker state with worker_id and detail state. Host crashes rerun init within three restart attempts per rolling ten seconds; stopped or exhausted workers require explicit start. " <>
       "Use runtime_invoke with worker_id/event/request_id; repeat an identical ID to replay its outcome. " <>
-      "Only empty effects lists are supported until event-effects. Generated code requires a trusted disposable environment."
+      "Effects may emit, schedule or log; accepted effect IDs acknowledge admission, and delivery failures appear in history. Generated code requires a trusted disposable environment."
   end
 end

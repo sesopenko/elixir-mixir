@@ -2,6 +2,7 @@ defmodule ElixirMixir.Runtime.Workers do
   @moduledoc "Manager-owned worker definitions, bounded startup, explicit stop and lifecycle snapshots."
 
   alias ElixirMixir.Runtime.ArtifactRegistry
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Limits
@@ -14,14 +15,15 @@ defmodule ElixirMixir.Runtime.Workers do
   @type mutation :: {:commit, map(), definitions()} | {:noop, map()} | {:error, Error.t()}
 
   @doc "Starts/reinitializes one definition only after bounded config/init and wire preflight."
-  @spec start(map(), definitions(), Limits.t(), non_neg_integer()) :: mutation()
-  def start(args, workers, limits, generation) do
+  @spec start(map(), definitions(), Limits.t(), non_neg_integer(), GenServer.server()) ::
+          mutation()
+  def start(args, workers, limits, generation, dispatcher \\ EffectDispatcher) do
     with :ok <- keys(args, ~w(worker_id artifact_id config request_id)),
          true <- Values.valid_id?(args["worker_id"]) and is_binary(args["artifact_id"]),
          :ok <- Values.validate(args["config"], :config, limits),
          :ok <- available(args["worker_id"], workers, limits),
          {:ok, artifact} <- ArtifactRegistry.fetch(args["artifact_id"]) do
-      start_host(args, workers, artifact, limits, generation)
+      start_host(args, workers, artifact, limits, generation, dispatcher)
     else
       false -> {:error, Error.new("INVALID_ARGUMENT")}
       error -> error
@@ -46,14 +48,14 @@ defmodule ElixirMixir.Runtime.Workers do
   end
 
   @doc "Invokes one running logical worker and retains its revisions only on an accepted transition."
-  @spec invoke(map(), definitions(), Limits.t(), non_neg_integer()) :: mutation()
-  def invoke(args, workers, limits, generation) do
+  @spec invoke(map(), definitions(), Limits.t(), non_neg_integer(), map()) :: mutation()
+  def invoke(args, workers, limits, generation, inherited \\ %{}) do
     with :ok <- keys(args, ~w(worker_id event request_id)),
          true <- Values.valid_id?(args["worker_id"]),
          :ok <- Values.validate(args["event"], :event, limits),
          {:ok, worker} <- find(workers, args["worker_id"]),
          :ok <- running(worker) do
-      invoke_host(args, worker, workers, limits, generation)
+      invoke_host(args, worker, workers, limits, generation, inherited)
     else
       false -> {:error, Error.new("INVALID_ARGUMENT")}
       error -> error
@@ -85,7 +87,7 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
-  defp start_host(args, workers, artifact, limits, generation) do
+  defp start_host(args, workers, artifact, limits, generation, dispatcher) do
     previous = Map.get(workers, args["worker_id"])
     revision = if previous, do: previous.worker_revision + 1, else: 1
     state_revision = if previous, do: previous.state_revision + 1, else: 1
@@ -98,6 +100,7 @@ defmodule ElixirMixir.Runtime.Workers do
       worker_revision: revision,
       state_revision: state_revision,
       limits: limits,
+      dispatcher: dispatcher,
       manager: self()
     }
 
@@ -136,6 +139,7 @@ defmodule ElixirMixir.Runtime.Workers do
       record("worker_started", worker, args["request_id"], %{})
       {:commit, data, Map.put(workers, worker.worker_id, worker)}
     else
+      ProcessHost.stop(pid)
       DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, pid)
       {:error, Error.new("LIMIT_EXCEEDED")}
     end
@@ -155,10 +159,13 @@ defmodule ElixirMixir.Runtime.Workers do
 
     if preflight(data, args["request_id"], generation, limits) do
       next = WorkerRecovery.cancel(next)
+      EffectDispatcher.cancel_source(worker.dispatcher, worker.worker_id)
       if worker.monitor, do: Process.demonitor(worker.monitor, [:flush])
 
-      if worker.pid,
-        do: DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, worker.pid)
+      if worker.pid do
+        ProcessHost.stop(worker.pid)
+        DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, worker.pid)
+      end
 
       record("worker_stopped", next, args["request_id"], %{})
       {:commit, data, Map.put(workers, next.worker_id, next)}
@@ -167,28 +174,56 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
-  defp invoke_host(args, worker, workers, limits, generation) do
-    record("event_accepted", worker, args["request_id"], %{})
-    context = %{generation: generation, request_id: args["request_id"]}
+  defp invoke_host(args, worker, workers, limits, generation, inherited) do
+    correlation = Map.get(inherited, :correlation_id, args["request_id"])
+    record("event_accepted", worker, correlation, %{"operation_id" => args["request_id"]})
+
+    context =
+      Map.merge(
+        %{
+          generation: generation,
+          request_id: args["request_id"],
+          correlation_id: args["request_id"],
+          source: worker.worker_id,
+          artifact_revision: worker.artifact.revision,
+          manager: self(),
+          path: [],
+          remaining_hops: limits.effect_hops
+        },
+        inherited
+      )
 
     case ProcessHost.invoke(worker.pid, args["event"], context, limits.operation_timeout_ms) do
-      {:ok, data} ->
+      {:ok, data, token} ->
+        confirm_batch(worker, data, token)
+
         worker = %{
           worker
           | worker_revision: data["worker_revision"],
             state_revision: data["state_revision"],
-            request_id: args["request_id"]
+            request_id: correlation
         }
 
-        record("event_delivered", worker, args["request_id"], %{
+        record("event_delivered", worker, correlation, %{
           "state_revision" => worker.state_revision
         })
 
         {:commit, data, Map.put(workers, worker.worker_id, worker)}
 
       {:error, error} ->
-        record("event_failed", worker, args["request_id"], %{"code" => error["code"]})
+        record("event_failed", worker, correlation, %{"code" => error["code"]})
         {:error, error}
+    end
+  end
+
+  defp confirm_batch(worker, data, token) do
+    case ProcessHost.snapshot(worker.pid) do
+      {:ok, %{state_revision: revision}}
+      when revision == :erlang.map_get("state_revision", data) ->
+        EffectDispatcher.commit_batch(worker.dispatcher, token)
+
+      _unavailable ->
+        EffectDispatcher.release(worker.dispatcher, token)
     end
   end
 

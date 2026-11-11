@@ -88,7 +88,7 @@ ElixirMixir.Runtime.Manager.inspect_runtime(%{})
 The result includes API version `"1"`, generation zero on startup (advancing on committed mutations/lifecycle changes),
 health, worker summaries and resource/ledger retention limits. Use worker_id and
 detail state for committed state. Artifacts can be defined and workers started/stopped;
-invocation commits bounded atomic transitions; automatic recovery is bounded per worker; effects are pending. Definitions and request outcomes will
+invocation commits bounded atomic transitions; automatic recovery and asynchronous emit/schedule/log effects are bounded per worker and runtime. Definitions and request outcomes will
 remain in memory only; stopping the BEAM loses them.
 
 Configure downward resource overrides before starting the application, for example

@@ -13,7 +13,7 @@ live-replacement is complete in the commit containing its checked task document.
 codex-demo is complete in the commit containing its checked task document.
 Actual demonstration: [59 Codex MCP calls in two fresh sessions](evidence/codex-sessions.json).
 Governing architecture:
-[ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
+[ADR-001](../../adr/001-architecture-initial-phases.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).
 Implementation assignment: [resume Phase 1](../../prompts/phase01-implementation.md).

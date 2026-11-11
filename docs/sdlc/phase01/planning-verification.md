@@ -61,7 +61,7 @@ for p in [base/'plan.md',*(base/'tasks').glob('*.md')]:
   checked+=1
 coverage=re.findall(r'^\| A(\d\d) \|',plan,re.M)
 assert coverage==[f'{n:02}' for n in range(1,15)]
-adr=Path('docs/adr/001-architecture.md').read_text()
+adr=Path('docs/adr/001-architecture-initial-phases.md').read_text()
 criteria=adr.split('### 9.4 Acceptance criteria')[1].split('### 9.5')[0]
 assert criteria.count('- [ ]')==14
 rule=Path('rules/60-context-recovery.md').read_text()

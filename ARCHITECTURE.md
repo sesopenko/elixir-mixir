@@ -1,6 +1,6 @@
 # elixir-mixir architecture entry point
 
-The governing design is [ADR-001](docs/adr/001-architecture.md). The implemented
+The governing design is [ADR-001](docs/adr/001-architecture-initial-phases.md). The implemented
 Phase 1 contract, limits and failure boundaries are in the
 [runtime API](docs/runtime-api.md); task checkpoints and evidence are in the
 [Phase 1 plan](docs/sdlc/phase01/plan.md) and

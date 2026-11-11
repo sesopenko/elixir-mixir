@@ -52,7 +52,7 @@ mix run --no-halt
 Stop it with Ctrl+C twice. The application starts the in-memory runtime Manager
 and the loopback MCP endpoint at `http://127.0.0.1:4100/mcp`. Kernel development happens in this repository;
 future demonstrations will create application behavior through MCP, as described
-in [the architecture](docs/adr/001-architecture.md).
+in [the architecture](docs/adr/001-architecture-initial-phases.md).
 
 Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
 terminal using the commands in [README](README.md). Client disconnects do not stop

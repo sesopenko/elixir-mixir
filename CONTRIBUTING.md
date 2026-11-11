@@ -274,7 +274,8 @@ For retained applications use the [Linux release recovery walkthrough](docs/phas
 It creates/reuses an explicit named volume at `/data`, sets
 `ELIXIR_MIXIR_DATA_DIR=/data`, waits for readiness, disconnects the client, sends
 SIGKILL to the owned container, and recreates it with the same volume. One runtime
-exclusively owns each store. Normal stop/removal retains its volume; deliberate
+exclusively owns each store. Normal stop uses `docker stop --time 30`, allowing the listener's 15-second
+connection drain even with SSE streams. Stop/removal retains its volume; deliberate
 volume deletion is a separate destructive command. Reconnect with a new MCP session
 and use the matching endpoint/port in both Codex and Claude Code instructions.
 Claude Code remains untested here despite automated HTTP release coverage.

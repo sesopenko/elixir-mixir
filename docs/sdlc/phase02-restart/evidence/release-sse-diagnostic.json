@@ -1,0 +1,85 @@
+{
+  "stop_timeout_seconds": 30,
+  "elapsed_seconds": 16.061655928002438,
+  "exit_code": 0,
+  "oom_killed": false,
+  "volume": "mixir-phase02-codex-c39baba95f28-data",
+  "commands": [
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-shutdown-check-e3706353-runtime",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-codex-c39baba95f28-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=40755",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "stop",
+      "--time",
+      "30",
+      "mixir-shutdown-check-e3706353-runtime"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-shutdown-check-e3706353-runtime"
+    ]
+  ]
+}

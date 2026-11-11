@@ -529,6 +529,25 @@ limits. Codex/Claude command syntax is unchanged; Claude remains explicitly
 untested. Automated release checks are separate from the pending actual Codex
 restart journey and do not claim completion of that client evidence.
 
+### Release shutdown correction found by the actual client demonstration
+
+The second actual Codex attempt completed the application journey, then exposed
+an insufficient Docker shutdown deadline: an existing MCP SSE connection outlived
+`docker stop --time 5`, causing Docker to send SIGKILL and record exit 137.
+The pinned Thousand Island listener allows 15 seconds for connection draining
+(`deps/thousand_island/lib/thousand_island/server_config.ex`). A separate
+[open-stream diagnostic](evidence/release-sse-diagnostic.json) exited zero in
+16.06 seconds with a 30-second deadline. The smoke now holds a real SSE stream
+open during normal shutdown and uses that deadline. README, contributor guidance
+and the recovery commands agree. No kernel behavior or timeout was suppressed.
+
+`python3 scripts/smoke-phase02-release.py --output docs/sdlc/phase02-restart/evidence/release-smoke-sse.json`
+passed on 2026-11-11; its [report](evidence/release-smoke-sse.json) records normal
+exit zero in 16.09 seconds, SIGKILL/recovery, continued count 12, isolation and
+unwritable-store rejection. The owned volume is retained. Full `mix check` passed
+again: 280 tests, two doctests and zero Dialyzer errors. This correction is committed
+in its owning release task before a fresh final Codex demonstration.
+
 ## codex-restart-demo
 
 Pending. Owning [task](tasks/codex-restart-demo.md). No execution evidence yet.

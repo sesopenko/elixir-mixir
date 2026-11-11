@@ -113,6 +113,14 @@ non-root permissions and failed unwritable storage. The [evidence entry](../veri
 and [machine report](../evidence/release-smoke.json) record commands and outcomes.
 The smoke volume remains separate from the actual client demo's empty store.
 
+Additional release regression: the actual Codex journey exposed the documented
+five-second normal-stop deadline as shorter than the listener's 15-second SSE
+connection drain. A real open-stream smoke now passes with `docker stop --time 30`
+and exit zero in 16.09 seconds. Full `mix check` again passes (280 tests, two
+doctests, zero Dialyzer errors). See the [correction evidence](../verification.md#release-shutdown-correction-found-by-the-actual-client-demonstration)
+and [report](../evidence/release-smoke-sse.json). This owning-feature correction
+precedes the final demonstration checkpoint.
+
 ## Relative size
 
 Final size: 3

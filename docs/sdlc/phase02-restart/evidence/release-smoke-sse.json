@@ -1,0 +1,278 @@
+{
+  "verified_at": "2026-11-11T22:52:36.185125+00:00",
+  "image": "elixir-mixir:phase02",
+  "image_id": "sha256:41783a3c9f3230c9204e483dd1ddbed2b91bfe9c829a0afd924cc7e91468c2c2",
+  "volume": "mixir-phase02-smoke-5cf07b25877e-data",
+  "volume_retained": true,
+  "port": 41811,
+  "safety": {
+    "user": "1000:1000",
+    "read_only_root": true,
+    "application_owner_uid": 0,
+    "data_writable": true,
+    "test_and_generated_modules_absent": true,
+    "only_volume": "mixir-phase02-smoke-5cf07b25877e-data"
+  },
+  "kill_signal": "KILL",
+  "kill_exit_code": 137,
+  "oom_killed": false,
+  "host_pids": [
+    647424,
+    647685
+  ],
+  "boot_ids": [
+    "7f74e7dd81d6ec55f31b4e45adf941da",
+    "1be0a812ae42dfe24c1c2497679b3426"
+  ],
+  "lineage_id": "6d0d78279a847dde7a115a6b376b5475",
+  "restored_state": {
+    "count": 10
+  },
+  "continued_count": 12,
+  "fresh_mcp_session": true,
+  "normal_stop_exit_code": 0,
+  "normal_stop_timeout_seconds": 30,
+  "open_sse_during_stop": true,
+  "normal_stop_elapsed_seconds": 16.09131770300155,
+  "unwritable_storage_failed_closed": true,
+  "commands": [
+    [
+      "docker",
+      "volume",
+      "create",
+      "--label",
+      "elixir-mixir.smoke=phase02",
+      "mixir-phase02-smoke-5cf07b25877e-data"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-5cf07b25877e-first",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-smoke-5cf07b25877e-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=41811",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "exec",
+      "mixir-phase02-smoke-5cf07b25877e-first",
+      "sh",
+      "-c",
+      "set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "kill",
+      "--signal",
+      "KILL",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "wait",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "rm",
+      "mixir-phase02-smoke-5cf07b25877e-first"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-5cf07b25877e-second",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-smoke-5cf07b25877e-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=41811",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "stop",
+      "--time",
+      "30",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-5cf07b25877e-second"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-5cf07b25877e-unwritable",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/app/unwritable",
+      "--env",
+      "ELIXIR_MIXIR_PORT=41811",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "wait",
+      "mixir-phase02-smoke-5cf07b25877e-unwritable"
+    ],
+    [
+      "docker",
+      "logs",
+      "mixir-phase02-smoke-5cf07b25877e-unwritable"
+    ],
+    [
+      "docker",
+      "image",
+      "inspect",
+      "elixir-mixir:phase02",
+      "--format",
+      "{{.Id}}"
+    ]
+  ]
+}

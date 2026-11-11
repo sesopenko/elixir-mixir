@@ -104,10 +104,11 @@ retention interval, including downtime; reusing an expired caller key can run ag
 
 ## Stop normally or deliberately discard data
 
-Normal shutdown and container removal retain the volume:
+Normal shutdown and container removal retain the volume. Allow 30 seconds so
+the listener can finish its 15-second connection drain, including MCP event streams:
 
 ```sh
-docker stop --time 5 elixir-mixir-phase02
+docker stop --time 30 elixir-mixir-phase02
 docker rm elixir-mixir-phase02
 ```
 
@@ -139,7 +140,7 @@ absence of test/generated modules and source/credential mounts, loopback readine
 on a chosen port, and real HTTP define/start/invoke to count 10. It disconnects,
 sends SIGKILL, verifies exit 137 without OOM termination, recreates the release with
 the same volume, verifies a different boot/OS process and fresh MCP session, checks
-restored state/revision/lineage, and invokes to 12. Normal stop exits zero. A separate
+restored state/revision/lineage, and invokes to 12. Normal stop with an open SSE stream uses a 30-second deadline and exits zero. A separate
 unwritable `/app` storage path must fail startup. The JSON report records the image
 ID, exact Docker commands and observed assertions.
 

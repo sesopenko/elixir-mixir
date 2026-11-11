@@ -184,8 +184,15 @@ rm /data/release-permission-proof
         assert after_worker["state_revision"] == before_worker["state_revision"]
         assert self.tool("runtime_invoke", {"worker_id": "release_counter", "event": {"amount": 2},
                          "request_id": "continued"})["reply"] == 12
-        self.disconnect()
-        self.docker("stop", "--time", "5", second)
+        request = urllib.request.Request(self.base + "/mcp", headers={
+            "Accept": "text/event-stream", "mcp-session-id": self.session})
+        stream = urllib.request.urlopen(request, timeout=45)
+        assert stream.status == 200
+        stopping = time.monotonic()
+        self.docker("stop", "--time", "30", second)
+        stop_seconds = time.monotonic() - stopping
+        stream.close()
+        self.session = None
         assert self.inspect(second)["State"]["ExitCode"] == 0
         denied = self.prefix + "-unwritable"
         self.containers.append(denied)
@@ -204,6 +211,8 @@ rm /data/release-permission-proof
                 "lineage_id": after["recovery"]["lineage_id"],
                 "restored_state": after_worker["state"], "continued_count": 12,
                 "fresh_mcp_session": True, "normal_stop_exit_code": 0,
+                "normal_stop_timeout_seconds": 30, "open_sse_during_stop": True,
+                "normal_stop_elapsed_seconds": stop_seconds,
                 "unwritable_storage_failed_closed": True, "commands": self.commands}
 
     def cleanup(self):

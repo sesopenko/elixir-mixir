@@ -174,6 +174,7 @@ commit with state and resume after recovery has restored the healthy workers.
 For the isolated Linux release, follow the [retained-volume walkthrough](docs/phase02-recovery.md).
 It mounts a named volume at `/data` with `ELIXIR_MIXIR_DATA_DIR=/data`; removing
 the container preserves the application until you deliberately delete the volume.
+For normal shutdown use `docker stop --time 30` so MCP streams can drain.
 Wait for readiness and use a fresh MCP session after each restart. The Codex and
 untested Claude Code connection commands above use the same endpoint.
 

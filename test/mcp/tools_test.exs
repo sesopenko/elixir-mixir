@@ -5,6 +5,7 @@ defmodule ElixirMixir.MCP.ToolsTest do
   alias ElixirMixir.MCP.Tools.RuntimeDefine
   alias ElixirMixir.MCP.Tools.RuntimeEvents
   alias ElixirMixir.MCP.Tools.RuntimeInvoke
+  alias ElixirMixir.MCP.Tools.RuntimeReplace
   alias ElixirMixir.MCP.Tools.RuntimeStart
   alias ElixirMixir.MCP.Tools.RuntimeStop
   alias ElixirMixir.Runtime.Limits
@@ -39,6 +40,14 @@ defmodule ElixirMixir.MCP.ToolsTest do
     assert Map.get(schema, "required", []) == []
     assert Enum.sort(Map.keys(schema["properties"])) == ~w(after limit worker_id)
     assert schema["properties"]["after"]["minimum"] == 0
+    assert schema["additionalProperties"] == false
+  end
+
+  test "replace requires artifact, positive worker revision and request identity" do
+    schema = RuntimeReplace.input_schema()
+    assert Enum.sort(schema["required"]) == ~w(artifact_id expected_revision request_id worker_id)
+    assert schema["properties"]["expected_revision"]["type"] == "integer"
+    assert schema["properties"]["expected_revision"]["minimum"] == 1
     assert schema["additionalProperties"] == false
   end
 

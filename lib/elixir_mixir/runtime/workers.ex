@@ -62,6 +62,22 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
+  @doc "Replaces a running implementation only after the same live host confirms the committed candidate."
+  @spec replace(map(), definitions(), Limits.t(), non_neg_integer()) :: mutation()
+  def replace(args, workers, limits, generation) do
+    with :ok <- keys(args, ~w(worker_id artifact_id expected_revision request_id)),
+         true <- Values.valid_id?(args["worker_id"]) and is_binary(args["artifact_id"]),
+         true <- is_integer(args["expected_revision"]) and args["expected_revision"] > 0,
+         {:ok, worker} <- find(workers, args["worker_id"]),
+         :ok <- running(worker),
+         {:ok, artifact} <- ArtifactRegistry.fetch(args["artifact_id"]) do
+      replace_host(args, worker, workers, artifact, limits, generation)
+    else
+      false -> {:error, Error.new("INVALID_ARGUMENT")}
+      error -> error
+    end
+  end
+
   @doc "Reads a worker's actual committed state, omitting unavailable state honestly."
   @spec snapshot(map(), String.t(), Limits.t()) :: map()
   def snapshot(%{status: "running"} = worker, detail, limits) do
@@ -213,6 +229,69 @@ defmodule ElixirMixir.Runtime.Workers do
       {:error, error} ->
         record("event_failed", worker, correlation, %{"code" => error["code"]})
         {:error, error}
+    end
+  end
+
+  defp replace_host(args, worker, workers, artifact, limits, generation) do
+    candidate = Map.take(artifact, [:id, :module, :revision, :state_schema])
+    context = %{generation: generation, request_id: args["request_id"]}
+
+    outcome =
+      with {:ok, data} <-
+             ProcessHost.replace(
+               worker.pid,
+               candidate,
+               args["expected_revision"],
+               context,
+               limits.operation_timeout_ms
+             ),
+           :ok <- confirm_replacement(worker, candidate, data) do
+        {:ok, data}
+      end
+
+    case outcome do
+      {:ok, data} ->
+        next = %{
+          worker
+          | artifact: candidate,
+            worker_revision: data["worker_revision"],
+            state_revision: data["state_revision"],
+            request_id: args["request_id"]
+        }
+
+        record("implementation_replaced", next, args["request_id"], %{
+          "migration_result" => data["migration_result"],
+          "previous_revision" => data["previous_revision"]
+        })
+
+        {:commit, data, Map.put(workers, worker.worker_id, next)}
+
+      {:error, error} ->
+        type =
+          if error["code"] == "MIGRATION_FAILED",
+            do: "migration_failed",
+            else: "replacement_failed"
+
+        record(type, worker, args["request_id"], %{
+          "code" => error["code"],
+          "details" => error["details"]
+        })
+
+        {:error, error}
+    end
+  end
+
+  defp confirm_replacement(worker, candidate, data) do
+    with {:ok, snapshot} <- ProcessHost.snapshot(worker.pid),
+         true <-
+           snapshot.artifact.id == candidate.id and
+             snapshot.worker_revision == data["worker_revision"],
+         true <- snapshot.state_revision == data["state_revision"] and Process.alive?(worker.pid),
+         true <-
+           data["pid_before"] == inspect(worker.pid) and data["pid_after"] == inspect(worker.pid) do
+      :ok
+    else
+      _unavailable -> {:error, Error.new("CALLBACK_FAILED")}
     end
   end
 

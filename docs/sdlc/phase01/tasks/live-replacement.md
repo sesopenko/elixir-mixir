@@ -2,6 +2,12 @@
 
 ## Startup and context recovery
 
+Implementation: [assignment](../../../prompts/phase01-implementation.md),
+[unattended continuation](../../../prompts/phase01-implementation-amendment-04.md).
+Corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md),
+[05](../../../prompts/phase01-transport-amendment-05.md).
+
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -90,12 +96,38 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Verified prerequisite `5885271`, reread governing instructions and preserved
+  unrelated `scripts/codex.sh`.
+- `mix test test/runtime/replacement_test.exs --warnings-as-errors`: 9 tests,
+  zero failures. Same host PID/no DOWN, exact compatible-state retention and
+  migrate bypass; explicit schema metadata/reverse migration; exact replay/conflict
+  and competing expected revisions; ten bounded migration failure modes retain
+  every old field; invalid definitions/references; response preflight; truly queued
+  operations around callback barriers; actual host death returns cached failure.
+- `mix test test/mcp test/integration --warnings-as-errors`: 54 tests, zero failures.
+  Exactly seven tools and strict replacement schema. HTTP covers two compatible
+  replacements, schema/reverse migration, compile rejection while active, all ten
+  failure modes, revision races, physical disconnect/replay of one migration,
+  externally killed host staging failure and recovery using the old artifact.
+- The completed HTTP counter/aggregator journey preserves both host PIDs and
+  compatible state, then changes emitted arithmetic: aggregate total 3 becomes 11
+  after an input of 4 is doubled by the replaced counter; topology counts two
+  successful deliveries. No application is seeded under production lib/.
+- Full `mix check`: passed; 2 doctests and 150 tests, zero failures; strict Credo
+  clean, Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- JSON examples for all seven tools decode; documented Generated source parses.
+  Local links and `git diff --check` pass; `.githooks` remains enabled. The commit
+  containing this checked task is the full-quality-hook checkpoint.
+- Automated A01–A14 substrate evidence is recorded in verification.md. Actual
+  Codex claims, isolated deployment and demonstration transcript remain the final
+  task, `codex-demo`, which starts only after this verified commit.

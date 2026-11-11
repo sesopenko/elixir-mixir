@@ -51,6 +51,11 @@ defmodule ElixirMixir.Runtime.Manager do
   def invoke(args, server \\ __MODULE__),
     do: GenServer.call(server, {:worker, :invoke, args}, Limits.defaults().operation_timeout_ms)
 
+  @doc "Replaces a live worker implementation with expected revision checks and explicit schema migration."
+  @spec replace(map(), GenServer.server()) :: result()
+  def replace(args, server \\ __MODULE__),
+    do: GenServer.call(server, {:worker, :replace, args}, Limits.defaults().operation_timeout_ms)
+
   @doc "Returns bounded read-only worker and relationship pages tied to the current generation."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
@@ -171,6 +176,9 @@ defmodule ElixirMixir.Runtime.Manager do
 
   defp worker_operation(:invoke, args, state, generation),
     do: Workers.invoke(args, state.workers, state.limits, generation)
+
+  defp worker_operation(:replace, args, state, generation),
+    do: Workers.replace(args, state.workers, state.limits, generation)
 
   defp mutation_arguments(args, limits) when is_map(args) do
     if Values.valid_id?(args["request_id"]) do

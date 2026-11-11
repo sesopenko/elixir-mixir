@@ -1,7 +1,7 @@
 # Runtime API version 1
 
 The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`,
-`runtime_stop`, `runtime_invoke` and `runtime_events`.
+`runtime_stop`, `runtime_invoke`, `runtime_events` and `runtime_replace`.
 Runtime metadata is in memory; no generated application is seeded at startup.
 
 ## Connection
@@ -75,7 +75,8 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Replacement remains pending its feature task.
+All seven Phase 1 tools are implemented. The separate actual Codex demonstration
+and isolated release setup remain the final feature checkpoint.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -122,7 +123,7 @@ returns `{:ok, reply, state, effects}` or `{:error, reason}`. migrate/2 returns
 `{:ok, state}` or `{:error, reason}` and cannot return effects. state_schema/0
 returns a positive integer. Define validates only the schema callback under its
 200 ms callback deadline and 8 MiB task heap; it does not execute init, events or
-migration. The later worker tasks own state transitions and effect support.
+migration. Hosts and the dispatcher validate state transitions and effect admission.
 
 Successful results contain artifact_id, reserved module name, original source_hash
 (SHA-256), logical revision, state_schema, compilation_status `compiled`, diagnostics
@@ -279,9 +280,11 @@ fresh client observes exactly one increment in the same host.
 A successful event may return up to 16 effects, with exact string-key shapes:
 
 ```json
-{"type":"emit","to":"aggregate","event":{"amount":5}}
-{"type":"schedule","to":"aggregate","delay_ms":100,"event":{"amount":5}}
-{"type":"log","level":"info","message":"incremented","metadata":{"amount":5}}
+[
+  {"type":"emit","to":"aggregate","event":{"amount":5}},
+  {"type":"schedule","to":"aggregate","delay_ms":100,"event":{"amount":5}},
+  {"type":"log","level":"info","message":"incremented","metadata":{"amount":5}}
+]
 ```
 
 Events must be JSON maps within 16 KiB/depth 16. Schedule delay is an integer from
@@ -368,3 +371,103 @@ Examples of tool arguments:
 Read the next page with the returned next_cursor as after. Inspecting the runtime
 or reading history from a fresh client leaves workers, revisions and generation
 unchanged.
+
+## runtime_replace
+
+Required arguments are worker_id, artifact_id, expected_revision (positive integer)
+and request_id. The artifact must already be defined; defining never activates it.
+expected_revision refers to the current **worker_revision**, distinct from artifact
+revision and runtime generation. Unknown artifacts/workers yield ARTIFACT_NOT_FOUND/
+WORKER_NOT_FOUND; stopped, failed or restarting workers yield WORKER_NOT_RUNNING.
+Unknown keys and invalid values yield INVALID_ARGUMENT or schema errors.
+
+The existing host checks expected_revision within its serialized transition. A
+stale competitor yields REVISION_CONFLICT and cannot overwrite newer work. For a
+matching schema, replace preserves state and state_revision exactly and does not
+call migrate or init. A schema change calls the candidate migrate/2 under the
+200 ms/8 MiB callback controls with string-key metadata:
+
+```text
+worker_id, old_artifact_id, new_artifact_id, old_state_schema, new_state_schema,
+worker_revision, state_revision, request_id
+```
+
+Only `{:ok, new_state}` with a valid bounded JSON map may migrate. Errors,
+exceptions, exits, timeout/heap failures, malformed tuples, non-JSON or oversized
+migration state yield MIGRATION_FAILED with a bounded details.cause and optional
+reason; no raw stack traces. Migration cannot emit effects. Every failed migration
+retains the old artifact, state, PID and revisions. Complete response overflow
+returns LIMIT_EXCEEDED before commit. Rejected source/missing callbacks fail during
+define and leave active workers unchanged.
+
+Successful replacement atomically updates the same host's artifact/data/revisions.
+worker_revision and generation advance once; state_revision advances only for an
+explicit schema migration. Results contain artifact_id, previous_revision and
+new_revision (artifact revisions), worker_revision, state_revision, migration_result
+(preserved or migrated), and equal pid_before/pid_after. Manager acknowledges only
+after confirming the candidate/revisions in the same live host. Host death observed
+during staging/confirmation yields CALLBACK_FAILED and ordinary lifecycle recovery,
+rather than replacement success. Phase 1 recovery reruns retained config with the
+last Manager-confirmed active artifact and loses volatile state.
+
+Accepted operations are serialized; queued events run entirely before replacement
+with the old callback/state or afterward with the new callback/state. No event mixes
+the candidate callback with the prior schema. Old artifacts stay immutable and
+loaded. Same request retries replay the original replacement outcome; different
+arguments under that ID yield REQUEST_ID_CONFLICT. Disconnect does not cancel
+accepted migration. A fresh client can replay and then inspect current live state.
+
+Rollback is another explicit replace using the current worker_revision. Crossing
+back to an old schema requires a valid reverse migrate callback in that artifact;
+there is no automatic reverse migration or state rollback after later events.
+History records implementation_replaced, migration_failed, replacement_failed and
+host lifecycle outcomes with bounded diagnostic context.
+
+## Tool argument examples
+
+These are arguments to the named MCP tools. Substitute returned artifact IDs and
+the latest inspected worker_revision. Each new mutation needs a fresh request_id;
+reuse a request_id only for an identical retry. The counter below is runtime source,
+not code seeded in the kernel.
+
+runtime_define:
+
+```json
+{"logical_name":"counter","source":"defmodule Generated do\n  @behaviour ElixirMixir.Behavior\n  @impl true\n  def init(config), do: {:ok, %{\"count\" => Map.get(config, \"initial\", 0)}}\n  @impl true\n  def handle_event(%{\"increment\" => amount}, state), do: {:ok, state[\"count\"] + amount, %{\"count\" => state[\"count\"] + amount}, []}\n  @impl true\n  def state_schema(), do: 1\n  @impl true\n  def migrate(state, _metadata), do: {:ok, state}\nend","expected_behavior":"elixir_mixir.behavior.v1","request_id":"define-counter-1"}
+```
+
+runtime_start:
+
+```json
+{"worker_id":"counter","artifact_id":"<artifact_id_from_define>","config":{"initial":0},"request_id":"counter-start-1"}
+```
+
+runtime_invoke:
+
+```json
+{"worker_id":"counter","event":{"increment":1},"request_id":"counter-increment-1"}
+```
+
+runtime_inspect:
+
+```json
+{"worker_id":"counter","detail":"state"}
+```
+
+runtime_events:
+
+```json
+{"after":0,"limit":25,"worker_id":"counter"}
+```
+
+runtime_replace (first define an updated template with a new request ID):
+
+```json
+{"worker_id":"counter","artifact_id":"<candidate_artifact_id>","expected_revision":1,"request_id":"counter-replace-1"}
+```
+
+runtime_stop:
+
+```json
+{"worker_id":"counter","request_id":"counter-stop-1"}
+```

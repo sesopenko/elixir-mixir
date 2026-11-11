@@ -919,6 +919,341 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
     for record <- records, do: assert({:ok, _, 0} = DateTime.from_iso8601(record["timestamp"]))
   end
 
+  test "HTTP performs successive same-PID replacements, migration and explicit reverse migration",
+       ctx do
+    artifacts = replacement_artifacts(ctx.client)
+    first = effect_start(ctx.client, artifacts[1], "counter")
+    health = Client.raw(ctx.client, :get, "/health").data
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{"amount" => 3},
+             "request_id" => "increment-v1"
+           })["reply"] == 3
+
+    before = tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+
+    for {source, code} <- [
+          {"defmodule Generated do", "COMPILE_FAILED"},
+          {"defmodule Generated do @behaviour ElixirMixir.Behavior end", "CALLBACK_MISSING"}
+        ] do
+      assert define(ctx.client, Map.put(args(source), "request_id", "reject-#{code}"))["code"] ==
+               code
+
+      assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"}) ==
+               before
+    end
+
+    second = http_replace(ctx.client, "counter", artifacts[2], 1, "replace-v2")
+    assert second["migration_result"] == "preserved"
+    assert second["pid_before"] == first["pid"]
+    assert second["pid_after"] == first["pid"]
+    assert second["state_revision"] == before["state_revision"]
+    assert worker_state(ctx.client, "counter") == before["state"]
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{},
+             "request_id" => "increment-v2"
+           })["reply"] == 5
+
+    third =
+      http_replace(
+        ctx.client,
+        "counter",
+        artifacts[1],
+        second["worker_revision"],
+        "replace-v1-again"
+      )
+
+    assert third["migration_result"] == "preserved"
+    assert third["pid_after"] == first["pid"]
+
+    migrated =
+      http_replace(ctx.client, "counter", artifacts[3], third["worker_revision"], "migrate-v3")
+
+    assert migrated["migration_result"] == "migrated"
+    assert migrated["pid_after"] == first["pid"]
+    assert worker_state(ctx.client, "counter")["value"] == 5
+    assert worker_state(ctx.client, "counter")["metadata"]["old_state_schema"] == 1
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{},
+             "request_id" => "increment-v3"
+           })["reply"] == 15
+
+    reverse =
+      http_replace(
+        ctx.client,
+        "counter",
+        artifacts[1],
+        migrated["worker_revision"],
+        "reverse-migrate"
+      )
+
+    assert reverse["migration_result"] == "migrated"
+    assert worker_state(ctx.client, "counter")["count"] == 15
+    assert Client.raw(ctx.client, :get, "/health").data == health
+
+    assert RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"})[
+             "pid"
+           ] == first["pid"]
+
+    assert Enum.count(public_events(ctx.client, 0), &(&1["type"] == "implementation_replaced")) ==
+             4
+  end
+
+  test "HTTP migration failures retain every old field and revision races admit one winner",
+       ctx do
+    artifacts = replacement_artifacts(ctx.client)
+
+    for mode <- ~w(error raise exit timeout late malformed invalid_root non_json oversized heap) do
+      id = "counter-#{mode}"
+      first = effect_start(ctx.client, artifacts[1], id, %{"migration" => mode})
+      before = tool(ctx.client, "runtime_inspect", %{"worker_id" => id, "detail" => "state"})
+
+      arguments = %{
+        "worker_id" => id,
+        "artifact_id" => artifacts[3]["artifact_id"],
+        "expected_revision" => first["worker_revision"],
+        "request_id" => "fail-#{mode}"
+      }
+
+      {response, _} = Client.call(ctx.client, "runtime_replace", arguments)
+      assert response.status == 200
+      assert response.data["result"]["isError"]
+      error = result(response)
+      assert error["code"] == "MIGRATION_FAILED"
+      assert tool(ctx.client, "runtime_replace", arguments) == error
+
+      assert tool(ctx.client, "runtime_inspect", %{"worker_id" => id, "detail" => "state"}) ==
+               before
+
+      assert tool(ctx.client, "runtime_invoke", %{
+               "worker_id" => id,
+               "event" => %{},
+               "request_id" => "still-v1-#{mode}"
+             })["reply"] == 1
+
+      assert byte_size(response.body) <= 65_536
+    end
+
+    effect_start(ctx.client, artifacts[1], "race")
+
+    tasks =
+      for index <- 1..2 do
+        Task.async(fn ->
+          arguments = %{
+            "worker_id" => "race",
+            "artifact_id" => artifacts[2]["artifact_id"],
+            "expected_revision" => 1,
+            "request_id" => "race-#{index}"
+          }
+
+          {response, _} =
+            Client.request(
+              ctx.client,
+              "tools/call",
+              %{"name" => "runtime_replace", "arguments" => arguments},
+              "race-rpc-#{index}"
+            )
+
+          result(response)
+        end)
+      end
+
+    results = Enum.map(tasks, &Task.await/1)
+    assert Enum.count(results, &(&1["migration_result"] == "preserved")) == 1
+    assert Enum.count(results, &(&1["code"] == "REVISION_CONFLICT")) == 1
+
+    assert tool(ctx.client, "runtime_replace", %{
+             "worker_id" => "race",
+             "artifact_id" => artifacts[1]["artifact_id"],
+             "expected_revision" => 1,
+             "request_id" => "race-1"
+           })["code"] == "REQUEST_ID_CONFLICT"
+
+    assert tool(ctx.client, "runtime_replace", %{
+             "worker_id" => "race",
+             "artifact_id" => artifacts[1]["artifact_id"],
+             "expected_revision" => 2,
+             "request_id" => "unknown-field",
+             "extra" => true
+           })["code"] == "INVALID_ARGUMENT"
+
+    {missing, _} = Client.call(ctx.client, "runtime_replace", %{"worker_id" => "race"})
+    assert missing.data["error"]["code"] == -32_602
+    history = public_events(ctx.client, 0)
+    assert Enum.count(history, &(&1["type"] == "migration_failed")) == 10
+  end
+
+  test "physical HTTP disconnect during replacement replays one committed migration in the same host",
+       ctx do
+    artifacts = replacement_artifacts(ctx.client)
+    first = effect_start(ctx.client, artifacts[1], "counter", %{"migration" => "controlled"})
+
+    arguments = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifacts[3]["artifact_id"],
+      "expected_revision" => 1,
+      "request_id" => "replace-disconnect"
+    }
+
+    pending =
+      Task.async(fn ->
+        try do
+          {:unexpected_response, Client.call(ctx.client, "runtime_replace", arguments)}
+        rescue
+          MatchError -> :connection_closed
+        end
+      end)
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "barrier_status", "key" => "replace"})[
+        "waiting"
+      ]
+    end)
+
+    Client.disconnect(ctx.client)
+    RuntimeFixture.control(ctx.fixture, %{"op" => "release_barrier", "key" => "replace"})
+    assert Task.await(pending, 1_000) == :connection_closed
+    fresh = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{fresh | session: nil}) end)
+    {_init, _notification, fresh} = Client.initialize(fresh)
+    replaced = tool(fresh, "runtime_replace", arguments)
+    assert replaced["migration_result"] == "migrated"
+    assert replaced["worker_revision"] == 2
+    assert replaced["state_revision"] == 2
+    assert replaced["pid_before"] == first["pid"]
+    assert replaced["pid_after"] == first["pid"]
+    assert tool(fresh, "runtime_replace", arguments) == replaced
+    current = tool(fresh, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+    assert current["artifact_id"] == artifacts[3]["artifact_id"]
+    assert current["state"]["value"] == 0
+    assert current["pid"] == first["pid"]
+
+    assert Enum.count(
+             public_events(fresh, 0),
+             &(&1["type"] == "implementation_replaced" and
+                 &1["request_id"] == "replace-disconnect")
+           ) == 1
+
+    assert RuntimeFixture.alive?(ctx.fixture)
+  end
+
+  test "HTTP host death during migration is a cached failure and retains the old active artifact",
+       ctx do
+    artifacts = replacement_artifacts(ctx.client)
+    first = effect_start(ctx.client, artifacts[1], "counter", %{"migration" => "controlled"})
+
+    arguments = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifacts[3]["artifact_id"],
+      "expected_revision" => 1,
+      "request_id" => "replace-host-death"
+    }
+
+    pending = Task.async(fn -> Client.call(ctx.client, "runtime_replace", arguments) end)
+
+    await_http(fn ->
+      RuntimeFixture.control(ctx.fixture, %{"op" => "barrier_status", "key" => "replace"})[
+        "waiting"
+      ]
+    end)
+
+    RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "counter"})
+    {response, _} = Task.await(pending)
+    failure = result(response)
+    assert failure["code"] == "CALLBACK_FAILED"
+    recovered = await_worker(ctx.client, "counter", "running", 100)
+    refute recovered["pid"] == first["pid"]
+    assert recovered["artifact_id"] == artifacts[1]["artifact_id"]
+    assert tool(ctx.client, "runtime_replace", arguments) == failure
+
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{},
+             "request_id" => "old-after-failure"
+           })["reply"] == 1
+  end
+
+  test "HTTP evolves a live counter/aggregator graph while retaining both hosts and compatible state",
+       ctx do
+    source = Fixtures.effects_source()
+    artifact = define(ctx.client, args(source))
+
+    evolved_source =
+      String.replace(
+        source,
+        ~S|Map.get(event, "amount", 1)|,
+        ~S|(Map.get(event, "amount", 1) * 2)|
+      )
+
+    evolved =
+      define(ctx.client, Map.put(args(evolved_source), "request_id", "define-evolved-counter"))
+
+    aggregate = effect_start(ctx.client, artifact, "aggregate")
+    counter = effect_start(ctx.client, artifact, "counter", %{"forward" => "aggregate"})
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "counter",
+      "event" => %{"amount" => 3},
+      "request_id" => "graph-before"
+    })
+
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 3 end)
+    before = tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+    changed = http_replace(ctx.client, "counter", evolved, 1, "evolve-graph")
+    assert changed["migration_result"] == "preserved"
+    assert changed["pid_after"] == counter["pid"]
+    assert worker_state(ctx.client, "counter") == before["state"]
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "counter",
+      "event" => %{"amount" => 4},
+      "request_id" => "graph-after"
+    })
+
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 11 end)
+    await_http(fn -> tool(ctx.client, "runtime_inspect", %{})["effects"]["pending"] == 0 end)
+    assert worker_state(ctx.client, "aggregate")["count"] == 2
+    assert worker_state(ctx.client, "counter")["total"] == 11
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter"})["pid"] ==
+             counter["pid"]
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "aggregate"})["pid"] ==
+             aggregate["pid"]
+
+    assert tool(ctx.client, "runtime_inspect", %{})["topology"] == [
+             %{"from" => "counter", "to" => "aggregate", "count" => 2, "pending" => 0}
+           ]
+  end
+
+  defp replacement_artifacts(client) do
+    for version <- 1..3, into: %{} do
+      {version,
+       define(
+         client,
+         Map.put(
+           args(Fixtures.replacement_source(version)),
+           "request_id",
+           "define-version-#{version}"
+         )
+       )}
+    end
+  end
+
+  defp http_replace(client, id, artifact, expected, request_id) do
+    tool(client, "runtime_replace", %{
+      "worker_id" => id,
+      "artifact_id" => artifact["artifact_id"],
+      "expected_revision" => expected,
+      "request_id" => request_id
+    })
+  end
+
   defp public_events(client, cursor) do
     {response, _} = Client.call(client, "runtime_events", %{"after" => cursor, "limit" => 100})
     assert byte_size(response.body) <= 65_536

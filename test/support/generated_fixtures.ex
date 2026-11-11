@@ -8,6 +8,7 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
     body = Keyword.get(opts, :body, "")
     init = Keyword.get(opts, :init, "{:ok, config}")
     event = Keyword.get(opts, :event, "{:ok, event, state, []}")
+    migrate = Keyword.get(opts, :migrate, "{:ok, state}")
 
     """
     defmodule Generated do
@@ -20,7 +21,11 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
       @impl true
       def state_schema(), do: #{schema}
       @impl true
-      def migrate(state, _metadata), do: {:ok, state}
+      def migrate(state, metadata) do
+      _ = state
+      _ = metadata
+      (#{migrate})
+    end
     end
     """
   end
@@ -93,6 +98,59 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
         true -> {:ok, count, next, effects}
       end
       """
+    )
+  end
+
+  @doc "Returns versioned counters with explicit reverse migration and bounded failure/barrier modes."
+  @spec replacement_source(1 | 2 | 3) :: String.t()
+  def replacement_source(version) when version in [1, 2, 3] do
+    key = if version == 3, do: "value", else: "count"
+
+    factor =
+      case version do
+        1 -> 1
+        2 -> 2
+        3 -> 10
+      end
+
+    migration =
+      case version do
+        1 ->
+          ~S|{:ok, %{"count" => state["value"], "migration" => "ok"}}|
+
+        2 ->
+          ~S|raise "same-schema migration must not execute"|
+
+        3 ->
+          ~S"""
+          next = %{"value" => state["count"], "migration" => state["migration"], "metadata" => metadata}
+          case state["migration"] do
+            "error" -> {:error, String.duplicate("😺", 3_000)}
+            "raise" -> raise "migration raised"
+            "exit" -> exit(:migration_exit)
+            "timeout" -> Process.sleep(:infinity)
+            "late" -> Process.sleep(300); {:ok, next}
+            "malformed" -> {:ok, next, []}
+            "invalid_root" -> {:ok, []}
+            "non_json" -> {:ok, %{"pid" => self()}}
+            "oversized" -> {:ok, %{"v" => String.duplicate("x", 16_384)}}
+            "heap" -> {:ok, %{"large" => Enum.to_list(1..1_000_000)}}
+            "controlled" -> ElixirMixir.TestSupport.CallbackBarrier.wait("replace"); {:ok, next}
+            _normal -> {:ok, next}
+          end
+          """
+      end
+
+    source(
+      schema: if(version == 3, do: "2", else: "1"),
+      init:
+        "{:ok, %{\"#{key}\" => Map.get(config, \"initial\", 0), \"migration\" => Map.get(config, \"migration\", \"ok\")}}",
+      event: """
+      if event["controlled"], do: ElixirMixir.TestSupport.CallbackBarrier.wait("event")
+      count = state["#{key}"] + Map.get(event, "amount", 1) * #{factor}
+      {:ok, count, Map.put(state, "#{key}", count), []}
+      """,
+      migrate: migration
     )
   end
 

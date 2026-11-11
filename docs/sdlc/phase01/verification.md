@@ -221,22 +221,55 @@ History stays in memory, and read omissions do not alter committed state or stor
 events. The minimum 1 KiB response ceiling can yield a bounded error when a minimal
 snapshot cannot fit. Replacement and the separate actual Codex demonstration remain.
 
+## live-replacement
+
+Verified 2026-11-11; the checked task's containing commit is the replacement checkpoint.
+
+- Focused replacement suite: 9 tests pass. Same-schema activation preserves exact
+  PID/state/state_revision and bypasses migrate; changed schema receives validated
+  context and migrates explicitly, including reverse migration to an old artifact.
+  Immutable artifacts remain unchanged. Ten failure modes preserve all old fields
+  and behavior; replay/conflict, competing revisions, response preflight, true queued
+  event ordering and actual host death during staging are verified.
+- Growing MCP/HTTP suite: 54 tests pass with exactly seven strict tool schemas.
+  Two successive compatible replacements, explicit/reverse schema migration, active
+  worker survival after invalid definitions, ten migration failures, revision races,
+  request replay/conflict, wire envelopes and endpoint continuity pass.
+- A physical HTTP disconnect during accepted controlled migration is followed by
+  fresh initialize and repeated identical request: one replacement, original result,
+  same PID, active candidate and migrated state. Actual host death instead returns
+  cached CALLBACK_FAILED and restarts the retained old artifact with a new PID.
+- Full HTTP graph evolution: counter/aggregator total 3, same-PID counter replacement
+  retaining prior state, next input 4 emits 8, aggregate reaches total 11/count 2,
+  both original host PIDs and observed topology remain intact.
+- Full `mix check`: 2 doctests and 150 tests pass; strict Credo clean, Doctor 100%
+  documentation/typespec coverage, Dialyzer zero errors. All seven JSON argument
+  examples decode, Generated template syntax parses, local links/diff checks pass,
+  and the normal `.githooks` checkpoint gate remains enabled.
+
+The automated runtime substrate is complete. The actual Codex connection/evolution/
+reconnect demonstration and isolated release deployment remain unverified until
+codex-demo; automated HTTP tests are not substitutes for that transcript.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
 | --- | --- | --- |
-| A01 | Automated initialize/list/inspect against independent BEAM | Actual Codex connection transcript |
-| A13 | Automated close/reinitialize and same OS runtime identity | Worker continuity in later features; actual Codex reconnect |
-| A14 | Loopback binding, configuration/header checks, local smoke startup | Isolated local deployment and actual demonstration |
-| A02 | Automated define over HTTP | Actual Codex creation transcript |
-| A03 | Loaded exports/BEAM/hash and immutable registry, including HTTP define | Complete for compiler substrate |
-| A10 | Failed definitions preserve active counter artifact/state; subsequent invoke works | Verified automated substrate |
-| A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
-| A05 | HTTP increment/inspect, full bounded state/history and revision checks | Actual Codex observations |
-| A12 | Real host kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
-| A06 | Two-worker HTTP arithmetic, observed/pending topology and bounded pages | Actual Codex transcript |
-| A07–A09, A11 | Foundations only | Owning replacement task |
+| A01 | Real HTTP initialize, seven-tool discovery and independent BEAM | Actual Codex connection transcript |
+| A02 | Bounded immutable definition through HTTP | Actual Codex creation transcript |
+| A03 | Loaded exports/BEAM/hash, immutable registry and actual HTTP define | Verified automated substrate |
+| A04 | Registry, DynamicSupervisor and HTTP define/start/inspect/stop | Verified automated substrate |
+| A05 | HTTP invocation, bounded state/history, revisions and failure preservation | Actual Codex observations |
+| A06 | Two-worker arithmetic and observed/pending paginated topology, including evolution | Actual Codex creation/connection transcript |
+| A07 | HTTP active artifact changes and different behavior after replacement | Actual Codex replacement transcript |
+| A08 | Equal HTTP PIDs and unit monitor with no DOWN across normal replacement | Actual Codex PID observation |
+| A09 | Exact compatible state; explicit schema and reverse migration | Actual Codex state observation |
+| A10 | Rejected definitions preserve active artifact/state; old callback still works | Verified automated substrate |
+| A11 | Ten migration failure modes preserve PID/artifact/state/revisions | Verified automated substrate |
+| A12 | Actual kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
+| A13 | Physical HTTP disconnect/replay preserves one invoke/effect/replacement; same BEAM | Actual fresh Codex reconnect transcript |
+| A14 | Loopback binding/config/header checks and local independent runtime | Isolated deployment and actual local demonstration |
 
-Replacement, isolated container/release
-setup and the actual Codex transcript remain pending. No worker/domain behavior is
-seeded in the production kernel or claimed by this checkpoint.
+Isolated container/release setup and the actual Codex transcript remain pending.
+No worker/domain behavior is seeded in production kernel source. Phase 1 is not
+complete until the final task proves its separate demonstration requirements.

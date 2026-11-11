@@ -8,7 +8,8 @@ worker-invoke is complete in the commit containing its checked task document.
 worker-recovery is complete in the commit containing its checked task document.
 event-effects is complete in the commit containing its checked task document.
 runtime-inspection is complete in the commit containing its checked task document.
-live-replacement is next. Governing architecture:
+live-replacement is complete in the commit containing its checked task document.
+codex-demo is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).

@@ -34,6 +34,7 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
              %{"name" => "runtime_events"},
              %{"name" => "runtime_inspect", "inputSchema" => schema},
              %{"name" => "runtime_invoke"},
+             %{"name" => "runtime_replace"},
              %{"name" => "runtime_start"},
              %{"name" => "runtime_stop"}
            ] =
@@ -160,6 +161,7 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
              %{"name" => "runtime_events"},
              %{"name" => "runtime_inspect"},
              %{"name" => "runtime_invoke"},
+             %{"name" => "runtime_replace"},
              %{"name" => "runtime_start"},
              %{"name" => "runtime_stop"}
            ] =

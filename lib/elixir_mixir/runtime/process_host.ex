@@ -6,6 +6,7 @@ defmodule ElixirMixir.Runtime.ProcessHost do
   alias ElixirMixir.Runtime.Callback
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
+  alias ElixirMixir.Runtime.Replacement
   alias ElixirMixir.Runtime.Transition
   alias ElixirMixir.Runtime.Values
 
@@ -30,6 +31,15 @@ defmodule ElixirMixir.Runtime.ProcessHost do
           {:ok, map(), reference() | :none} | {:error, Error.t()}
   def invoke(pid, event, context, timeout) do
     GenServer.call(pid, {:invoke, event, context}, timeout)
+  catch
+    :exit, _reason -> {:error, Error.new("CALLBACK_FAILED")}
+  end
+
+  @doc "Stages replacement inside the same host through its owning Manager with a finite wait."
+  @spec replace(pid(), map(), pos_integer(), map(), pos_integer()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def replace(pid, artifact, expected, context, timeout) do
+    GenServer.call(pid, {:replace, artifact, expected, context}, timeout)
   catch
     :exit, _reason -> {:error, Error.new("CALLBACK_FAILED")}
   end
@@ -74,6 +84,17 @@ defmodule ElixirMixir.Runtime.ProcessHost do
 
     case outcome do
       {:commit, data, next, token} -> {:reply, {:ok, data, token}, next}
+      {:error, error} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call(
+        {:replace, artifact, expected, context},
+        {manager, _tag},
+        %{manager: manager} = state
+      ) do
+    case Replacement.stage(state, artifact, expected, context) do
+      {:ok, data, next} -> {:reply, {:ok, data}, next}
       {:error, error} -> {:reply, {:error, error}, state}
     end
   end

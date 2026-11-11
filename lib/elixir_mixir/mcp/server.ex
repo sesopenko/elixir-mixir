@@ -8,6 +8,7 @@ defmodule ElixirMixir.MCP.Server do
   component(ElixirMixir.MCP.Tools.RuntimeInspect, name: "runtime_inspect")
 
   component(ElixirMixir.MCP.Tools.RuntimeInvoke, name: "runtime_invoke")
+  component(ElixirMixir.MCP.Tools.RuntimeReplace, name: "runtime_replace")
   component(ElixirMixir.MCP.Tools.RuntimeStart, name: "runtime_start")
   component(ElixirMixir.MCP.Tools.RuntimeStop, name: "runtime_stop")
 
@@ -21,6 +22,6 @@ defmodule ElixirMixir.MCP.Server do
       "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
       "Inspect worker state with worker_id and detail state; runtime pages have generation-bound cursors. Use runtime_events after/limit/worker_id for correlated history. Host crashes rerun init within three restart attempts per rolling ten seconds; stopped or exhausted workers require explicit start. " <>
       "Use runtime_invoke with worker_id/event/request_id; repeat an identical ID to replay its outcome. " <>
-      "Effects may emit, schedule or log; accepted effect IDs acknowledge admission, and delivery failures appear in history. Generated code requires a trusted disposable environment."
+      "Use runtime_replace with worker_id/artifact_id/expected_revision/request_id. Expected revision is the current worker revision; matching schemas preserve state, changed schemas run explicit migrate. Effects may emit, schedule or log; accepted effect IDs acknowledge admission, and delivery failures appear in history. Generated code requires a trusted disposable environment."
   end
 end

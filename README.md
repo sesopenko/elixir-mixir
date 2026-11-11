@@ -3,8 +3,8 @@
 An experimental Elixir/OTP runtime for creating and evolving a live application
 through MCP. The current checkpoint exposes runtime inspection and bounded generated-artifact
 compilation and supervised worker start/invoke/inspect/stop over localhost HTTP, backed by
-an in-memory Manager and request ledger. Replacement is planned
-in [Phase 1](docs/sdlc/phase01/plan.md). Persistence is a later phase.
+an in-memory Manager and request ledger. Live replacement retains the host PID and
+compatible state, with explicit migration for schema changes. Persistence is a later phase.
 
 After the setup in [CONTRIBUTING.md](CONTRIBUTING.md), start the runtime in its own
 terminal:
@@ -28,8 +28,10 @@ codex
 ```
 
 The tools are `runtime_define`, `runtime_start`, `runtime_invoke`, `runtime_inspect`,
-`runtime_events` and `runtime_stop`. Inspect reads state and paginated topology;
+`runtime_events`, `runtime_replace` and `runtime_stop`. Inspect reads state and paginated topology;
 events reads correlated lifecycle/effect history with sequence cursors and eviction gaps.
+Replace requires the current worker revision from inspection. See the
+[seven tool argument examples](docs/runtime-api.md#tool-argument-examples).
 Define compiles an inactive artifact; start runs its bounded init in a supervised
 logical worker; invoke commits bounded reply/state transitions and admits asynchronous
 emit, schedule and structured log effects.

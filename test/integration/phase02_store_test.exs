@@ -42,11 +42,10 @@ defmodule ElixirMixir.Integration.Phase02StoreTest do
              %{"mode" => "durable", "format_version" => 1}
 
     {response, _} =
-      Client.call(client, "runtime_start", %{
+      Client.call(client, "runtime_invoke", %{
         "request_id" => "rejected",
         "worker_id" => "never",
-        "artifact_id" => "missing",
-        "config" => %{}
+        "event" => %{}
       })
 
     assert response.data["result"]["structuredContent"]["code"] == "DURABILITY_UNAVAILABLE"

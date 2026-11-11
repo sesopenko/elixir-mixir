@@ -1,6 +1,6 @@
 # durable-lifecycle: Commit the desired graph and restore initial worker state
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -91,15 +91,22 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `12e4c30` verified against committed
+code/evidence and origin before work. Focused lifecycle unit checks passed (6 tests),
+independent HTTP lifecycle checks passed (11 tests), growing MCP/integration suite
+passed (75 tests), and full `mix check` passed (199 tests, 2 doctests, Credo clean,
+Doctor 100%, Dialyzer zero findings). The [evidence entry](../verification.md#durable-lifecycle)
+records actual OS termination, no-client reconstruction, schema/reference isolation,
+retry exhaustion and held-restoration readiness checks. Milestone 5's automated
+exit condition is met; durable invocation/replacement/effects remain pending.
 
 ## Relative size
 

@@ -1,6 +1,6 @@
 # Phase 2 restart feature plan — Durable Genesis
 
-Status: store-foundation, staged-hosts and durable-artifacts verified; remaining implementation tasks are pending.
+Status: store-foundation, staged-hosts, durable-artifacts and durable-lifecycle verified; remaining implementation tasks are pending.
 Governing assignment: [immutable snapshot](../../prompts/phase02-restart-planning.md).
 Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
 Architecture: [ADR-001](../../adr/001-architecture-initial-phases.md), section 10 and
@@ -66,7 +66,7 @@ effects and machine power-loss certification are outside this proof.
 ## Task index and deterministic execution order
 
 Execute in numeric order; dependencies below are also the full graph edge set.
-Store-foundation (`b9dea1a`), staged-hosts (`fa5b364`) and durable-artifacts are verified in their checkpoint commits. Remaining tasks are pending. Sizes are relative, not hours.
+Store-foundation (`b9dea1a`), staged-hosts (`fa5b364`), durable-artifacts (`12e4c30`) and durable-lifecycle are verified in their checkpoint commits. Remaining tasks are pending. Sizes are relative, not hours.
 
 | Order | Task ID and document | Outcome | Prerequisites | Size | Milestone |
 | --- | --- | --- | --- | --- | --- |
@@ -399,7 +399,8 @@ Each row follows ADR section 10.9 in order. IDs are stable coverage references.
 Completion requires every task verified and committed, all fourteen criteria backed
 by automated evidence, separate actual Codex evidence for the client journey, no
 open architectural choices, and current README/contributor/API/recovery guidance.
-Until then all Phase 2 feature claims remain pending.
+Until then full Phase 2 completion remains pending. Verified task boundaries above
+describe the partial capabilities that are already available.
 
 ## Late sizing review
 

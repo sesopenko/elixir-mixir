@@ -28,6 +28,12 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "restoration_barrier"}) do
+    hook = &restore_with_barrier/1
+    :sys.replace_state(Manager, &%{&1 | restore_host: hook})
+    %{"enabled" => true}
+  end
+
   def request(%{"op" => "durability_barrier", "phase" => phase}) do
     hook = fn reached ->
       if Atom.to_string(reached) == phase, do: CallbackBarrier.wait(phase)
@@ -46,6 +52,8 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
         for({{:artifact, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "requests" =>
         for({{:request, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "workers" => for({{:worker, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "states" => for({{:state, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "meta" => records[:meta]
     }
   end
@@ -141,6 +149,12 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   def request(%{"op" => "recovery_failure", "enabled" => enabled}) when is_boolean(enabled) do
     Application.put_env(:elixir_mixir, :test_recovery_failure, enabled)
+
+    if :sys.get_state(Manager).storage.mode == :durable do
+      restore = restorer(enabled)
+      :sys.replace_state(Manager, &%{&1 | restore_host: restore})
+    end
+
     %{"enabled" => enabled}
   end
 
@@ -165,6 +179,22 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   def request(%{"op" => "kill_registry"}), do: kill_authority(ArtifactRegistry)
   def request(%{"op" => "kill_store"}), do: kill_authority(Store)
+
+  defp restore_with_barrier(opts) do
+    unless Process.get(:test_restoration_released) do
+      CallbackBarrier.wait("restoration")
+      Process.put(:test_restoration_released, true)
+    end
+
+    DynamicSupervisor.start_child(ElixirMixir.Runtime.WorkerSupervisor, {ProcessHost, opts})
+  end
+
+  defp restorer(true), do: fn _opts -> {:error, :injected} end
+
+  defp restorer(false),
+    do: fn opts ->
+      DynamicSupervisor.start_child(ElixirMixir.Runtime.WorkerSupervisor, {ProcessHost, opts})
+    end
 
   defp kill_authority(authority) do
     ref = Process.monitor(Process.whereis(ElixirMixir.Supervisor))

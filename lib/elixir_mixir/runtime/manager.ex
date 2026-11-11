@@ -12,6 +12,9 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.Definition
   alias ElixirMixir.Runtime.DurableArtifacts
   alias ElixirMixir.Runtime.DurableDefinitions
+  alias ElixirMixir.Runtime.DurableLifecycle
+  alias ElixirMixir.Runtime.DurableOperations
+  alias ElixirMixir.Runtime.DurableRecovery
   alias ElixirMixir.Runtime.DurableRequests
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
@@ -38,39 +41,39 @@ defmodule ElixirMixir.Runtime.Manager do
   @doc "Compiles a bounded template into an immutable, inactive artifact using request replay semantics."
   @spec define(map(), GenServer.server()) :: result()
   def define(args, server \\ __MODULE__) do
-    GenServer.call(server, {:define, args}, Limits.defaults().operation_timeout_ms)
+    api_call(server, {:define, args})
   end
 
   @doc "Starts a logical worker using a defined artifact and bounded JSON configuration."
   @spec start_worker(map(), GenServer.server()) :: result()
   def start_worker(args, server \\ __MODULE__),
-    do: GenServer.call(server, {:worker, :start, args}, Limits.defaults().operation_timeout_ms)
+    do: api_call(server, {:worker, :start, args})
 
   @doc "Explicitly stops a worker while retaining its definition; repeat stops are idempotent."
   @spec stop_worker(map(), GenServer.server()) :: result()
   def stop_worker(args, server \\ __MODULE__),
-    do: GenServer.call(server, {:worker, :stop, args}, Limits.defaults().operation_timeout_ms)
+    do: api_call(server, {:worker, :stop, args})
 
   @doc "Commits one bounded worker event at most once per validated request identity."
   @spec invoke(map(), GenServer.server()) :: result()
   def invoke(args, server \\ __MODULE__),
-    do: GenServer.call(server, {:worker, :invoke, args}, Limits.defaults().operation_timeout_ms)
+    do: api_call(server, {:worker, :invoke, args})
 
   @doc "Replaces a live worker implementation with expected revision checks and explicit schema migration."
   @spec replace(map(), GenServer.server()) :: result()
   def replace(args, server \\ __MODULE__),
-    do: GenServer.call(server, {:worker, :replace, args}, Limits.defaults().operation_timeout_ms)
+    do: api_call(server, {:worker, :replace, args})
 
   @doc "Returns bounded read-only worker and relationship pages tied to the current generation."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
-    GenServer.call(server, {:inspect, args}, Limits.defaults().operation_timeout_ms)
+    api_call(server, {:inspect, args})
   end
 
   @doc "Returns bounded correlated event history after an exclusive sequence cursor."
   @spec events(map(), GenServer.server()) :: result()
   def events(args, server \\ __MODULE__),
-    do: GenServer.call(server, {:events, args}, Limits.defaults().operation_timeout_ms)
+    do: api_call(server, {:events, args})
 
   @doc """
   Runs a trusted kernel operation once per request ID and validated argument hash.
@@ -83,11 +86,26 @@ defmodule ElixirMixir.Runtime.Manager do
   """
   @spec mutate(GenServer.server(), String.t(), map(), (non_neg_integer() -> result())) :: result()
   def mutate(server, operation, args, callback) do
-    GenServer.call(
-      server,
-      {:mutate, operation, args, callback},
-      Limits.defaults().operation_timeout_ms
-    )
+    api_call(server, {:mutate, operation, args, callback})
+  end
+
+  defp api_call(server, message) do
+    manager = Process.whereis(__MODULE__)
+
+    if is_pid(manager) and GenServer.whereis(server) == manager and not ready?() do
+      {:error, envelope(Error.new("RUNTIME_RECOVERING"), recovering_generation())}
+    else
+      GenServer.call(server, message, Limits.defaults().operation_timeout_ms)
+    end
+  end
+
+  defp recovering_generation do
+    case :ets.lookup(ElixirMixir.Runtime.Readiness, :generation) do
+      [{:generation, generation}] -> generation
+      [] -> 0
+    end
+  rescue
+    ArgumentError -> 0
   end
 
   @doc "Checks default runtime readiness without waiting behind a generated callback."
@@ -113,7 +131,8 @@ defmodule ElixirMixir.Runtime.Manager do
         do: :ets.new(ElixirMixir.Runtime.Readiness, [:named_table, :protected]),
         else: nil
 
-    if readiness, do: :ets.insert(readiness, {:ready, storage.mode == :memory})
+    if readiness,
+      do: :ets.insert(readiness, [{:ready, storage.mode == :memory}, {:generation, 0}])
 
     state = %{
       readiness: readiness,
@@ -125,6 +144,13 @@ defmodule ElixirMixir.Runtime.Manager do
       boot_id: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
       lineage_id: nil,
       recovery_task: nil,
+      restore_host:
+        Keyword.get(opts, :restore_host, fn opts ->
+          DynamicSupervisor.start_child(
+            ElixirMixir.Runtime.WorkerSupervisor,
+            {ElixirMixir.Runtime.ProcessHost, opts}
+          )
+        end),
       storage: storage,
       limits: limits,
       ledger: RequestLedger.new(limits),
@@ -160,6 +186,7 @@ defmodule ElixirMixir.Runtime.Manager do
         recovery_task: task
     }
 
+    if state.readiness, do: :ets.insert(state.readiness, {:generation, state.generation})
     {:noreply, state}
   end
 
@@ -182,6 +209,17 @@ defmodule ElixirMixir.Runtime.Manager do
   def handle_call({:events, args}, _from, state) do
     result = with :ok <- Inspection.events(args, state.limits), do: Inspector.events(args, state)
     {:reply, bounded(read_result(result, state), state), state}
+  end
+
+  def handle_call({:worker, operation, args}, _from, %{storage: %{mode: :durable}} = state)
+      when operation in [:start, :stop] do
+    with :ok <- mutation_arguments(args, state.limits),
+         :ok <- DurableLifecycle.validate(operation, args, state.limits) do
+      {result, next} = DurableLifecycle.execute(operation, args, state)
+      {:reply, result, next}
+    else
+      {:error, error} -> {:reply, failure(error, nil, state), state}
+    end
   end
 
   def handle_call(message, _from, %{storage: %{mode: :durable}} = state)
@@ -289,9 +327,25 @@ defmodule ElixirMixir.Runtime.Manager do
     Process.demonitor(ref, [:flush])
     records = Store.snapshot(state.store)
     puts = DurableRequests.interrupted(records, state.generation, state.wall_clock.())
-    if map_size(puts) > 0, do: DurableDefinitions.commit!(state, puts, [], false, "recovery", %{})
-    if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
-    {:noreply, %{state | recovery: Map.put(recovery, "status", "ready"), recovery_task: nil}}
+    if map_size(puts) > 0, do: DurableOperations.commit!(state, puts, [], false, "recovery", %{})
+
+    case DurableRecovery.restore(records, state) do
+      {:ok, workers, worker_recovery} ->
+        recovery =
+          recovery
+          |> Map.merge(worker_recovery)
+          |> Map.put("status", "ready")
+          |> Map.put(
+            "degraded",
+            recovery["degraded"] or worker_recovery["workers_quarantined"] > 0
+          )
+
+        if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
+        {:noreply, %{state | workers: workers, recovery: recovery, recovery_task: nil}}
+
+      {:error, _error} ->
+        {:stop, :recovery_failed, state}
+    end
   end
 
   def handle_info({ref, {:error, _error}}, %{recovery_task: %{ref: ref}} = state),
@@ -299,6 +353,12 @@ defmodule ElixirMixir.Runtime.Manager do
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %{recovery_task: %{ref: ref}} = state),
     do: {:stop, :recovery_failed, state}
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{storage: %{mode: :durable}} = state),
+    do: {:noreply, DurableRecovery.down(state, ref, reason)}
+
+  def handle_info({:restart_worker, id, token}, %{storage: %{mode: :durable}} = state),
+    do: {:noreply, DurableRecovery.retry(state, id, token)}
 
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     {workers, changed} = WorkerRecovery.down(state.workers, ref, reason, recovery_policy(state))

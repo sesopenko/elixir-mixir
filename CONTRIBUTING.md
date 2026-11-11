@@ -303,9 +303,9 @@ own temporary directories; the subprocess fixtures clear inherited storage and p
 environment variables. CubDB 2.0.2 is locked with synchronous writes and automatic
 compaction enabled. Loss of the authoritative store shuts down the kernel.
 
-Durable source definitions and their outcomes are integrated with the store.
-Worker state and effects are still pending. In durable mode, worker mutation
-tools return `DURABILITY_UNAVAILABLE` before executing callbacks. Inspection
+Durable source definitions, desired workers, initial state and request outcomes
+are integrated with the store. Event transitions and effects are still pending.
+In durable mode, invoke and replacement return `DURABILITY_UNAVAILABLE` before callbacks. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for current running-application experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
@@ -335,10 +335,35 @@ mix test test/runtime/durable_artifacts_test.exs test/runtime/durable_requests_t
 mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
 ```
 
-Only inactive source definitions are integrated so far; worker mutations remain
-unavailable in durable mode. Wait for `/health` before connecting. Recompilation can
+Durable start/stop and initial-state recovery are also integrated. Invoke and
+replacement remain unavailable in durable mode. Wait for `/health` before connecting. Recompilation can
 execute compile-time IO again, so the same trusted-code isolation requirements
 apply after restart. Definition response module strings can describe an old slot;
 artifact IDs and current inspection are authoritative. Request replay retention
 includes downtime and expired IDs can execute again. See the
 [runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay).
+
+
+The lifecycle suite extends the same retained-directory fixture. It checks running
+and stopped definitions, config and committed initial state, six SIGKILL boundaries,
+no-init/no-migration reconstruction, durable retry exhaustion, and readiness held
+through host creation:
+
+```sh
+mix test test/runtime/durable_lifecycle_test.exs --warnings-as-errors
+mix test test/integration/phase02_lifecycle_test.exs --warnings-as-errors
+```
+
+Boot and unexpected host death inject the committed JSON checkpoint; they do not
+rerun generated init or migration. Explicit start after stop initializes from new
+supplied config. Restart budget timestamps use UTC and exhaustion survives a BEAM
+restart; manual start resets the budget. Failed or quarantined definitions must be
+stopped before changing artifact/config. Durable worker inspection includes desired
+status and config, plus the last committed state when a live host is absent.
+
+The test-only `restore_host:` constructor hook can hold or reject reconstruction.
+Public default-runtime calls consult the readiness table before entering Manager's
+mailbox, so reads and mutations return `RUNTIME_RECOVERING` promptly even while host
+creation is held. Health stays 503 until healthy routes have been published; a
+fresh client session is required after each BEAM restart. The automated tests do
+not replace the separate actual Phase 2 Codex demonstration, which is pending.

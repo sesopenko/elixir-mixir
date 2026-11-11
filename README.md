@@ -145,8 +145,8 @@ Live replacement and reconnecting from a fresh Codex session are implemented and
 tested. The default memory mode keeps the application running when Codex closes,
 but restarting the runtime or container loses its workers, code, state and history.
 A crashed worker can restart under supervision, starting from its initial state.
-Optional durable source definitions are described below; running application
-recovery is still being implemented. There is no autonomous controller yet.
+Optional durable source and worker definitions are described below; durable event
+transitions and effect recovery are still being implemented. There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -161,14 +161,15 @@ docker rm -f elixir-mixir-phase01
 - [Verification](docs/sdlc/phase01/verification.md): automated checks and actual Codex demonstration evidence.
 - [Contributing](CONTRIBUTING.md): development setup, troubleshooting and the required `mix check` quality gate.
 
-## Try durable source definitions (in progress)
+## Try durable worker definitions (in progress)
 
-Phase 2 restart recovery is being implemented. Durable mode can now retain source
-artifacts and definition outcomes across abrupt BEAM termination, then recompile
-them without a client. Running worker and effect recovery are still pending; use
-the default memory mode for the application experiments above.
+Durable mode retains source artifacts, running and stopped worker definitions,
+configuration, initial state and request outcomes across abrupt BEAM termination.
+It reconstructs running workers without a client and keeps stopped workers stopped.
+Durable event invocation, replacement and effects are still being implemented; use
+the default memory mode for the full application experiments above.
 
-To try durable source definitions from the repository root, use a local directory
+To try durable worker definitions from the repository root, use a local directory
 owned exclusively by this runtime:
 
 ```sh
@@ -182,9 +183,14 @@ Code connection commands:
 curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
 ```
 
-Definitions accepted through `runtime_define` survive restart using that same
-directory. Durable worker mutations currently return `DURABILITY_UNAVAILABLE`.
-A pending definition interrupted before commit replays `OPERATION_INTERRUPTED`;
+Ask the connected agent to define and start a worker whose initial state contains
+count 7, then inspect its state. `runtime_define`, `runtime_start` and `runtime_stop`
+now survive restart using that same directory. Boot restores the committed state
+into fresh processes without rerunning generated init or migration callbacks.
+An explicit start after stop initializes from the supplied configuration again.
+Use a fresh MCP session after restart and wait for health before reconnecting.
+Durable invocation and replacement currently return `DURABILITY_UNAVAILABLE`.
+A pending mutation interrupted before commit replays `OPERATION_INTERRUPTED`;
 retry it with a new request ID. Completed responses replay for a bounded interval
 (default 10 minutes, including downtime); an expired ID may execute again. Module
 and PID strings in historical responses describe that operation, so use current

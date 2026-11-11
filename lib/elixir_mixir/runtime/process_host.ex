@@ -61,11 +61,10 @@ defmodule ElixirMixir.Runtime.ProcessHost do
 
   @impl true
   def init(opts) do
-    with {:ok, {:ok, data}} <-
-           Callback.run(fn -> opts.artifact.module.init(opts.config) end, opts.limits),
+    with {:ok, data} <- initial_data(opts),
          :ok <- valid_state(data, opts.limits) do
       {:ok,
-       Map.merge(opts, %{
+       Map.merge(Map.delete(opts, :restore_data), %{
          data: data,
          staged: nil,
          last_publication: nil,
@@ -73,8 +72,17 @@ defmodule ElixirMixir.Runtime.ProcessHost do
          owner_monitor: Process.monitor(opts.manager)
        })}
     else
-      {:ok, _invalid} -> {:stop, {:runtime_error, Error.new("CALLBACK_FAILED")}}
       {:error, error} -> {:stop, {:runtime_error, error}}
+    end
+  end
+
+  defp initial_data(%{restore_data: data}), do: {:ok, data}
+
+  defp initial_data(opts) do
+    case Callback.run(fn -> opts.artifact.module.init(opts.config) end, opts.limits) do
+      {:ok, {:ok, data}} -> {:ok, data}
+      {:ok, _invalid} -> {:error, Error.new("CALLBACK_FAILED")}
+      error -> error
     end
   end
 

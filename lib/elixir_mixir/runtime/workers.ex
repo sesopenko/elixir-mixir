@@ -82,7 +82,7 @@ defmodule ElixirMixir.Runtime.Workers do
   @doc "Reads a worker's actual committed state, omitting unavailable state honestly."
   @spec snapshot(map(), String.t(), Limits.t()) :: map()
   def snapshot(%{status: "running"} = worker, detail, limits) do
-    base = public(worker)
+    base = with_config(public(worker), worker, detail)
 
     case ProcessHost.snapshot(worker.pid, limits.callback_timeout_ms) do
       {:ok, snapshot} -> with_state(base, snapshot, detail)
@@ -90,7 +90,15 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
+  def snapshot(%{committed_data: data} = worker, "state", _limits) when is_map(data),
+    do: Map.put(with_config(public(worker), worker, "state"), "state", data)
+
   def snapshot(worker, _detail, _limits), do: Map.put(public(worker), "state_omitted", true)
+
+  defp with_config(base, %{desired_status: _status, config: config}, "state"),
+    do: Map.put(base, "config", config)
+
+  defp with_config(base, _worker, _detail), do: base
 
   defp with_state(base, snapshot, "state"), do: Map.put(base, "state", snapshot.data)
   defp with_state(base, _snapshot, _summary), do: base
@@ -367,11 +375,16 @@ defmodule ElixirMixir.Runtime.Workers do
 
   defp retained_definition(_args, _worker), do: :ok
 
+  @doc "Returns bounded kernel-owned logical lifecycle metadata."
+  @spec summary(map()) :: map()
+  def summary(worker), do: public(worker)
+
   defp public(worker) do
-    %{
+    data = %{
       "worker_id" => worker.worker_id,
       "artifact_id" => worker.artifact.id,
-      "implementation_version" => worker.artifact.revision,
+      "implementation_version" =>
+        if(worker.artifact.revision > 0, do: worker.artifact.revision, else: nil),
       "pid" => if(worker.pid, do: inspect(worker.pid), else: nil),
       "worker_revision" => worker.worker_revision,
       "state_revision" => worker.state_revision,
@@ -380,6 +393,10 @@ defmodule ElixirMixir.Runtime.Workers do
       "restart_limit" => 3,
       "restart_window_ms" => 10_000
     }
+
+    if Map.has_key?(worker, :desired_status),
+      do: Map.put(data, "desired_status", worker.desired_status),
+      else: data
   end
 
   defp stopped(worker),

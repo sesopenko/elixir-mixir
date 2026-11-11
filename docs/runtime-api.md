@@ -486,8 +486,8 @@ across BEAM lifetimes and never share it between running VMs.
 Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 `storage.format_version` (null in memory, currently 1 in durable mode). Absolute
 host paths are omitted. Durable mode supports source definitions and retained
-outcomes as described below. Worker mutations still fail with
-`DURABILITY_UNAVAILABLE` before callbacks; memory tools keep their existing
+outcomes, start/stop and initial-state recovery as described below. Durable invoke
+and replacement still fail with `DURABILITY_UNAVAILABLE` before callbacks; memory tools keep their existing
 behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
 
@@ -506,8 +506,8 @@ Candidate startup has no logical route. Manager registers the live host PID as
 the Registry value after init and response preflight, and removes that route on
 stop or host death. The Registry registrant is the Manager, so kernel lookups must
 use the explicit value. Owner death terminates candidates and releases reserved
-capacity. This protocol adds no application restart guarantee yet; durable-mode
-worker mutations retain the storage-foundation restriction above.
+capacity. Durable lifecycle operations use the same unrouted candidate boundary;
+durable invocation and replacement retain the restriction above.
 
 ### Durable source definitions and request replay
 
@@ -515,8 +515,8 @@ Durable mode now supports `runtime_define`. It first persists a request admissio
 with a unique operation ID, compiles without publishing the registry entry, then
 atomically stores the source, hash, logical revision, exact response and bounded
 audit record. Registry publication follows that commit. Source artifacts and
-completed definition errors survive abrupt BEAM termination. Start, stop, invoke
-and replacement remain disabled in durable mode until worker recovery is integrated.
+completed definition errors survive abrupt BEAM termination. Start/stop and initial
+state recovery are also integrated; invoke and replacement remain disabled in durable mode.
 
 Boot validates retained hashes/contracts and recompiles valid definitions in
 artifact-ID order using fresh slots from the fixed module pool. Artifact IDs are
@@ -531,10 +531,11 @@ slots fails readiness rather than silently recovering a subset.
 return `RUNTIME_RECOVERING` before admitting mutations. Summary inspection includes
 `recovery.status`, artifact counts, `degraded`, bounded diagnostics, `boot_id` and `lineage_id`.
 The lineage stays with the store; each Manager boot gets a new boot ID. Absolute
-storage paths and source text remain omitted from public inspection. This checkpoint
-restores inactive definitions; it does not yet restore a running application.
+storage paths and source text remain omitted from public inspection. Desired worker
+definitions and committed initial state now restore as described below; event and
+effect durability remain pending.
 
-An admitted definition with no committed outcome becomes a retained
+An admitted definition or lifecycle operation with no committed outcome becomes a retained
 `OPERATION_INTERRUPTED` error on restart without changing generation. A new request
 ID may retry it. A completed request replays its exact historical response, even
 if the original response or registry publication was interrupted. Changing its
@@ -550,3 +551,42 @@ idempotency. A full retained ledger returns `BUSY` without evicting outcomes.
 An uncertain store write or failed publication closes availability; restart reads
 the actual committed result. Direct compile-time IO by trusted generated code is
 outside this transaction boundary and may repeat on recompilation.
+
+
+### Durable worker lifecycle
+
+`runtime_start` runs bounded init in a supervised but unrouted candidate. It commits
+worker/config/desired status, selected artifact, initial schema/state/revisions,
+exact outcome and audit together before publishing its logical route. A failed init
+or response preflight leaves no definition or live candidate. `runtime_stop` commits
+the stopped definition and outcome before removing routing and terminating the
+host. Repeated stop retains its no-op generation and revision semantics. Source
+pending effects are deleted in that same stop transaction.
+
+Boot recreates desired-running hosts in sorted logical-ID order and injects the
+validated committed checkpoint. It never calls generated init or migrate. Worker
+IDs, configuration, selected artifacts and committed revisions survive; PIDs,
+monitors and retry tokens are new. Stopped workers remain stopped and their last
+committed state remains inspectable. Explicit start initializes from supplied
+config again and advances the state revision. Worker detail inspection adds config;
+durable worker summaries add `desired_status`. Existing bounded omission applies.
+
+Unexpected durable host death also restores its committed initial state. A crash
+and each retry persist lifecycle revisions and generation, but restoration does
+not advance the committed state revision. The three-attempt/ten-second rolling
+budget uses persisted UTC timestamps. Exhaustion remains failed across VM restart;
+manual start resets it. Stop before changing a failed or quarantined artifact/config.
+Stale monitor and retry tokens cannot change a newer incarnation.
+
+Missing/unusable artifacts and mismatched schema/state quarantine the affected
+worker while healthy workers recover. Recovery summary adds `workers`,
+`workers_restored`, `workers_quarantined` and bounded `worker_diagnostics`.
+Original records remain available for diagnosis. Stop and start a valid definition
+to repair one; recovery never silently migrates stored state.
+
+Readiness stays closed through worker validation, reconstruction and routing.
+Reads and mutations return `RUNTIME_RECOVERING` before admission even if Manager
+is occupied reconstructing hosts. Wait for health 200, then initialize a new MCP
+session. No client is needed to perform reconstruction. Invoke, replacement and
+effect durability are still pending, so durable invocation and replacement remain
+gated at this stage.

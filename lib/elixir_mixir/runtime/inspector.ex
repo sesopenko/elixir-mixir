@@ -79,8 +79,14 @@ defmodule ElixirMixir.Runtime.Inspector do
 
   defp worker_snapshot(worker, detail, state) do
     snapshot = Workers.snapshot(worker, detail, state.limits)
-    {:ok, artifact} = ArtifactRegistry.fetch(worker.artifact.id)
 
+    case ArtifactRegistry.fetch(worker.artifact.id) do
+      {:ok, artifact} -> attach_artifact(snapshot, artifact)
+      {:error, _error} -> Map.put(snapshot, "artifact_unavailable", true)
+    end
+  end
+
+  defp attach_artifact(snapshot, artifact) do
     metadata =
       Map.take(artifact, [
         :id,
@@ -100,6 +106,7 @@ defmodule ElixirMixir.Runtime.Inspector do
       fits?(data, state) -> {:ok, data}
       Map.has_key?(data, "artifact") -> fit_worker(omit(data, "artifact"), state)
       Map.has_key?(data, "state") -> fit_worker(omit(data, "state"), state)
+      Map.has_key?(data, "config") -> fit_worker(omit(data, "config"), state)
       true -> {:error, Error.new("LIMIT_EXCEEDED")}
     end
   end
@@ -119,6 +126,9 @@ defmodule ElixirMixir.Runtime.Inspector do
 
       Enum.any?(workers, &Map.has_key?(&1, "state")) ->
         fit_page(base, Enum.map(workers, &omit_if_present(&1, "state")), edges, paging, state)
+
+      Enum.any?(workers, &Map.has_key?(&1, "config")) ->
+        fit_page(base, Enum.map(workers, &omit_if_present(&1, "config")), edges, paging, state)
 
       length(workers) + length(edges) > 1 ->
         shrink_page(base, workers, edges, paging, state)

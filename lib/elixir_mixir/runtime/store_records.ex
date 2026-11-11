@@ -26,7 +26,12 @@ defmodule ElixirMixir.Runtime.StoreRecords do
     Enum.reduce_while(puts, :ok, fn {key, value}, :ok ->
       result =
         if valid_key?(key) and is_map(value),
-          do: Values.validate(value, :reply, %{limits | reply_bytes: record_bytes(key, limits)}),
+          do:
+            Values.validate(value, :reply, %{
+              limits
+              | reply_bytes: record_bytes(key, limits),
+                depth: limits.depth + 4
+            }),
           else: {:error, Error.new("INVALID_ARGUMENT")}
 
       with :ok <- result,
@@ -59,9 +64,15 @@ defmodule ElixirMixir.Runtime.StoreRecords do
   defp references(puts, records) do
     valid =
       Enum.all?(puts, fn
-        {{:worker, _id}, value} -> Map.has_key?(records, {:artifact, value["artifact_id"]})
-        {{:state, id}, _value} -> Map.has_key?(records, {:worker, id})
-        {_key, _value} -> true
+        {{:worker, _id}, value} ->
+          value["desired_status"] == "stopped" or
+            Map.has_key?(records, {:artifact, value["artifact_id"]})
+
+        {{:state, id}, _value} ->
+          Map.has_key?(records, {:worker, id})
+
+        {_key, _value} ->
+          true
       end)
 
     if valid, do: :ok, else: {:error, Error.new("INVALID_ARGUMENT")}

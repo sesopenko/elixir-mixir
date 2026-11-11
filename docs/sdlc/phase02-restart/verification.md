@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation, staged-hosts and durable-artifacts verified; remaining checkpoints and application recovery
+Status: store-foundation, staged-hosts, durable-artifacts and durable-lifecycle verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -136,7 +136,63 @@ committed worker state, effects and the actual client demo are still pending.
 
 ## durable-lifecycle
 
-Pending. Owning [task](tasks/durable-lifecycle.md). No execution evidence yet.
+Verified 2026-11-11 after inspecting prerequisite `12e4c30`, the governing contracts,
+committed evidence and origin. This checkpoint meets milestone 5's automated exit.
+
+- `mix test test/runtime/durable_lifecycle_test.exs --warnings-as-errors`: 6 passed.
+- `mix test test/integration/phase02_lifecycle_test.exs --warnings-as-errors`: 11 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 75 passed.
+- Full `mix check`: 199 tests, 2 doctests; warnings-as-errors clean, strict Credo
+  clean, Doctor 100%, Dialyzer zero errors/skips.
+- Plan verifier, diff checks and installed `.githooks` path verified. The checkpoint
+  commit runs the full quality gate again. README/contributor/API guidance updated
+  together; existing client commands and Claude Code qualification are preserved.
+
+An independent BEAM starts two workers linked by config and a third subsequently
+stopped worker. Init writes a marker and raises if called again; migration raises.
+After actual SIGKILL, the same directory reopens with no MCP session. The running
+hosts are newly supervised and routed, stopped routing stays absent, stored worker/
+state/request records and generation stay equal, logical IDs/config/artifacts/
+revisions/initial state match, and marker contents prove init was not repeated.
+A new OS PID and boot ID with the same lineage prove a new process lifetime without
+assuming printed host PID inequality. Explicit start after stop initializes from
+new config and advances worker/state revisions. Invocation remains gated.
+
+Six SIGKILL scenarios pause start and stop after admission, after preparation and
+after durable commit. Starts remain unrouted at all barriers. Before commit there
+is no partial worker/state record set; boot replays `OPERATION_INTERRUPTED`.
+After commit, boot honors the entire saved desired definition and replays the exact
+historical outcome despite interruption before routing/termination/response.
+Stopped records stay stopped and no-op stop preserves generation and revisions.
+
+Focused failures cover init error/timeout/invalid shape/non-JSON state, duplicate
+start, response-size rejection with synchronous candidate cleanup, maximum-depth
+state inside a checkpoint envelope, host death restoration, and stale DOWN/retry
+tokens. Restoring a host preserves state revision; crash/retry lifecycle revisions
+and UTC retry timestamps commit before publication. Three injected restoration
+failures persist exhaustion; a real VM restart keeps the definition failed.
+Manual start resets the budget, and edits to a failed definition require stop.
+
+Offline corruption tests retain a mismatched schema or missing artifact reference.
+Only the affected worker is quarantined; a healthy peer restores. A migration
+side-effect marker stays absent, proving mismatched schema does not run migration.
+Broken references are explicitly unavailable in inspection, rather than inventing
+an implementation version. The original bad records remain until explicit repair;
+stop can repair a broken reference and start a valid definition.
+
+A held compilation then held host-construction boundary verifies health 503 through
+reconstruction. The latter first reproduced a queued read instead of prompt
+`RUNTIME_RECOVERING`; public default-runtime calls now check the readiness table
+before entering Manager's mailbox. Held reads return promptly, mutations never
+enter the durable ledger, and health 200 appears only after healthy routes exist.
+The initial new HTTP helper also exposed duplicate fixed-profile ownership; closing
+the health-probe pool before opening the MCP client fixed that fixture cause.
+
+Durable request coordination is shared by definitions and lifecycle operations:
+prepare and response preflight, one atomic record/outcome/audit commit, then live
+publication. Existing memory behavior and all earlier artifact interruption tests
+remain green. Worker event transitions, replacement, outbox/delivery, deployment,
+actual Codex restart demonstration and final evidence review remain pending.
 
 ## durable-transitions
 
@@ -172,8 +228,11 @@ Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
 
 ## Acceptance and milestone evidence
 
-Source recovery evidence for A01 and definition-boundary evidence for A09/A14 are
-recorded above. Full acceptance reconciliation and milestone 5–7 results remain pending. Add an evidence table mapping
+Source recovery evidence for A01, desired definitions/logical identities/fresh hosts
+for A02/A05/A06, automated no-client recovery for A07, and source/lifecycle boundary
+evidence for A09/A14 are recorded above. Milestone 5's automated exit is verified.
+Full acceptance reconciliation, the actual-client portion of A07, and milestones
+6–7 remain pending. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.
 The final evidence-review reconciles these existing records; it does not create
 missing runtime coverage.

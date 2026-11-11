@@ -159,3 +159,9 @@ docker rm -f elixir-mixir-phase01
 - [Architecture](ARCHITECTURE.md): the kernel design and plans for future phases.
 - [Verification](docs/sdlc/phase01/verification.md): automated checks and actual Codex demonstration evidence.
 - [Contributing](CONTRIBUTING.md): development setup, troubleshooting and the required `mix check` quality gate.
+
+Phase 2 restart recovery is being implemented. Its first checkpoint supplies an
+opt-in durable kernel store, but generated application recovery is still pending.
+Keep using the default memory mode for experiments; durable mode currently rejects
+mutations. See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress)
+and the [restart plan](docs/sdlc/phase02-restart/plan.md) for the current boundary.

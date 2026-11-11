@@ -1,7 +1,8 @@
 # Phase 2 restart feature plan — Durable Genesis
 
-Status: planning checkpoint; every implementation task is pending.
+Status: store-foundation verified; remaining implementation tasks are pending.
 Governing assignment: [immutable snapshot](../../prompts/phase02-restart-planning.md).
+Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
 Architecture: [ADR-001](../../adr/001-architecture-initial-phases.md), section 10 and
 milestones 5–7. [Planning verification](planning-verification.md) records planning
 checks; [implementation verification](verification.md) must record future evidence.
@@ -65,7 +66,7 @@ effects and machine power-loss certification are outside this proof.
 ## Task index and deterministic execution order
 
 Execute in numeric order; dependencies below are also the full graph edge set.
-All tasks are pending. Sizes are relative, not hours.
+Store-foundation is verified in its checkpoint commit. Remaining tasks are pending. Sizes are relative, not hours.
 
 | Order | Task ID and document | Outcome | Prerequisites | Size | Milestone |
 | --- | --- | --- | --- | --- | --- |

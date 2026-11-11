@@ -18,6 +18,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
+  alias ElixirMixir.Runtime.StorageConfig
   alias ElixirMixir.Runtime.Values
   alias ElixirMixir.Runtime.WorkerRecovery
   alias ElixirMixir.Runtime.Workers
@@ -92,6 +93,10 @@ defmodule ElixirMixir.Runtime.Manager do
 
     {:ok,
      %{
+       storage:
+         StorageConfig.new(
+           Keyword.get(opts, :storage, Application.get_env(:elixir_mixir, :storage, []))
+         ),
        limits: limits,
        ledger: RequestLedger.new(limits),
        generation: 0,
@@ -121,6 +126,11 @@ defmodule ElixirMixir.Runtime.Manager do
   def handle_call({:events, args}, _from, state) do
     result = with :ok <- Inspection.events(args, state.limits), do: Inspector.events(args, state)
     {:reply, bounded(read_result(result, state), state), state}
+  end
+
+  def handle_call(message, _from, %{storage: %{mode: :durable}} = state)
+      when elem(message, 0) in [:define, :worker, :mutate] do
+    {:reply, failure(Error.new("DURABILITY_UNAVAILABLE"), nil, state), state}
   end
 
   def handle_call({:define, args}, _from, state) do

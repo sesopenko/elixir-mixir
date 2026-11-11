@@ -473,3 +473,19 @@ runtime_stop:
 ```json
 {"worker_id":"counter","request_id":"counter-stop-1"}
 ```
+
+## Experimental durable storage foundation
+
+Memory mode remains the default. `ELIXIR_MIXIR_DATA_DIR` opts into an exclusive,
+expanded absolute local data directory; programmatic configuration uses `:storage`
+with `mode: :durable` and `data_dir:`. Invalid configuration or unsupported format
+fails startup, and store loss shuts down runtime authority. Retain the directory
+across BEAM lifetimes and never share it between running VMs.
+
+Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
+`storage.format_version` (null in memory, currently 1 in durable mode). Absolute
+host paths are omitted. The store foundation does not yet persist generated
+application behavior. All durable-mode mutations currently fail with
+`DURABILITY_UNAVAILABLE` before compilation or callbacks; memory tools keep their
+existing behavior. This intermediate boundary will be extended by the
+[Phase 2 checkpoints](sdlc/phase02-restart/plan.md).

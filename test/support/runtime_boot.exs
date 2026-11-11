@@ -5,6 +5,14 @@ Application.put_env(:logger, :level, :warning)
 
 opts = System.argv() |> List.first("{}") |> Jason.decode!()
 
+Process.sleep(Map.get(opts, "startup_delay_ms", 0))
+
+Application.put_env(
+  :elixir_mixir,
+  :storage,
+  if(opts["data_dir"], do: [mode: :durable, data_dir: opts["data_dir"]], else: [mode: :memory])
+)
+
 known =
   Map.new(ElixirMixir.Runtime.Limits.defaults(), fn {key, _} -> {Atom.to_string(key), key} end)
 

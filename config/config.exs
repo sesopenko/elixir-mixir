@@ -7,3 +7,5 @@ config :elixir_mixir, :mcp, enabled: config_env() != :test, ip: {127, 0, 0, 1}, 
 config :hermes_mcp, log: false
 
 config :logger, :default_formatter, metadata: [:request_id, :effect_id, :mixir_metadata]
+
+config :elixir_mixir, :storage, mode: :memory

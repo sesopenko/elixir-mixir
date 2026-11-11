@@ -30,6 +30,7 @@ defmodule ElixirMixir.MixProject do
 
   defp deps do
     [
+      {:cubdb, "== 2.0.2"},
       {:hermes_mcp, "== 0.14.1"},
       {:plug, "== 1.20.3"},
       {:bandit, "== 1.14.1"},

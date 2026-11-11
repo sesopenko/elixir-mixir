@@ -5,6 +5,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Manager
+  alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.CallbackBarrier
 
   @doc "Handles bounded JSON control lines until the owning port closes stdin."
@@ -26,6 +27,27 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "store_commit", "value" => value}) do
+    store = Store
+    records = store.snapshot(store)
+
+    {:ok, outcome} =
+      store.commit(store, records[:meta]["generation"], %{
+        puts: %{{:audit, 0} => value, {:audit, 1} => %{"paired" => true}},
+        deletes: [],
+        outcome: %{"saved" => true},
+        operation_id: "fixture",
+        advance: true
+      })
+
+    outcome
+  end
+
+  def request(%{"op" => "store_snapshot"}) do
+    records = Store.snapshot(Store)
+    %{"meta" => records[:meta], "first" => records[{:audit, 0}], "second" => records[{:audit, 1}]}
+  end
+
   def request(%{"op" => "registry_status"}), do: ArtifactRegistry.status()
   def request(%{"op" => "events"} = args), do: EventLog.events(Map.get(args, "args", %{}))
 
@@ -99,9 +121,12 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
     %{"port" => port}
   end
 
-  def request(%{"op" => "kill_registry"}) do
+  def request(%{"op" => "kill_registry"}), do: kill_authority(ArtifactRegistry)
+  def request(%{"op" => "kill_store"}), do: kill_authority(Store)
+
+  defp kill_authority(authority) do
     ref = Process.monitor(Process.whereis(ElixirMixir.Supervisor))
-    Process.exit(Process.whereis(ArtifactRegistry), :kill)
+    Process.exit(Process.whereis(authority), :kill)
 
     receive do
       {:DOWN, ^ref, :process, _pid, _reason} ->

@@ -37,6 +37,10 @@ defmodule ElixirMixir.Runtime.Inspector do
 
       base = %{
         "health" => "ok",
+        "storage" => %{
+          "mode" => Atom.to_string(state.storage.mode),
+          "format_version" => if(state.storage.mode == :durable, do: 1, else: nil)
+        },
         "worker_count" => length(workers),
         "edge_count" => length(edges),
         "limits" => Map.new(state.limits, fn {key, value} -> {Atom.to_string(key), value} end),

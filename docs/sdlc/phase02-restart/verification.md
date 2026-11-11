@@ -1,7 +1,7 @@
 # Phase 2 implementation verification
 
-Status: pending implementation. This is an evidence template, not executed recovery
-or client evidence. Planning results belong in [planning-verification](planning-verification.md).
+Status: store-foundation verified; remaining checkpoints and application recovery
+evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
 For each checkpoint record date, baseline and resulting commit, actual commands,
@@ -17,7 +17,37 @@ printed PID string alone is not proof of reconstruction.
 
 ## store-foundation
 
-Pending. Owning [task](tasks/store-foundation.md). No execution evidence yet.
+Verified 2026-11-11 against baseline `5c7f8ea` (this checkpoint commit).
+Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
+
+- `python3 scripts/verify-phase01-demo.py`: verified 59 actual Phase 1 Codex calls,
+  confirming the committed prerequisite evidence before selecting this task.
+- Focused storage/config/restart command: 8 tests passed. Coverage includes atomic
+  paired writes and generation, conflict/canceled writes, invalid JSON and size/
+  table limits, changed-record dependencies, unknown format preservation,
+  invalid directory, duplicate owner, normal close/reopen, significant store loss,
+  readiness-timeout child cleanup and real HTTP inspect/rejected define.
+- `mix test test/mcp test/integration --warnings-as-errors`: 57 tests passed.
+- `mix check`: 159 tests and 2 doctests passed, no warnings, strict Credo clean,
+  Doctor documentation/typespec coverage 100%, Dialyzer zero errors/skips.
+- `python3 docs/sdlc/phase02-restart/verify-plan.py` and `git diff --check`: passed;
+  installed hook path is `.githooks`. Commit runs the same full gate.
+
+`test/integration/phase02_store_test.exs` owns a unique `/tmp/mixir-restart-*`
+directory, commits two audit records at generation 1, sends `kill -KILL` to the
+reported BEAM OS PID, waits for exit status 137, then starts another independent
+BEAM against that exact directory without an LLM. It verifies a different OS PID
+and exact equality of metadata (including lineage/generation) and both records.
+The fixture clears inherited storage/port settings. Production Store owns all
+backend access, synchronous writes and compaction; test corruption setup alone
+uses CubDB directly. A normal-close test caught a leaked backend process; explicit
+backend shutdown now allows immediate same-directory reopen.
+
+This proves store durability only. All durable application mutations fail with
+`DURABILITY_UNAVAILABLE` before compiler slot use (zero attempts/artifacts);
+memory behavior remains covered by the full prior suite. Generated definitions,
+worker state, outbox recovery and the actual Phase 2 client demo remain pending.
+README, CONTRIBUTING and runtime API describe this boundary.
 
 ## staged-hosts
 

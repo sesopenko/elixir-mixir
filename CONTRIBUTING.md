@@ -287,3 +287,23 @@ Linux VM is the stronger isolation and non-Linux alternative.
 - Phase 1 stores everything in memory. Host crash recovery reruns init and loses
   that worker's volatile state; BEAM/container restart loses the complete application.
   Client reconnect alone preserves it.
+
+## Durable storage foundation (Phase 2 in progress)
+
+The default runtime remains in memory. To open the experimental durable kernel
+store, set `ELIXIR_MIXIR_DATA_DIR=/absolute/path/to/data` before startup. The
+application also accepts `config :elixir_mixir, :storage, mode: :durable,
+data_dir: "/absolute/path/to/data"`. Missing or unusable directories and unsupported
+store formats fail startup; storage never silently falls back to memory.
+
+Only one runtime may own a directory. Use a local writable filesystem and retain
+that directory across restarts. Do not share it between VMs. Tests must use their
+own temporary directories; the subprocess fixtures clear inherited storage and port
+environment variables. CubDB 2.0.2 is locked with synchronous writes and automatic
+compaction enabled. Loss of the authoritative store shuts down the kernel.
+
+This checkpoint provides the store and restart fixture, but generated artifacts,
+workers and effects are not yet integrated with it. In durable mode all mutation
+tools return `DURABILITY_UNAVAILABLE` before executing generated code. Inspection
+and HTTP readiness remain available. Use memory mode for current experiments.
+The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.

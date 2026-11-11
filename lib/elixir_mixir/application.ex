@@ -11,6 +11,8 @@ defmodule ElixirMixir.Application do
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Manager
+  alias ElixirMixir.Runtime.StorageConfig
+  alias ElixirMixir.Runtime.Store
 
   @impl true
   @doc """
@@ -21,21 +23,38 @@ defmodule ElixirMixir.Application do
     config = Config.new(Application.get_env(:elixir_mixir, :mcp, []))
     mcp = if config.enabled, do: [{MCPSupervisor, config}], else: []
 
+    storage =
+      StorageConfig.new(Application.get_env(:elixir_mixir, :storage, []))
+
+    stores =
+      if storage.mode == :durable do
+        [
+          Supervisor.child_spec(
+            {Store, data_dir: storage.data_dir, name: Store},
+            restart: :temporary,
+            significant: true
+          )
+        ]
+      else
+        []
+      end
+
     children =
-      [
-        EventLog,
-        Supervisor.child_spec(ArtifactRegistry, restart: :temporary, significant: true),
-        Supervisor.child_spec({Task.Supervisor, name: ElixirMixir.CompilerTasks},
-          id: ElixirMixir.CompilerTasks
-        ),
-        Supervisor.child_spec({Task.Supervisor, name: ElixirMixir.CallbackTasks},
-          id: ElixirMixir.CallbackTasks
-        ),
-        {Registry, keys: :unique, name: ElixirMixir.Runtime.ProcessRegistry},
-        {DynamicSupervisor, strategy: :one_for_one, name: ElixirMixir.Runtime.WorkerSupervisor},
-        Supervisor.child_spec(EffectDispatcher, restart: :temporary, significant: true),
-        Supervisor.child_spec(Manager, restart: :temporary, significant: true)
-      ] ++ mcp
+      stores ++
+        [
+          EventLog,
+          Supervisor.child_spec(ArtifactRegistry, restart: :temporary, significant: true),
+          Supervisor.child_spec({Task.Supervisor, name: ElixirMixir.CompilerTasks},
+            id: ElixirMixir.CompilerTasks
+          ),
+          Supervisor.child_spec({Task.Supervisor, name: ElixirMixir.CallbackTasks},
+            id: ElixirMixir.CallbackTasks
+          ),
+          {Registry, keys: :unique, name: ElixirMixir.Runtime.ProcessRegistry},
+          {DynamicSupervisor, strategy: :one_for_one, name: ElixirMixir.Runtime.WorkerSupervisor},
+          Supervisor.child_spec(EffectDispatcher, restart: :temporary, significant: true),
+          Supervisor.child_spec(Manager, restart: :temporary, significant: true)
+        ] ++ mcp
 
     opts = [strategy: :one_for_one, auto_shutdown: :any_significant, name: ElixirMixir.Supervisor]
     Supervisor.start_link(children, opts)

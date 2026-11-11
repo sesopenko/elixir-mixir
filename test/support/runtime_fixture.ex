@@ -19,6 +19,10 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
   @spec control(pid(), map()) :: map()
   def control(pid, request), do: GenServer.call(pid, {:control, request}, 15_000)
 
+  @doc "Abruptly kills the actual BEAM and waits for its OS exit."
+  @spec kill(pid()) :: :ok
+  def kill(pid), do: GenServer.call(pid, :kill, 5_000)
+
   @impl true
   def init(opts) do
     paths =
@@ -32,10 +36,28 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
     port =
       Port.open(
         {:spawn_executable, System.find_executable("elixir")},
-        [:binary, :exit_status, :stderr_to_stdout, :hide, args: args]
+        [
+          :binary,
+          :exit_status,
+          :stderr_to_stdout,
+          :hide,
+          args: args,
+          env: [{~c"ELIXIR_MIXIR_DATA_DIR", false}, {~c"ELIXIR_MIXIR_PORT", false}]
+        ]
       )
 
-    {:ok, %{port: port, output: "", pending: "", ready: nil, waiter: nil, control_waiter: nil}}
+    {:ok,
+     %{
+       port: port,
+       boot_timer:
+         Process.send_after(self(), :boot_timeout, Keyword.get(opts, :boot_timeout_ms, 10_000)),
+       output: "",
+       pending: "",
+       ready: nil,
+       waiter: nil,
+       control_waiter: nil,
+       killer: nil
+     }}
   end
 
   @impl true
@@ -43,7 +65,12 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
   def handle_call(:ready, _from, state), do: {:reply, state.ready, state}
 
   def handle_call(:alive, _from, state),
-    do: {:reply, Port.info(state.port, :os_pid) != nil, state}
+    do: {:reply, state.port != nil and Port.info(state.port, :os_pid) != nil, state}
+
+  def handle_call(:kill, from, state) do
+    {_, 0} = System.cmd("kill", ["-KILL", state.ready.os_pid])
+    {:noreply, %{state | killer: from}}
+  end
 
   def handle_call({:control, request}, from, state) do
     true = Port.command(state.port, JSON.encode!(request) <> "\n")
@@ -51,11 +78,19 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
   end
 
   @impl true
+  def handle_info(:boot_timeout, state), do: {:stop, :boot_timeout, state}
+
   def handle_info({port, {:data, data}}, %{port: port} = state) do
     parts = String.split(state.pending <> data, "\n")
     {lines, [pending]} = Enum.split(parts, -1)
     state = Enum.reduce(lines, state, &line/2)
     {:noreply, %{state | pending: pending}}
+  end
+
+  def handle_info({port, {:exit_status, 137}}, %{port: port, killer: killer} = state)
+      when not is_nil(killer) do
+    GenServer.reply(killer, :ok)
+    {:noreply, %{state | port: nil, killer: nil}}
   end
 
   def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
@@ -65,6 +100,7 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
   defp line("MIXIR_READY:" <> value, state) do
     [port, os_pid] = String.split(value, ":")
     ready = %{port: String.to_integer(port), os_pid: os_pid}
+    Process.cancel_timer(state.boot_timer)
     if state.waiter, do: GenServer.reply(state.waiter, ready)
     %{state | ready: ready, waiter: nil}
   end
@@ -79,8 +115,9 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
 
   @impl true
   def terminate(_reason, state) do
-    if Port.info(state.port) do
-      Port.command(state.port, "stop\n")
+    if state.port && Port.info(state.port) do
+      {:os_pid, os_pid} = Port.info(state.port, :os_pid)
+      System.cmd("kill", ["-KILL", to_string(os_pid)], stderr_to_stdout: true)
       Port.close(state.port)
     end
   end

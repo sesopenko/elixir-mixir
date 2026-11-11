@@ -6,9 +6,10 @@ defmodule ElixirMixir.Runtime.DurableLifecycleTest do
   alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.GeneratedFixtures, as: Fixtures
+  alias ElixirMixir.TestSupport.RuntimeFixture
 
   setup ctx do
-    dir = Path.join(System.tmp_dir!(), "mixir-lifecycle-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-lifecycle")
     on_exit(fn -> File.rm_rf!(dir) end)
     store = start_supervised!({Store, data_dir: dir})
     parent = self()

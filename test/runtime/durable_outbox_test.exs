@@ -10,6 +10,7 @@ defmodule ElixirMixir.Runtime.DurableOutboxTest do
   alias ElixirMixir.Runtime.Manager
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.GeneratedFixtures, as: Fixtures
+  alias ElixirMixir.TestSupport.RuntimeFixture
 
   setup_all do
     source =
@@ -39,7 +40,7 @@ defmodule ElixirMixir.Runtime.DurableOutboxTest do
   end
 
   setup ctx do
-    dir = Path.join(System.tmp_dir!(), unique())
+    dir = RuntimeFixture.temp_path(unique())
     on_exit(fn -> File.rm_rf!(dir) end)
     limits = Map.merge(%{ledger_retention_ms: 100}, Map.get(ctx, :limits, %{}))
     store = start_supervised!({Store, data_dir: dir, limits: limits})

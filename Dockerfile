@@ -12,9 +12,10 @@ COPY rel rel
 RUN mix compile --warnings-as-errors && mix release
 
 FROM elixir:1.18.3-otp-27-slim@sha256:fc227cb4b0c568a1f7cf6a8e40269185248cd29204c0d4e95cdefe31f5d1a873
-RUN useradd --uid 1000 --user-group --no-create-home --shell /usr/sbin/nologin mixir
+RUN useradd --uid 1000 --user-group --no-create-home --shell /usr/sbin/nologin mixir \
+    && mkdir /data && chown 1000:1000 /data
 WORKDIR /app
-COPY --from=build --chown=1000:1000 /build/_build/prod/rel/elixir_mixir /app
+COPY --from=build /build/_build/prod/rel/elixir_mixir /app
 USER 1000:1000
 ENTRYPOINT ["/app/bin/elixir_mixir"]
 CMD ["start"]

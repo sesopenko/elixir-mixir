@@ -329,7 +329,7 @@ defmodule ElixirMixir.Integration.Phase02LifecycleTest do
   end
 
   defp directory do
-    dir = Path.join(System.tmp_dir!(), "mixir-life-http-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-life-http")
     on_exit(fn -> File.rm_rf!(dir) end)
     dir
   end

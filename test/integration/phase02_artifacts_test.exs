@@ -175,7 +175,7 @@ defmodule ElixirMixir.Integration.Phase02ArtifactsTest do
 
   defp directory do
     dir =
-      Path.join(System.tmp_dir!(), "mixir-artifact-http-#{System.unique_integer([:positive])}")
+      RuntimeFixture.temp_path("mixir-artifact-http")
 
     on_exit(fn -> File.rm_rf!(dir) end)
     dir

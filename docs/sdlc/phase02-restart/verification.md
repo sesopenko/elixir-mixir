@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through recovery-quarantine verified; remaining checkpoints and application recovery
+Status: store-foundation through release-storage verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -473,7 +473,61 @@ release storage and the actual Codex client journey remain pending.
 
 ## release-storage
 
-Pending. Owning [task](tasks/release-storage.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `8e3dc2f` was committed and pushed.
+
+- `mix test test/runtime/storage_config_test.exs --warnings-as-errors`: 1 passed.
+- `mix test test/integration/phase02_release_config_test.exs --warnings-as-errors`: 4 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 122 passed.
+- Full `mix check`: 280 tests, 2 doctests; no warnings, strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors/skips.
+- `docker build -t elixir-mixir:phase02 .`: passed, compiling 53 kernel modules and
+  assembling the production OTP release with locked production dependencies.
+- `python3 scripts/smoke-phase02-release.py --output docs/sdlc/phase02-restart/evidence/release-smoke.json`:
+  passed. The [machine report](evidence/release-smoke.json) records exact Docker
+  commands, image identity, OS/boot/lineage assertions, retained volume and results.
+- Edited local links, walkthrough shell syntax, plan verifier and diff checks pass;
+  `.githooks` repeats the complete quality gate before recording this checkpoint.
+
+The resulting image is `sha256:41783a3c9f3230c9204e483dd1ddbed2b91bfe9c829a0afd924cc7e91468c2c2`.
+The Dockerfile prepares `/data` for UID/GID 1000 and keeps application files owned
+by root. Durability is explicitly selected at run time with a named `/data` volume
+and `ELIXIR_MIXIR_DATA_DIR=/data`; there is no implicit anonymous volume or default
+change to memory mode. The build context whitelist still excludes Git, tests,
+credentials and experiments. Actual image checks find no test controls or generated
+slot BEAMs, no source/credential bind mounts, a read-only application tree, writable
+retained data and separate `/tmp` scratch. Runtime caps, no-new-privileges, PID/memory
+limits and host-network loopback behavior remain in force.
+
+The smoke owns `mixir-phase02-smoke-b99f112f22f8-data` and uniquely named containers.
+Real HTTP defines a counter, starts it at 7 and invokes to 10. After client session
+disconnect, `docker kill --signal KILL` ends the actual container at exit 137, with
+OOMKilled false. Recreating the release with that same volume restores count 10,
+artifact selection and state revision. Host PIDs change from 599358 to 599629,
+boot IDs differ, lineage remains equal, and a fresh MCP session invokes to 12.
+Normal stop exits zero. A separate unwritable `/app` data path exits unsuccessfully
+with `storage_unavailable`, proving no memory fallback. Only owned containers are
+removed automatically; explicit post-checks confirm they are gone and the volume
+still exists. No user volume is deleted. This populated smoke store is not the
+empty store for the subsequent actual Codex demonstration.
+
+The growing suite exposed a real fixture isolation bug: a supposedly fresh `/tmp`
+path was already a directory. `System.unique_integer` is scoped to one BEAM; two
+fresh one-scheduler probes each produced 546. Storage tests now use one shared
+128-bit random temporary-path helper, including unit stores and independent HTTP
+fixtures. A regression launches two separate BEAMs and verifies distinct unused
+paths. The formerly failing quarantine file passes, and both the 122-test growing
+suite and full gate pass with independent concurrent test VMs. Existing directories
+are not cleared to hide the collision. Alias conventions were applied without
+weakening checks.
+
+The [Linux recovery walkthrough](../../phase02-recovery.md), README and contributor
+guidance give exact volume create/reuse, readiness, client initialization, SIGKILL,
+container recreation, normal shutdown and deliberate volume-deletion commands.
+They cover exclusive store ownership, Linux/loopback assumptions, port overrides,
+volume lifetime, request/session semantics, restored schedules and external IO
+limits. Codex/Claude command syntax is unchanged; Claude remains explicitly
+untested. Automated release checks are separate from the pending actual Codex
+restart journey and do not claim completion of that client evidence.
 
 ## codex-restart-demo
 

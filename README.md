@@ -171,6 +171,12 @@ It reconstructs running workers without a client and keeps stopped workers stopp
 Event invocation and implementation replacement are supported. Outgoing effects
 commit with state and resume after recovery has restored the healthy workers.
 
+For the isolated Linux release, follow the [retained-volume walkthrough](docs/phase02-recovery.md).
+It mounts a named volume at `/data` with `ELIXIR_MIXIR_DATA_DIR=/data`; removing
+the container preserves the application until you deliberately delete the volume.
+Wait for readiness and use a fresh MCP session after each restart. The Codex and
+untested Claude Code connection commands above use the same endpoint.
+
 To try durable worker definitions from the repository root, use a local directory
 owned exclusively by this runtime:
 

@@ -203,7 +203,7 @@ defmodule ElixirMixir.Integration.Phase02DeliveryTest do
 
   defp directory do
     dir =
-      Path.join(System.tmp_dir!(), "mixir-delivery-http-#{System.unique_integer([:positive])}")
+      RuntimeFixture.temp_path("mixir-delivery-http")
 
     on_exit(fn -> File.rm_rf!(dir) end)
     dir

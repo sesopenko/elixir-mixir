@@ -1,9 +1,10 @@
 defmodule ElixirMixir.Runtime.StoreTest do
   use ExUnit.Case, async: true
   alias ElixirMixir.Runtime.Store
+  alias ElixirMixir.TestSupport.RuntimeFixture
 
   setup do
-    dir = Path.join(System.tmp_dir!(), "mixir-store-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-store")
     on_exit(fn -> File.rm_rf!(dir) end)
     %{dir: dir}
   end

@@ -1,0 +1,270 @@
+{
+  "verified_at": "2026-11-11T22:19:22.600460+00:00",
+  "image": "elixir-mixir:phase02",
+  "image_id": "sha256:41783a3c9f3230c9204e483dd1ddbed2b91bfe9c829a0afd924cc7e91468c2c2",
+  "volume": "mixir-phase02-smoke-b99f112f22f8-data",
+  "volume_retained": true,
+  "port": 50735,
+  "safety": {
+    "user": "1000:1000",
+    "read_only_root": true,
+    "application_owner_uid": 0,
+    "data_writable": true,
+    "test_and_generated_modules_absent": true,
+    "only_volume": "mixir-phase02-smoke-b99f112f22f8-data"
+  },
+  "kill_signal": "KILL",
+  "kill_exit_code": 137,
+  "oom_killed": false,
+  "host_pids": [
+    599358,
+    599629
+  ],
+  "boot_ids": [
+    "1cd74e061e321250a3f7e8d642cef156",
+    "d4bb808e160cd0b14da9a6cb76e35a32"
+  ],
+  "lineage_id": "8068756593860acef252681e9c0653cf",
+  "restored_state": {
+    "count": 10
+  },
+  "continued_count": 12,
+  "fresh_mcp_session": true,
+  "normal_stop_exit_code": 0,
+  "unwritable_storage_failed_closed": true,
+  "commands": [
+    [
+      "docker",
+      "volume",
+      "create",
+      "--label",
+      "elixir-mixir.smoke=phase02",
+      "mixir-phase02-smoke-b99f112f22f8-data"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-b99f112f22f8-first",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-smoke-b99f112f22f8-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=50735",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "exec",
+      "mixir-phase02-smoke-b99f112f22f8-first",
+      "sh",
+      "-c",
+      "set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "kill",
+      "--signal",
+      "KILL",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "wait",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "rm",
+      "mixir-phase02-smoke-b99f112f22f8-first"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-b99f112f22f8-second",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-smoke-b99f112f22f8-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=50735",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "stop",
+      "--time",
+      "5",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-smoke-b99f112f22f8-second"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-smoke-b99f112f22f8-unwritable",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/app/unwritable",
+      "--env",
+      "ELIXIR_MIXIR_PORT=50735",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "wait",
+      "mixir-phase02-smoke-b99f112f22f8-unwritable"
+    ],
+    [
+      "docker",
+      "logs",
+      "mixir-phase02-smoke-b99f112f22f8-unwritable"
+    ],
+    [
+      "docker",
+      "image",
+      "inspect",
+      "elixir-mixir:phase02",
+      "--format",
+      "{{.Id}}"
+    ]
+  ]
+}

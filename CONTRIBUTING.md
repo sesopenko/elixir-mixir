@@ -252,7 +252,10 @@ The [Dockerfile](Dockerfile) uses a digest-pinned official Elixir 1.18.3/OTP 27
 image, installs the builder CA store, fetches only production dependencies and
 builds an OTP release. Its build context is a whitelist of mix.exs/mix.lock,
 config/, lib/ and rel/; Git, tests, credentials and local experiments are excluded.
-No build credentials or host files are copied into the runtime stage.
+No build credentials or host files are copied into the runtime stage. The application
+files are root-owned. UID/GID 1000 owns only the prepared `/data` directory; a
+read-only container supplies separate `/tmp` scratch space. Durability remains
+opt-in, so no implicit anonymous data volume changes the memory-mode workflow.
 
 The [release environment](rel/env.sh.eex) disables distribution and directs release
 temporary/crash files to /tmp. Fixed thread counts fit the 128-PID cap. A 65,536
@@ -266,6 +269,30 @@ processes separate. Do not mount client auth, source directories or Docker socke
 inside the generated-code container. Linux host networking exposes only the
 configured loopback listener but permits outbound/network access; a disposable
 Linux VM is the stronger isolation and non-Linux alternative.
+
+For retained applications use the [Linux release recovery walkthrough](docs/phase02-recovery.md).
+It creates/reuses an explicit named volume at `/data`, sets
+`ELIXIR_MIXIR_DATA_DIR=/data`, waits for readiness, disconnects the client, sends
+SIGKILL to the owned container, and recreates it with the same volume. One runtime
+exclusively owns each store. Normal stop/removal retains its volume; deliberate
+volume deletion is a separate destructive command. Reconnect with a new MCP session
+and use the matching endpoint/port in both Codex and Claude Code instructions.
+Claude Code remains untested here despite automated HTTP release coverage.
+
+The Docker-specific smoke check is separate from ordinary ExUnit:
+
+```sh
+docker build -t elixir-mixir:phase02 .
+python3 scripts/smoke-phase02-release.py --image elixir-mixir:phase02 --output /tmp/elixir-mixir-release-smoke.json
+```
+
+It creates only uniquely owned test containers/volume, verifies production module
+exclusion and non-root permissions, restores count 10 after SIGKILL/recreation,
+continues to 12 and rejects unwritable storage. It removes its containers but
+retains and prints the data volume; review and delete that test volume explicitly
+when finished. Keep it separate from the actual client demonstration's empty store.
+The report records exact Docker commands, boot/lineage/state assertions and image
+identity. Source, client auth and Docker sockets must remain outside the container.
 
 ## MCP connection troubleshooting
 

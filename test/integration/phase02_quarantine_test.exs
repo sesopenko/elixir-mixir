@@ -359,7 +359,7 @@ defmodule ElixirMixir.Integration.Phase02QuarantineTest do
 
   defp directory do
     dir =
-      Path.join(System.tmp_dir!(), "mixir-quarantine-http-#{System.unique_integer([:positive])}")
+      RuntimeFixture.temp_path("mixir-quarantine-http")
 
     on_exit(fn -> File.rm_rf!(dir) end)
     dir

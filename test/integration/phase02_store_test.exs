@@ -20,7 +20,7 @@ defmodule ElixirMixir.Integration.Phase02StoreTest do
   end
 
   test "loss of the authoritative store shuts down the runtime" do
-    dir = Path.join(System.tmp_dir!(), "mixir-store-death-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-store-death")
     on_exit(fn -> File.rm_rf!(dir) end)
     fixture = start_supervised!({RuntimeFixture, data_dir: dir})
     RuntimeFixture.ready(fixture)
@@ -30,7 +30,7 @@ defmodule ElixirMixir.Integration.Phase02StoreTest do
   end
 
   test "SIGKILL retains the atomic store while HTTP rejects an unknown replacement target" do
-    dir = Path.join(System.tmp_dir!(), "mixir-restart-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-restart")
     on_exit(fn -> File.rm_rf!(dir) end)
     fixture = start_supervised!({RuntimeFixture, data_dir: dir})
     ready = RuntimeFixture.ready(fixture)

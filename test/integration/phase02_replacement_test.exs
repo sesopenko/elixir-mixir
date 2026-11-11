@@ -184,7 +184,7 @@ defmodule ElixirMixir.Integration.Phase02ReplacementTest do
       })
 
   defp directory do
-    dir = Path.join(System.tmp_dir!(), "mixir-replace-http-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-replace-http")
     on_exit(fn -> File.rm_rf!(dir) end)
     dir
   end

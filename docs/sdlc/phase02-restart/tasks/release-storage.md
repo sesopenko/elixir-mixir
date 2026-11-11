@@ -1,6 +1,6 @@
 # release-storage: Retain durable storage in the supported local release
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -95,15 +95,23 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `8e3dc2f` verified and pushed before
+work. Storage config passed (1 test), release config/isolation passed (4 tests),
+growing MCP/integration passed (122 tests), and full `mix check` passed (280 tests,
+2 doctests, Credo clean, Doctor 100%, Dialyzer zero findings). Production image build
+and the [retained-volume smoke](../../../phase02-recovery.md#automated-production-release-smoke-test)
+passed with exit-137 SIGKILL, restored count 10, further count 12, fresh boot/session,
+non-root permissions and failed unwritable storage. The [evidence entry](../verification.md#release-storage)
+and [machine report](../evidence/release-smoke.json) record commands and outcomes.
+The smoke volume remains separate from the actual client demo's empty store.
 
 ## Relative size
 

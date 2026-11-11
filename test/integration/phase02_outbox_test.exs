@@ -125,7 +125,7 @@ defmodule ElixirMixir.Integration.Phase02OutboxTest do
     ]
 
   defp directory do
-    dir = Path.join(System.tmp_dir!(), "mixir-outbox-http-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-outbox-http")
     on_exit(fn -> File.rm_rf!(dir) end)
     dir
   end

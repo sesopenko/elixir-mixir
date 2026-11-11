@@ -7,6 +7,7 @@ defmodule ElixirMixir.TestSupport.DurableFixture do
   alias ElixirMixir.Runtime.Manager
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.GeneratedFixtures, as: Fixtures
+  alias ElixirMixir.TestSupport.RuntimeFixture
 
   @doc "Compiles one shared counting fixture with declarative event/config effects and failure modes."
   @spec artifact() :: map()
@@ -48,7 +49,7 @@ defmodule ElixirMixir.TestSupport.DurableFixture do
   @doc "Starts a fresh store and Manager, seeding an already compiled fixture without extra lifetime slots."
   @spec setup(map()) :: map()
   def setup(ctx) do
-    dir = Path.join(System.tmp_dir!(), unique())
+    dir = RuntimeFixture.temp_path(unique())
     ExUnit.Callbacks.on_exit(fn -> File.rm_rf!(dir) end)
 
     store =

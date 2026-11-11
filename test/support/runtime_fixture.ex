@@ -5,6 +5,13 @@ defmodule ElixirMixir.TestSupport.RuntimeFixture do
 
   @type ready :: %{port: :inet.port_number(), os_pid: String.t()}
 
+  @doc "Returns a fresh temporary path whose identity is independent of the calling BEAM lifetime."
+  @spec temp_path(String.t()) :: String.t()
+  def temp_path(prefix) do
+    suffix = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
+    Path.join(System.tmp_dir!(), prefix <> "-" <> suffix)
+  end
+
   @doc "Launches the test-only runtime script with the compiled application paths."
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)

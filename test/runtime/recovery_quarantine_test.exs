@@ -12,6 +12,7 @@ defmodule ElixirMixir.Runtime.RecoveryQuarantineTest do
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.Runtime.StoreRecords
   alias ElixirMixir.TestSupport.DurableFixture
+  alias ElixirMixir.TestSupport.RuntimeFixture
 
   test "malformed retained intent metadata cannot enter the delivery queue" do
     record = %{
@@ -110,7 +111,7 @@ defmodule ElixirMixir.Runtime.RecoveryQuarantineTest do
   end
 
   test "bounded audit recording preserves original evidence and generation" do
-    dir = Path.join(System.tmp_dir!(), "mixir-quarantine-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-quarantine")
     on_exit(fn -> File.rm_rf!(dir) end)
     limits = Limits.new(%{history_records: 2})
     store = start_supervised!({Store, data_dir: dir, limits: %{history_records: 2}})
@@ -160,7 +161,7 @@ defmodule ElixirMixir.Runtime.RecoveryQuarantineTest do
 
   @tag capture_log: true
   test "global overflow fails before compiler use or interrupted-request reconciliation" do
-    dir = Path.join(System.tmp_dir!(), "mixir-capacity-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-capacity")
     on_exit(fn -> File.rm_rf!(dir) end)
     store = start_supervised!({Store, data_dir: dir})
 
@@ -214,7 +215,7 @@ defmodule ElixirMixir.Runtime.RecoveryQuarantineTest do
 
   @tag capture_log: true
   test "malformed global lineage fails startup without exposing or rewriting it" do
-    dir = Path.join(System.tmp_dir!(), "mixir-lineage-#{System.unique_integer([:positive])}")
+    dir = RuntimeFixture.temp_path("mixir-lineage")
     on_exit(fn -> File.rm_rf!(dir) end)
 
     meta = %{

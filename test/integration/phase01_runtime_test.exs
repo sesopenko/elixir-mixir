@@ -250,9 +250,8 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
            })["code"] == "WORKER_NOT_FOUND"
   end
 
-  test "a test-controlled host kill preserves HTTP and peer state without automatic restart",
-       ctx do
-    artifact = define(ctx.client, args(Fixtures.worker_source()))
+  test "host recovery resets volatile state while HTTP, peers and BEAM survive reconnect", ctx do
+    artifact = define(ctx.client, args(Fixtures.recovery_source()))
 
     start = %{
       "worker_id" => "counter",
@@ -261,7 +260,7 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
       "request_id" => "start"
     }
 
-    _first = tool(ctx.client, "runtime_start", start)
+    first = tool(ctx.client, "runtime_start", start)
 
     peer =
       tool(ctx.client, "runtime_start", %{
@@ -270,21 +269,88 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
           "request_id" => "peer-start"
       })
 
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{"value" => 9},
+             "request_id" => "before-crash"
+           })["state_revision"] == 2
+
+    health = Client.raw(ctx.client, :get, "/health").data
+
     assert RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "counter"})[
              "killed"
            ]
 
-    failed = await_worker(ctx.client, "counter", "failed", 50)
+    Client.disconnect(ctx.client)
+    fresh = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{fresh | session: nil}) end)
+    {_init, _notification, fresh} = Client.initialize(fresh)
+    restarted = await_worker(fresh, "counter", "running", 100)
+    refute restarted["pid"] == first["pid"]
+    assert restarted["state"] == %{"value" => 1}
+    assert restarted["state_revision"] == 3
+    assert restarted["worker_revision"] > first["worker_revision"]
+    assert restarted["restart_count"] == 1
+    assert restarted["artifact_id"] == artifact["artifact_id"]
+    assert tool(fresh, "runtime_inspect", %{"worker_id" => "peer"})["pid"] == peer["pid"]
+
+    assert tool(fresh, "runtime_invoke", %{
+             "worker_id" => "peer",
+             "event" => %{"value" => 2},
+             "request_id" => "peer-event"
+           })["reply"] == %{"value" => 2}
+
+    assert Client.raw(fresh, :get, "/health").data == health
+    assert RuntimeFixture.alive?(ctx.fixture)
+  end
+
+  test "HTTP observes exhaustion, manual budget reset and stop during a pending retry", ctx do
+    artifact = define(ctx.client, args(Fixtures.recovery_source()))
+
+    start = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => %{"value" => 1},
+      "request_id" => "start"
+    }
+
+    tool(ctx.client, "runtime_start", start)
+    RuntimeFixture.control(ctx.fixture, %{"op" => "recovery_failure", "enabled" => true})
+    RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "counter"})
+    failed = await_worker(ctx.client, "counter", "failed", 150)
+    assert failed["restart_count"] == 3
     assert failed["pid"] == nil
 
-    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "peer", "detail" => "state"})[
-             "state"
-           ] == %{"value" => 1}
+    assert tool(ctx.client, "runtime_invoke", %{
+             "worker_id" => "counter",
+             "event" => %{},
+             "request_id" => "failed-invoke"
+           })["code"] == "WORKER_NOT_RUNNING"
 
-    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "peer"})["pid"] == peer["pid"]
-    assert Client.raw(ctx.client, :get, "/health").status == 200
+    events = RuntimeFixture.control(ctx.fixture, %{"op" => "events"})["events"]
+    assert Enum.count(events, &(&1["type"] == "worker_restart_attempt")) == 3
+    RuntimeFixture.control(ctx.fixture, %{"op" => "recovery_failure", "enabled" => false})
     restarted = tool(ctx.client, "runtime_start", %{start | "request_id" => "manual-recovery"})
+    assert restarted["restart_count"] == 0
     assert restarted["worker_revision"] > failed["worker_revision"]
+    RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "counter"})
+    await_worker(ctx.client, "counter", "restarting", 50)
+
+    stopped =
+      tool(ctx.client, "runtime_stop", %{
+        "worker_id" => "counter",
+        "request_id" => "stop-recovery"
+      })
+
+    Process.sleep(400)
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter"})["status"] == "stopped"
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter"})["generation"] ==
+             stopped["generation"]
+
+    refute RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"})[
+             "registered"
+           ]
   end
 
   test "the full config depth limit survives HTTP and worker inspection", ctx do
@@ -484,7 +550,7 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
   defp await_worker(_client, _id, _status, 0), do: flunk("worker lifecycle did not settle")
 
   defp await_worker(client, id, status, remaining) do
-    snapshot = tool(client, "runtime_inspect", %{"worker_id" => id})
+    snapshot = tool(client, "runtime_inspect", %{"worker_id" => id, "detail" => "state"})
 
     if snapshot["status"] == status,
       do: snapshot,

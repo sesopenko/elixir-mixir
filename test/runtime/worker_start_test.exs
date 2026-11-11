@@ -180,7 +180,7 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert {:ok, %{"state" => ^config}} = inspect_worker(ctx)
   end
 
-  test "a killed host becomes failed without restarting Manager or its healthy peer", ctx do
+  test "a killed host recovers without restarting Manager or its healthy peer", ctx do
     {:ok, first} = Manager.start_worker(start_args(ctx, %{"count" => 1}), ctx.manager)
     peer = %{ctx | worker: unique()}
     {:ok, healthy} = Manager.start_worker(start_args(peer, %{"count" => 2}), ctx.manager)
@@ -188,15 +188,13 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
-    failed = await_failed(ctx, 50)
-    assert failed["pid"] == nil
-    assert failed["worker_revision"] == first["worker_revision"] + 1
-    assert failed["state_omitted"]
+    restarted = await_running(ctx, first["pid"], 100)
+    refute restarted["pid"] == first["pid"]
+    assert restarted["worker_revision"] > first["worker_revision"]
+    assert restarted["state"] == %{"count" => 1}
     assert {:ok, %{"pid" => peer_pid, "state" => %{"count" => 2}}} = inspect_worker(peer)
     assert peer_pid == healthy["pid"]
     assert Process.alive?(ctx.manager)
-    assert {:ok, restarted} = Manager.start_worker(start_args(ctx, %{"count" => 3}), ctx.manager)
-    assert restarted["worker_revision"] > failed["worker_revision"]
     assert restarted["state_revision"] == first["state_revision"] + 1
   end
 
@@ -228,18 +226,18 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert_receive {:DOWN, ^helper_ref, :process, ^helper, _reason}, 1_000
   end
 
-  defp await_failed(ctx, 0),
+  defp await_running(ctx, _old_pid, 0),
     do: flunk("host failure was not observed: #{inspect(inspect_worker(ctx))}")
 
-  defp await_failed(ctx, remaining) do
+  defp await_running(ctx, old_pid, remaining) do
     {:ok, state} = inspect_worker(ctx)
 
-    if state["status"] == "failed",
+    if state["status"] == "running" and state["pid"] != old_pid,
       do: state,
       else:
         (
           Process.sleep(5)
-          await_failed(ctx, remaining - 1)
+          await_running(ctx, old_pid, remaining - 1)
         )
   end
 

@@ -2,6 +2,12 @@
 
 ## Startup and context recovery
 
+Implementation: [assignment](../../../prompts/phase01-implementation.md) and
+[unattended continuation](../../../prompts/phase01-implementation-amendment-04.md).
+Corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md),
+[05](../../../prompts/phase01-transport-amendment-05.md).
+
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -88,12 +94,33 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Verified prerequisite commit `1c325d4`, reread governing instructions and preserved
+  unrelated `scripts/codex.sh`.
+- `mix test test/runtime/worker_recovery_test.exs --warnings-as-errors`: 5 tests,
+  zero failures. Injected monotonic clock and retry scheduling prove exactly three
+  attempts, failed init accounting, independent budgets, expiration at ten seconds,
+  manual reset, and stale monitor/token immunity after stop and a new incarnation.
+  Actual host kills prove new Registry/PID, reset state and monotonic revisions.
+- `mix test test/runtime/worker_start_test.exs test/runtime/worker_invoke_test.exs --warnings-as-errors`:
+  19 tests, zero failures. Earlier manual-only expectation now checks automatic
+  recovery; callback failures retain their original host/state/revisions/budget.
+- `mix test test/mcp test/integration --warnings-as-errors`: 40 tests, zero failures.
+  Independent BEAM HTTP tests prove kill/reconnect recovery, healthy peer invocation,
+  stable BEAM/health identity, three failed init attempts and explicit budget reset.
+  Stop during a pending retry remains stopped after the retry delay has elapsed.
+- `mix check`: passed; 2 doctests, 102 tests, zero failures; strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- `git diff --check`: passed; hook path `.githooks`. The commit containing this
+  completed checklist is the checkpoint, recorded through the full-quality hook.
+- Next task after that commit: `event-effects`. Generated effect timers remain
+  that task's scope; recovery timers are now cancelled and incarnation guarded.

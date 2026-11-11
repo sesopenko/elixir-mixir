@@ -18,7 +18,7 @@ defmodule ElixirMixir.MCP.Server do
       "Define requires logical_name, source, expected_behavior elixir_mixir.behavior.v1 and request_id. " <>
       "Reuse request_id only for identical retries. All four callbacks are mandatory. " <>
       "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
-      "Inspect worker state with worker_id and detail state. Host failure currently requires explicit start. " <>
+      "Inspect worker state with worker_id and detail state. Host crashes rerun init within three restart attempts per rolling ten seconds; stopped or exhausted workers require explicit start. " <>
       "Use runtime_invoke with worker_id/event/request_id; repeat an identical ID to replay its outcome. " <>
       "Only empty effects lists are supported until event-effects. Generated code requires a trusted disposable environment."
   end

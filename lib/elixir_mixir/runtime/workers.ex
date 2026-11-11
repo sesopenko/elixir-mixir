@@ -8,6 +8,7 @@ defmodule ElixirMixir.Runtime.Workers do
   alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Values
+  alias ElixirMixir.Runtime.WorkerRecovery
 
   @type definitions :: %{String.t() => map()}
   @type mutation :: {:commit, map(), definitions()} | {:noop, map()} | {:error, Error.t()}
@@ -56,29 +57,6 @@ defmodule ElixirMixir.Runtime.Workers do
     else
       false -> {:error, Error.new("INVALID_ARGUMENT")}
       error -> error
-    end
-  end
-
-  @doc "Marks a monitored running host failed once; automatic recovery is added in worker-recovery."
-  @spec down(definitions(), reference(), term()) :: {definitions(), boolean()}
-  def down(workers, ref, reason) do
-    case Enum.find(workers, fn {_id, worker} ->
-           worker.monitor == ref and worker.status == "running"
-         end) do
-      nil ->
-        {workers, false}
-
-      {id, worker} ->
-        worker = %{
-          worker
-          | status: "failed",
-            pid: nil,
-            monitor: nil,
-            worker_revision: worker.worker_revision + 1
-        }
-
-        record("worker_crashed", worker, worker.request_id, %{"reason" => down_reason(reason)})
-        {Map.put(workers, id, worker), true}
     end
   end
 
@@ -137,7 +115,15 @@ defmodule ElixirMixir.Runtime.Workers do
 
   defp publish(args, workers, opts, generation, pid) do
     worker =
-      Map.merge(opts, %{pid: pid, monitor: nil, status: "running", request_id: args["request_id"]})
+      Map.merge(opts, %{
+        pid: pid,
+        monitor: nil,
+        status: "running",
+        request_id: args["request_id"],
+        restarts: [],
+        restart_token: nil,
+        restart_timer: nil
+      })
 
     data = public(worker)
 
@@ -168,6 +154,7 @@ defmodule ElixirMixir.Runtime.Workers do
     data = stopped(next)
 
     if preflight(data, args["request_id"], generation, limits) do
+      next = WorkerRecovery.cancel(next)
       if worker.monitor, do: Process.demonitor(worker.monitor, [:flush])
 
       if worker.pid,
@@ -210,9 +197,14 @@ defmodule ElixirMixir.Runtime.Workers do
 
   defp available(id, workers, limits) do
     case Map.get(workers, id) do
-      %{status: "running"} -> {:error, Error.new("WORKER_EXISTS")}
-      nil when map_size(workers) >= limits.workers -> {:error, Error.new("LIMIT_EXCEEDED")}
-      _other -> :ok
+      %{status: status} when status in ["running", "restarting"] ->
+        {:error, Error.new("WORKER_EXISTS")}
+
+      nil when map_size(workers) >= limits.workers ->
+        {:error, Error.new("LIMIT_EXCEEDED")}
+
+      _other ->
+        :ok
     end
   end
 
@@ -224,7 +216,10 @@ defmodule ElixirMixir.Runtime.Workers do
       "pid" => if(worker.pid, do: inspect(worker.pid), else: nil),
       "worker_revision" => worker.worker_revision,
       "state_revision" => worker.state_revision,
-      "status" => worker.status
+      "status" => worker.status,
+      "restart_count" => length(worker.restarts),
+      "restart_limit" => 3,
+      "restart_window_ms" => 10_000
     }
   end
 
@@ -259,9 +254,4 @@ defmodule ElixirMixir.Runtime.Workers do
       "metadata" => metadata
     })
   end
-
-  defp down_reason(:killed), do: "killed"
-  defp down_reason(:normal), do: "normal"
-  defp down_reason(:shutdown), do: "shutdown"
-  defp down_reason(_other), do: "abnormal"
 end

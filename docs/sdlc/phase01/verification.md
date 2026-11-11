@@ -146,6 +146,27 @@ their owning Manager. Callback reasons are formatted and capped inside bounded
 generated execution; state commits wait for all validation and response preflight.
 Automatic worker recovery is still the following checkpoint.
 
+## worker-recovery
+
+Verified 2026-11-11; the checked task's containing commit is the recovery checkpoint.
+
+- Focused recovery suite: 5 tests pass. Real host kills reset init state under the
+  retained active artifact/config with a new PID/Registry mapping and increasing
+  revisions. Deterministic clock/timer controls prove three attempts per rolling
+  ten seconds, counting failed init, independent worker budgets, exact expiration,
+  explicit start reset and stale DOWN/retry immunity after stop/new incarnation.
+- Existing startup/invocation suites: 19 tests pass, including unchanged live hosts
+  after callback failure/timeout and healthy peer continuity.
+- Growing MCP/HTTP suites: 40 tests pass. A fresh client reconnects while recovery
+  proceeds, observes a new PID/reset state and invokes the unchanged healthy peer;
+  OS BEAM/health identity remains fixed. Failed reinitialization yields exactly
+  three recorded attempts and retained failed status, then explicit start works.
+  Stop during retry prevents resurrection after the deadline; no production test
+  control is exposed.
+- Full `mix check`: 2 doctests and 102 tests, zero failures; strict Credo clean,
+  Doctor documentation/typespec coverage 100%, Dialyzer zero errors.
+- `git diff --check` passes; `.githooks` remains enabled for the checkpoint commit.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
@@ -158,9 +179,9 @@ Automatic worker recovery is still the following checkpoint.
 | A10 | Failed definitions preserve active counter artifact/state; subsequent invoke works | Verified automated substrate |
 | A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
 | A05 | HTTP increment/inspect, revisions and failure preservation | Actual Codex observations |
-| A12 | Real host kill preserves HTTP, Manager and healthy peer | Automatic recovery bounds in worker-recovery |
+| A12 | Real host kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
 | A06–A09, A11 | Foundations only | Owning effect/replacement tasks |
 
-Automatic recovery, effects, full history/topology inspection, replacement, isolated container/release
+Effects, full history/topology inspection, replacement, isolated container/release
 setup and the actual Codex transcript remain pending. No worker/domain behavior is
 seeded in the production kernel or claimed by this checkpoint.

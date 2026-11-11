@@ -76,6 +76,16 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
     )
   end
 
+  @doc "Returns a mutable worker with a test-only reinitialization failure switch."
+  @spec recovery_source() :: String.t()
+  def recovery_source do
+    source(
+      init:
+        "if Application.get_env(:elixir_mixir, :test_recovery_failure, false), do: {:error, :reinit_failed}, else: {:ok, config}",
+      event: "{:ok, event, Map.merge(state, event), []}"
+    )
+  end
+
   @doc "Expands an extra module to verify actual compiler output independently of AST checks."
   @spec extra_module() :: Macro.t()
   defmacro extra_module do

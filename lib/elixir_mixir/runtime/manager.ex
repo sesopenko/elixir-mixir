@@ -16,11 +16,12 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Values
+  alias ElixirMixir.Runtime.WorkerRecovery
   alias ElixirMixir.Runtime.Workers
 
   @type result :: {:ok, map()} | {:error, Error.t()}
 
-  @doc "Starts a manager with optional name, downward limit overrides and monotonic clock."
+  @doc "Starts a manager with optional name, downward limits, monotonic clock and kernel restart timer."
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
@@ -82,6 +83,10 @@ defmodule ElixirMixir.Runtime.Manager do
        ledger: RequestLedger.new(limits),
        generation: 0,
        workers: %{},
+       restart_timer:
+         Keyword.get(opts, :restart_timer, fn message ->
+           Process.send_after(self(), message, 100)
+         end),
        clock: Keyword.get(opts, :clock, fn -> System.monotonic_time(:millisecond) end)
      }}
   end
@@ -175,11 +180,20 @@ defmodule ElixirMixir.Runtime.Manager do
 
   @impl true
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
-    {workers, changed} = Workers.down(state.workers, ref, reason)
+    {workers, changed} = WorkerRecovery.down(state.workers, ref, reason, recovery_policy(state))
 
     {:noreply,
      %{state | workers: workers, generation: state.generation + if(changed, do: 1, else: 0)}}
   end
+
+  def handle_info({:restart_worker, id, token}, state) do
+    {workers, changed} = WorkerRecovery.retry(state.workers, id, token, recovery_policy(state))
+
+    {:noreply,
+     %{state | workers: workers, generation: state.generation + if(changed, do: 1, else: 0)}}
+  end
+
+  defp recovery_policy(state), do: %{clock: state.clock, timer: state.restart_timer}
 
   defp execute(id, callback, state) do
     {result, next_state, changed} = staged(callback.(state.generation + 1), state)

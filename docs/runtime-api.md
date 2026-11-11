@@ -52,7 +52,7 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Effects, automatic recovery, event inspection and replacement are pending their feature tasks.
+Effects, event inspection and replacement are pending their feature tasks.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -182,10 +182,29 @@ close/reinitialize preserves running worker PID and state.
 
 Unexpected host death currently marks the retained definition failed, removes its
 live PID, advances worker revision/generation and records a correlated crash event.
-Peers, Manager and HTTP remain alive. **Recovery is manual at this checkpoint**:
-call runtime_start with a fresh request_id to reinitialize the failed ID. Automatic
-restart budgets belong to worker-recovery. Phase 1 does not preserve state across
-crashes. No automatic recovery timer is advertised yet.
+Peers, Manager and HTTP remain alive. Manager marks the worker `restarting` and
+schedules a bounded init attempt after 100 ms using its retained active artifact and
+config. A successful restart has a new diagnostic PID and Registry mapping; logical
+worker ID stays fixed. **Phase 1 loses volatile state across crashes**: init reruns,
+rather than restoring the last event's state. Worker revision advances on host death
+and on each restart attempt; state revision advances only on successful reinitialization.
+Generation advances once per crash or attempt, including a failed attempt.
+
+Each worker allows three automatic attempts per rolling 10,000 ms. Failed init
+counts toward the same budget as successful reinitialization. Exhaustion retains
+status `failed`, omits unavailable state/PID and requires a fresh explicit start;
+no fourth retry is scheduled inside the window. Starting a stopped/failed worker
+explicitly resets its budget. Starting a running/restarting ID yields WORKER_EXISTS.
+Invoke during restart or after exhaustion yields WORKER_NOT_RUNNING. Callback task
+failure/timeout retains its live host and does not consume restart budget.
+
+Inspection/start results include restart_count (attempts retained at the latest
+lifecycle change), restart_limit 3 and restart_window_ms 10000. Stopping a worker
+cancels its retry timer and invalidates the incarnation token; old monitor and retry
+messages cannot resurrect it or affect a newer explicit start. Lifecycle history
+correlates crashes, attempts, successful restarts, init failure and exhaustion to
+the originating request. Recovery is in-memory only and does not recover a failed
+Manager, artifact registry or BEAM.
 
 Request replay returns the original outcome and generation without another host or
 stop, even if later operations have changed the worker. Inspect to obtain current

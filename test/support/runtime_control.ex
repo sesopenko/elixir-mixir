@@ -66,6 +66,11 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
     end
   end
 
+  def request(%{"op" => "recovery_failure", "enabled" => enabled}) when is_boolean(enabled) do
+    Application.put_env(:elixir_mixir, :test_recovery_failure, enabled)
+    %{"enabled" => enabled}
+  end
+
   def request(%{"op" => "kill_host", "id" => id}) do
     [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
     ref = Process.monitor(pid)

@@ -29,7 +29,10 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
     {list, client} = Client.request(client, "tools/list", %{}, "discovery-id")
     assert list.data["id"] == "discovery-id"
 
-    assert [%{"name" => "runtime_inspect", "inputSchema" => schema}] =
+    assert [
+             %{"name" => "runtime_define"},
+             %{"name" => "runtime_inspect", "inputSchema" => schema}
+           ] =
              list.data["result"]["tools"]
 
     assert schema["additionalProperties"] == false
@@ -147,7 +150,10 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
     assert response.body == ""
     event = Client.receive_event(stream)
     assert event["id"] == "sse-id"
-    assert [%{"name" => "runtime_inspect"}] = event["result"]["tools"]
+
+    assert [%{"name" => "runtime_define"}, %{"name" => "runtime_inspect"}] =
+             event["result"]["tools"]
+
     :httpc.cancel_request(stream, client.profile)
     assert RuntimeFixture.alive?(ctx.fixture)
   end

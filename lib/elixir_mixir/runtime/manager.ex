@@ -9,10 +9,12 @@ defmodule ElixirMixir.Runtime.Manager do
 
   use GenServer
 
+  alias ElixirMixir.Runtime.Definition
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Inspection
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.RequestLedger
+  alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Values
 
   @type result :: {:ok, map()} | {:error, Error.t()}
@@ -21,6 +23,12 @@ defmodule ElixirMixir.Runtime.Manager do
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+  end
+
+  @doc "Compiles a bounded template into an immutable, inactive artifact using request replay semantics."
+  @spec define(map(), GenServer.server()) :: result()
+  def define(args, server \\ __MODULE__) do
+    GenServer.call(server, {:define, args}, Limits.defaults().operation_timeout_ms)
   end
 
   @doc "Returns the empty runtime status. Accepts optional worker_id, detail and page limit; no cursor exists yet."
@@ -88,6 +96,20 @@ defmodule ElixirMixir.Runtime.Manager do
     {:reply, bounded(result, state), state}
   end
 
+  def handle_call({:define, args}, _from, state) do
+    case mutation_arguments(args, state.limits) do
+      :ok ->
+        hash = Values.request_hash("define", args)
+        callback = fn generation -> Definition.define(args, generation, state.limits) end
+        {result, state} = run(args["request_id"], hash, callback, state)
+        {:reply, result, state}
+
+      {:error, error} ->
+        id = if is_map(args) and Values.valid_id?(args["request_id"]), do: args["request_id"]
+        {:reply, failure(error, id, state), state}
+    end
+  end
+
   def handle_call({:mutate, operation, args, callback}, _from, state) do
     case mutation_arguments(args, state.limits) do
       :ok ->
@@ -133,8 +155,13 @@ defmodule ElixirMixir.Runtime.Manager do
     limits = %{state.limits | reply_bytes: state.limits.response_bytes}
 
     case Values.validate(data, :reply, limits) do
-      :ok -> {status, data}
-      {:error, _error} -> failure(Error.new("LIMIT_EXCEEDED"), data["request_id"], state)
+      :ok ->
+        if ResponseBudget.fits?(data, state.limits),
+          do: {status, data},
+          else: failure(Error.new("LIMIT_EXCEEDED"), data["request_id"], state)
+
+      {:error, _error} ->
+        failure(Error.new("LIMIT_EXCEEDED"), data["request_id"], state)
     end
   end
 

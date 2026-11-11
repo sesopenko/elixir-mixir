@@ -1,6 +1,6 @@
 # Runtime API version 1
 
-The currently implemented MCP surface contains one tool: `runtime_inspect`.
+The currently implemented MCP surface contains `runtime_inspect` and `runtime_define`.
 Runtime metadata is in memory; no generated application is seeded at startup.
 
 ## Connection
@@ -39,7 +39,7 @@ Arguments are optional; omission is equivalent to an empty object:
 Unknown keys, invalid IDs, explicit null values, unsupported detail and malformed
 cursors return `INVALID_ARGUMENT`. Schema type violations produce protocol errors.
 Inspection is read-only and never executes generated behavior. It reports
-`api_version: "1"`, `generation: 0`, health, empty workers/topology, configured
+`api_version: "1"`, current generation (zero on startup), health, empty workers/topology, configured
 limits and ledger capacity/retention. State inspection does not invent workers.
 
 The JSON envelope appears as text content and identical `structuredContent`,
@@ -51,9 +51,91 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Worker, compiler, event and replacement tools are pending their feature tasks.
+Worker, event and replacement tools are pending their feature tasks.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
-complete wire outcomes before applying staged changes; the current exposed tool
-is read-only. Runtime generations and request replay rules are described in
+complete wire outcomes before applying staged changes; definition preflights its
+result before registry publication. Runtime generations and request replay rules
+are described in
 [CONTRIBUTING](../CONTRIBUTING.md) and the [Phase 1 plan](sdlc/phase01/plan.md).
+
+## runtime_define
+
+The currently implemented tools are `runtime_define` and `runtime_inspect`.
+No workers start automatically. Definition takes four required string fields:
+
+| Argument | Contract |
+| --- | --- |
+| `logical_name` | ASCII identifier `[a-zA-Z0-9_-]{1,64}` |
+| `source` | At most 32 KiB raw UTF-8; one `defmodule Generated do ... end` template |
+| `expected_behavior` | Exactly `elixir_mixir.behavior.v1` |
+| `request_id` | Nonempty ASCII identifier, at most 64 characters; reuse for identical retries only |
+
+For example, submit this source as the `source` string of a `runtime_define` call
+with logical_name `counter`, expected_behavior `elixir_mixir.behavior.v1` and a new
+request_id:
+
+```elixir
+defmodule Generated do
+  @behaviour ElixirMixir.Behavior
+  @impl true
+  def init(config), do: {:ok, %{"count" => Map.get(config, "initial", 0)}}
+  @impl true
+  def handle_event(%{"increment" => amount}, state) do
+    count = state["count"] + amount
+    {:ok, count, %{"count" => count}, []}
+  end
+  @impl true
+  def state_schema(), do: 1
+  @impl true
+  def migrate(state, _metadata), do: {:ok, state}
+end
+```
+
+All four callbacks are mandatory. Config/event/state roots are JSON maps with
+string keys. init/1 returns `{:ok, state}` or `{:error, reason}`. handle_event/2
+returns `{:ok, reply, state, effects}` or `{:error, reason}`. migrate/2 returns
+`{:ok, state}` or `{:error, reason}` and cannot return effects. state_schema/0
+returns a positive integer. Define validates only the schema callback under its
+200 ms callback deadline and 8 MiB task heap; it does not execute init, events or
+migration. The later worker tasks own state transitions and effect support.
+
+Successful results contain artifact_id, reserved module name, original source_hash
+(SHA-256), logical revision, state_schema, compilation_status `compiled`, diagnostics
+and callbacks_valid, together with the API/generation/request envelope. A new
+successful definition of the same logical name gets a distinct module/artifact
+and increments its logical revision. Replaying a request returns the exact recorded
+outcome, including its original generation; different arguments under the same ID
+return REQUEST_ID_CONFLICT. Errors replay too. Validation errors before a valid,
+JSON-hashable request are not cached.
+
+Before parsing, reserve one of 128 fixed `ElixirMixir.Generated.Slot001` through
+`Slot128` module atoms for this BEAM lifetime. Rewrite only the outer module name;
+use `__MODULE__` for self references inside the source. Reject other top-level
+forms, nested modules, obvious Module.create/Code.compile_* calls, and compilation
+output containing anything except the reserved module. Failed attempts consume
+slots, including syntax errors, warnings, callback errors and timeouts. Source or
+metadata validation rejected before reservation does not consume a slot. No slots
+are reset or purged in a running BEAM, even after application stop/start.
+
+The compiler runs in an unlinked monitored task with a five-second deadline and
+64 MiB task heap. Temporary compiler descendants are tracked and joined during
+cleanup; bounded diagnostics include tracked helper counts on task failure. Code
+warnings and errors are captured without changing global compiler options; schema
+warnings also reject definition. Missing callbacks yield CALLBACK_MISSING; syntax,
+warnings, invalid schema and deadlines yield COMPILE_FAILED. Limits yield
+LIMIT_EXCEEDED. Diagnostics are at most ten records with 2 KiB UTF-8 text each,
+without raw exception stack traces.
+
+Compilation loads code before metadata publication. The registry retains original
+source, hash, BEAM, schema/contract versions and immutable metadata only after all
+checks and full-response preflight pass. Failed definitions do not alter existing
+artifacts, active behavior or runtime generation. Compile success/failure records
+go to the bounded EventLog ring; its MCP reader is pending runtime-inspection.
+
+Generated macros, compile-time code and schema callbacks execute with VM privileges.
+AST checks, task heap flags and deadlines are not a secure sandbox or a total VM
+memory/atom budget. Compile-time side effects cannot be rolled back. Run experiments
+only in a trusted disposable environment without secrets or valuable infrastructure.
+Loss of Manager or artifact-registry authority shuts down the kernel; there is no
+Phase 1 recovery. Stopping the BEAM loses all artifact metadata.

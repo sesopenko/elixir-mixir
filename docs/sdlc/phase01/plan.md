@@ -2,8 +2,11 @@
 
 Status: implementation in progress. kernel-api is committed at `14f8d10`;
 mcp-bootstrap is complete in the commit containing its checked task document.
-artifact-compiler is next. Governing architecture:
+artifact-compiler is complete in the commit containing its checked task document.
+worker-start is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
+Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
+Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).
 Implementation assignment: [resume Phase 1](../../prompts/phase01-implementation.md).
 Planning assignment: [complete immutable snapshot](../../prompts/phase01-planning.md).
 HTTP dependency/transport correction: [amendment 03](../../prompts/phase01-dependency-amendment-03.md).
@@ -147,13 +150,15 @@ only normalize/validate arguments, call Manager, and encode bounded results. No 
 application is seeded at startup. Use one runtime per BEAM; global-registry/compiler
 and integration tests run `async: false` with explicit cleanup and small test limits.
 
-Permanent root `:one_for_one` children, added only as needed: EventLog, artifact registry,
+Root `:one_for_one` children, added only as needed: EventLog, artifact registry,
 unique OTP Registry, callback Task.Supervisor, compiler Task.Supervisor,
 DynamicSupervisor for hosts, EffectDispatcher, Manager, Hermes.Server.Registry,
 MCP server supervisor, Bandit listener. Start the manager before HTTP readiness.
 A host/worker-subtree failure must not restart HTTP or Manager. Failure of authoritative
 Manager or artifact metadata is kernel failure: fail the application rather than
-pretending to recover the graph. No Phase 1 kernel restart recovery guarantee.
+pretending to recover the graph. No Phase 1 kernel restart recovery guarantee. Manager and artifact registry are
+temporary significant children with root `auto_shutdown: :any_significant`; their
+loss stops authority rather than restarting empty metadata (amendment 05).
 
 Manager serializes mutations and assigns operation context. Bounded callback/compiler
 work runs in unlinked, monitored tasks; neither Manager nor MCP executes generated

@@ -1,9 +1,9 @@
 # elixir-mixir
 
 An experimental Elixir/OTP runtime for creating and evolving a live application
-through MCP. The current checkpoint exposes read-only runtime inspection over
-localhost HTTP, backed by a supervised in-memory Manager and bounded request ledger.
-Worker creation, generated behavior, event delivery and replacement are planned
+through MCP. The current checkpoint exposes runtime inspection and bounded generated-artifact
+compilation over localhost HTTP, backed by a supervised in-memory Manager and request
+ledger. Worker creation, event delivery and replacement are planned
 in [Phase 1](docs/sdlc/phase01/plan.md). Persistence is a later phase.
 
 After the setup in [CONTRIBUTING.md](CONTRIBUTING.md), start the runtime in its own
@@ -27,7 +27,8 @@ codex mcp list
 codex
 ```
 
-The only tool currently advertised is `runtime_inspect`. Closing and restarting
+The advertised tools are `runtime_inspect` and `runtime_define`; definition compiles
+one Generated template into an inactive immutable artifact. Closing and restarting
 Codex leaves the BEAM running; Ctrl+C twice in the runtime terminal stops it.
 The endpoint is an independently running service. Override its port with
 `ELIXIR_MIXIR_PORT=4101 mix run --no-halt` and use the same port in client commands.

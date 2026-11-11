@@ -6,6 +6,7 @@ defmodule ElixirMixir.MCP.Router do
   import Plug.Conn
 
   alias ElixirMixir.MCP.Server
+  alias ElixirMixir.MCP.Transport
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.Manager
   alias ElixirMixir.Runtime.Values
@@ -98,9 +99,16 @@ defmodule ElixirMixir.MCP.Router do
   end
 
   defp forward(conn, limits) do
-    conn
-    |> register_before_send(&normalize(&1, limits))
-    |> StreamableHTTP.Plug.call(StreamableHTTP.Plug.init(server: Server, timeout: 7_000))
+    conn = register_before_send(conn, &normalize(&1, limits))
+
+    if conn.method == "POST" do
+      Transport.post(conn, limits)
+    else
+      StreamableHTTP.Plug.call(
+        conn,
+        StreamableHTTP.Plug.init(server: Server, timeout: limits.operation_timeout_ms)
+      )
+    end
   end
 
   defp normalize(%{status: 202} = conn, _limits), do: resp(conn, 202, "")

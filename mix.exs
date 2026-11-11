@@ -16,13 +16,14 @@ defmodule ElixirMixir.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :crypto],
       mod: {ElixirMixir.Application, []}
     ]
   end
 
   defp deps do
     [
+      {:jason, "== 1.4.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.23.0", only: [:dev, :test], runtime: false}

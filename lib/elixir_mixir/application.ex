@@ -11,7 +11,7 @@ defmodule ElixirMixir.Application do
   """
   @spec start(Application.start_type(), term()) :: Supervisor.on_start()
   def start(_type, _args) do
-    children = []
+    children = [ElixirMixir.Runtime.Manager]
 
     opts = [strategy: :one_for_one, name: ElixirMixir.Supervisor]
     Supervisor.start_link(children, opts)

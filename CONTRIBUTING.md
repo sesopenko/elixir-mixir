@@ -40,7 +40,7 @@ iex -S mix
 ```
 
 The greeting command prints `:world`. In IEx, call `ElixirMixir.hello()` or inspect
-the empty supervision tree with
+the supervision tree with
 `Supervisor.which_children(ElixirMixir.Supervisor)`. Exit IEx with Ctrl+C twice.
 
 To keep the OTP application running without an interactive shell:
@@ -49,10 +49,47 @@ To keep the OTP application running without an interactive shell:
 mix run --no-halt
 ```
 
-Stop it with Ctrl+C twice. The bootstrap starts an empty supervisor and does not
-yet expose an MCP endpoint. Kernel development happens in this repository;
+Stop it with Ctrl+C twice. The application starts the in-memory runtime Manager
+and does not yet expose an MCP endpoint. Kernel development happens in this repository;
 future demonstrations will create application behavior through MCP, as described
 in [the architecture](docs/adr/001-architecture.md).
+
+## In-memory runtime foundation
+
+Inspect the current runtime in IEx:
+
+```elixir
+ElixirMixir.Runtime.Manager.inspect_runtime(%{})
+```
+
+The result includes API version `"1"`, generation zero on startup, health, empty
+worker/topology lists, and resource/ledger retention limits. No generated behavior
+or worker tools exist at this checkpoint. Definitions and request outcomes will
+remain in memory only; stopping the BEAM loses them.
+
+Configure downward resource overrides before starting the application, for example
+in `config/config.exs`:
+
+```elixir
+config :elixir_mixir, :limits, %{ledger_entries: 128, ledger_retention_ms: 60_000}
+```
+
+The complete set of names and ceilings is returned by `ElixirMixir.Runtime.Limits.defaults/0`. Unknown names,
+non-integers, non-positive values, and values above Phase 1 ceilings fail startup.
+`page_default` must not exceed `page_max`. `response_bytes` must be at least 256 to
+permit a bounded error envelope. Tests can start an isolated Manager with `limits:`
+and an injected monotonic millisecond `clock:`.
+
+The kernel coordinator serializes operations and reserves request IDs. Identical
+validated operation arguments replay the recorded success or failure; changing
+arguments or operation under the same ID returns `REQUEST_ID_CONFLICT`. Pending
+entries never expire. Completed results expire after the retention window measured
+from completion; retrying an expired ID may run the operation again. A full ledger
+returns `BUSY` rather than evicting retained outcomes. Caller disconnect leaves an
+accepted operation running. Read operations, failures and replay do not advance
+generation; successful kernel mutations advance it once. The internal mutation
+callback is trusted kernel code and must stage and preflight changes before commit.
+It is never an interface for executing generated behavior.
 
 ## Tests
 

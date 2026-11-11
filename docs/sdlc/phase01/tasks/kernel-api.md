@@ -2,6 +2,8 @@
 
 ## Startup and context recovery
 
+Implementation assignment: [phase01-implementation.md](../../../prompts/phase01-implementation.md).
+Dependency correction: [amendment 02](../../../prompts/phase01-dependency-amendment-02.md).
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -34,7 +36,7 @@ this task refines those contracts and does not authorize architectural alternati
 
 ## Concrete implementation steps and components
 
-Add the already-selected Jason 1.4.4 runtime dependency and :crypto application here, before using JSON byte validation or canonical SHA-256 hashing; resolve and commit mix.lock without moving development tooling into runtime dependencies. Create `Runtime.Values`, `Runtime.Limits`, `Runtime.Error`, `Runtime.RequestLedger`, and `Runtime.Manager` under `lib/elixir_mixir/runtime/`. Add focused structs/types only where useful; document every public API and struct. Start Manager under the existing supervisor without removing the greeting API.
+Add the already-selected Jason 1.4.5 (see dependency amendment 02) runtime dependency and :crypto application here, before using JSON byte validation or canonical SHA-256 hashing; resolve and commit mix.lock without moving development tooling into runtime dependencies. Create `Runtime.Values`, `Runtime.Limits`, `Runtime.Error`, `Runtime.RequestLedger`, and `Runtime.Manager` under `lib/elixir_mixir/runtime/`. Add focused structs/types only where useful; document every public API and struct. Start Manager under the existing supervisor without removing the greeting API.
 Implement the JSON/depth/byte checks and ID validation in the plan. Canonicalize request hashes without atomizing client data. Implement ledger admission, same-operation replay, ID conflict, expiration, and saturation with an injectable monotonic clock. Implement the mutation wrapper and test it with a kernel-owned test operation; do not expose fabricated runtime tools or successful placeholders for future features.
 Implement only `inspect_runtime/1` for empty status now. Manager provides internal sequencing/context helpers consumed by later operations; future public functions are introduced with their implementation. Configure defaults through application config and test overrides. Validate configurations at boot. Keep runtime generation changes explicit and testable.
 
@@ -85,12 +87,28 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-10):
+
+- Inspected clean tracked baseline at `8934921` and planning prerequisite `07ce010`;
+  only unrelated untracked `scripts/codex.sh` existed. Runtime implementation was
+  absent. Saved the new implementation assignment and recorded dependency correction 02.
+- `mix deps.get`: original Jason 1.4.4 pin failed against Doctor/Decimal 3;
+  compatible exact 1.4.5 pin resolved with the existing lockfile unchanged.
+- `mix test test/runtime/kernel_api_test.exs --warnings-as-errors`: 15 tests,
+  zero failures, including concurrent duplicate requests and caller disconnect.
+- Reproduced too-small response configuration with a failing regression test;
+  rejected response ceilings below 256 bytes, then passed the test.
+- `mix check`: passed; 1 doctest, 26 tests, zero failures; strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- `git diff --check`: passed. `core.hooksPath`: `.githooks`.
+- The commit containing this completed checklist is the kernel-api checkpoint;
+  its normal pre-commit hook reruns the full gate. No HTTP/generated execution
+  capability is claimed. Next task after the commit: `mcp-bootstrap`.

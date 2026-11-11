@@ -282,6 +282,6 @@ damaged state before repair. Unsupported format, unusable storage or retained
 records exceeding configured limits prevent readiness; the runtime never falls
 back to empty memory state.
 
-See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress),
+See [storage development guidance](CONTRIBUTING.md#durable-storage),
 the [runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay)
 and the [restart plan](docs/sdlc/phase02-restart/plan.md) for the current boundary.

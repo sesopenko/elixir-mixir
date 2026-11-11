@@ -3,7 +3,8 @@
 The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`,
 `runtime_stop`, `runtime_invoke`, `runtime_events` and `runtime_replace`.
 Default runtime metadata is in memory; no generated application is seeded at startup.
-Optional durable source definition recovery is described below.
+Optional durable mode retains definitions, state, implementation selections, request
+outcomes and pending work across abrupt restart, as described below.
 
 ## Connection
 
@@ -41,13 +42,14 @@ Arguments are optional; omission is equivalent to an empty object:
 Unknown keys, invalid IDs, explicit null values, unsupported detail and malformed
 cursors return `INVALID_ARGUMENT`. Schema type violations produce protocol errors.
 Inspection is read-only and never executes generated behavior. It reports
-`api_version: "1"`, current generation (zero on startup), health, worker_count,
+`api_version: "1"`, current generation (zero for an empty runtime), health, worker_count,
 edge_count, sorted worker pages, topology, pending effects/timers/reservations,
 configured limits and ledger capacity/retention. Worker summaries include diagnostic
 PID, status, revisions, restart budgets and cached immutable artifact metadata
 (ID/logical name/revision/schema/source hash/contract), excluding source and BEAM.
 State detail reads the host's actual committed state with a finite timeout. Failed/
-stopped workers explicitly omit state; an unavailable host reports available false
+stopped workers in memory mode explicitly omit state; durable mode can report their
+retained checkpoint. An unavailable host reports available false
 and state_omitted. State inspection never invents workers or reruns init/schema.
 
 Topology entries contain from/to logical IDs, successful delivery count and pending
@@ -74,16 +76,15 @@ and `details` alongside version/generation. Entire encoding, including JSON-RPC 
 and escaped duplicate content, must fit the response limit. Response overrides
 must allow at least 1,024 bytes for correlated fallback errors.
 
-## Incremental implementation
+## Verified capabilities
 
-All seven Phase 1 tools are implemented. The separate actual Codex demonstration
-and isolated release setup remain the final feature checkpoint.
-No successful placeholders are advertised. Each feature must extend real-HTTP
-tests and this document in its own verified commit. Future mutations must preflight
-complete wire outcomes before applying staged changes; definition preflights its
-result before registry publication. Runtime generations and request replay rules
-are described in
-[CONTRIBUTING](../CONTRIBUTING.md) and the [Phase 1 plan](sdlc/phase01/plan.md).
+All seven tools support the documented memory and durable workflows. The
+[Phase 1 demonstration](../examples/phase_1_demo.md) records live evolution and
+client reconnection; the [Phase 2 demonstration](../examples/phase_2_recovery.md)
+records actual Codex sessions around abrupt termination, automatic recovery and
+further evolution. Automated tests cover interruption and failure paths separately.
+Mutations preflight complete wire outcomes before publication. Durable operations
+commit authoritative records before live publication and acknowledgement.
 
 ## runtime_define
 
@@ -157,14 +158,15 @@ Compilation loads code before metadata publication. The registry retains origina
 source, hash, BEAM, schema/contract versions and immutable metadata only after all
 checks and full-response preflight pass. Failed definitions do not alter existing
 artifacts, active behavior or runtime generation. Compile success/failure records
-go to the bounded EventLog ring; its MCP reader is pending runtime-inspection.
+go to the bounded EventLog ring, readable through `runtime_events`.
 
 Generated macros, compile-time code and schema callbacks execute with VM privileges.
 AST checks, task heap flags and deadlines are not a secure sandbox or a total VM
 memory/atom budget. Compile-time side effects cannot be rolled back. Run experiments
 only in a trusted disposable environment without secrets or valuable infrastructure.
-Loss of Manager or artifact-registry authority shuts down the kernel; there is no
-Phase 1 recovery. Stopping the BEAM loses all artifact metadata.
+Loss of Manager or artifact-registry authority shuts down the kernel. Memory mode
+loses artifact metadata on BEAM exit; durable mode recompiles retained sources on
+the next startup.
 
 
 ## runtime_start and runtime_stop
@@ -230,8 +232,8 @@ lifecycle change), restart_limit 3 and restart_window_ms 10000. Stopping a worke
 cancels its retry timer and invalidates the incarnation token; old monitor and retry
 messages cannot resurrect it or affect a newer explicit start. Lifecycle history
 correlates crashes, attempts, successful restarts, init failure and exhaustion to
-the originating request. Recovery is in-memory only and does not recover a failed
-Manager, artifact registry or BEAM.
+the originating request. This automatic init-based restart describes memory mode.
+Durable mode restores committed state and persisted restart budgets as described below.
 
 Request replay returns the original outcome and generation without another host or
 stop, even if later operations have changed the worker. Inspect to obtain current
@@ -413,9 +415,11 @@ explicit schema migration. Results contain artifact_id, previous_revision and
 new_revision (artifact revisions), worker_revision, state_revision, migration_result
 (preserved or migrated), and equal pid_before/pid_after. Manager acknowledges only
 after confirming the candidate/revisions in the same live host. Host death observed
-during staging/confirmation yields CALLBACK_FAILED and ordinary lifecycle recovery,
-rather than replacement success. Phase 1 recovery reruns retained config with the
-last Manager-confirmed active artifact and loses volatile state.
+during staging/confirmation in memory mode yields CALLBACK_FAILED and ordinary
+lifecycle recovery, rather than replacement success. Memory-mode recovery reruns
+retained config with the last Manager-confirmed artifact and loses volatile state.
+Durable commit/publication failures follow the fail-closed recovery rule below; a
+known committed success is never overwritten by a publication failure.
 
 Accepted operations are serialized; queued events run entirely before replacement
 with the old callback/state or afterward with the new callback/state. No event mixes
@@ -479,7 +483,7 @@ runtime_stop:
 {"worker_id":"counter","request_id":"counter-stop-1"}
 ```
 
-## Experimental durable storage foundation
+## Experimental durable storage
 
 Memory mode remains the default. `ELIXIR_MIXIR_DATA_DIR` opts into an exclusive,
 expanded absolute local data directory; programmatic configuration uses `:storage`
@@ -492,8 +496,8 @@ Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 host paths are omitted. Durable mode supports source definitions and retained
 outcomes, start/stop, event state recovery and implementation replacement.
 Complete outgoing effect batches commit with state; durable delivery resumes after recovery. Memory tools keep their existing
-behavior. This intermediate boundary will be extended by the
-[Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
+behavior. The [Phase 2 verification record](sdlc/phase02-restart/verification.md)
+links the automated tests and actual-client evidence for these contracts.
 
 ### Preparing worker changes
 

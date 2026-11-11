@@ -1,7 +1,7 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through codex-restart-demo verified; final evidence review
-is pending. Planning results belong in [planning-verification](planning-verification.md).
+Status: Phase 2 complete in this checkpoint commit. All twelve tasks, fourteen
+acceptance criteria and milestones 5–7 are verified. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
 For each checkpoint record date, baseline and resulting commit, actual commands,
@@ -610,25 +610,89 @@ the final complete evidence. The final owned containers are gone and volume
 
 ## evidence-review
 
-Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
+Verified 2026-11-11 against prerequisite `048d531`, already pushed to
+`origin/main`. All eleven prerequisite task documents and checkpoint commits were
+read; each commit contains its verified seven-item checklist and explanatory body,
+and all are ordered ancestors of origin. The release shutdown correction is a
+separate verified ancestor. Historical checkpoint entries below describe their
+capabilities at that checkpoint; their old pending boundaries are not current status.
+
+The final growing suite passes 122 tests. Both actual-client evidence verifiers
+pass (Phase 1: 59 calls; Phase 2: 44 calls). The structural verifier confirms twelve
+tasks, twelve nodes, eleven matching edges, acyclic execution order, all fourteen
+criteria, three milestones, sizes no greater than eight, preserved snapshot and
+generated rules. Final `mix check` passes: 280 tests, two doctests, strict Credo
+clean, Doctor 100% module/function/typespec coverage and Dialyzer zero errors/skips.
+The installed `.githooks` pre-commit hook repeats that complete gate. Local checks
+pass 206 links across 21 current public/phase documents, including heading targets;
+`git diff --check` passes. The immutable planning snapshot checksum is unchanged.
+No runtime feature or deferred integration test is introduced here.
+
+Public API and architecture entry-point prose now distinguish the memory workflow
+from implemented durable recovery. Stale pending-demo/history-reader statements
+and links to renamed headings were corrected. Codex/Claude endpoint, HTTP transport,
+readiness wait and port override instructions agree; client command syntax is
+unchanged. README and CONTRIBUTING retain the explicit untested Claude qualification.
+The recovery guide distinguishes client lifetime, retained volume lifetime, normal
+stop, SIGKILL and deliberate volume deletion. Trusted-code/direct-IO, bounded replay,
+wall-clock timers, one-owner storage and external-effect limitations remain explicit.
+
 
 ## Acceptance and milestone evidence
 
-Source recovery evidence for A01, desired definitions/logical identities/fresh hosts
-for A02/A05/A06, selected implementation evidence for A03, committed event-state
-evidence for A04, automated no-client recovery
-for A07, timer/effect recovery and internal deduplication evidence for A10/A11,
-isolated quarantine/repair evidence for A12,
-and source/lifecycle/event/delivery boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
-The actual-client portion of A07 and A13 is verified in codex-restart-demo.
-Full acceptance reconciliation and milestone 7 remain pending evidence-review. Add an evidence table mapping
-each criterion to exact tests/results and committed artifacts as features land.
-The final evidence-review reconciles these existing records; it does not create
-missing runtime coverage.
+The final audit follows ADR-001 section 10.9 in order. Test links name the exact
+current files; the observations column states the assertions inspected rather than
+inferring behavior from green response codes. The growing suite and full gate run
+all these automated scenarios. The separate client verifier checks the committed
+actual session artifacts.
+
+| Criterion | Automated evidence inspected | Committed observation / actual-client evidence |
+| --- | --- | --- |
+| A01 — Source artifacts survive | [Artifact tests](../../../test/integration/phase02_artifacts_test.exs), “HTTP definitions recompile without a client…” | Original source/hash/ID/revision and whole store equal after SIGKILL; next revision and capacity checked; demo closed-store hashes match actual MCP source arguments |
+| A02 — Desired manifest survives | [Lifecycle tests](../../../test/integration/phase02_lifecycle_test.exs), “linked desired definitions…” | Two running definitions and one stopped definition retain config, desired status, artifact, state and revisions; stopped definition is unrouted |
+| A03 — Active selection survives | [Replacement tests](../../../test/integration/phase02_replacement_test.exs), “live replacements preserve PID…” | Retained selected artifact/schema/state/revisions match; migration marker proves no repeat; subsequent event uses recovered behavior; demo v2 restores then v3 replaces |
+| A04 — Committed state survives | [Transition tests](../../../test/integration/phase02_transitions_test.exs), four SIGKILL boundaries | Before commit restores 2; after commit restores 7 and exact result; replay never increments again; next event succeeds |
+| A05 — Logical identities retained | [Lifecycle tests](../../../test/integration/phase02_lifecycle_test.exs), “linked desired definitions…”; [delivery tests](../../../test/integration/phase02_delivery_test.exs) | Logical IDs/config links and routes restored; persisted edges and logical-target delivery remain correct; demo counter/aggregate/probe retain identities |
+| A06 — Fresh processes constructed | [Lifecycle tests](../../../test/integration/phase02_lifecycle_test.exs) and [fixture](../../../test/support/runtime_fixture.ex) | Different BEAM OS PID/boot, supervised and registered fresh hosts with exact committed state; demo independent container/OS/start witnesses agree; printed PID inequality alone is never the proof |
+| A07 — Recovery needs no LLM | [Lifecycle tests](../../../test/integration/phase02_lifecycle_test.exs), no-session boot; [timer test](../../../test/integration/phase02_delivery_test.exs), “future and overdue schedules…” | Ready routes and stored state checked before MCP initialization; actual demo's bounded no-Codex interval includes restart, restoration and original timer delivery |
+| A08 — No partial mutations | [Transitions](../../../test/integration/phase02_transitions_test.exs), [replacement](../../../test/integration/phase02_replacement_test.exs), [outbox](../../../test/integration/phase02_outbox_test.exs), [delivery](../../../test/integration/phase02_delivery_test.exs) boundary matrices | Complete old/new state-outcome pair, selection-schema pair, origin-effect batch, stop-cancellation set and target-parent-children-edge set checked on disk and live before/after real kills |
+| A09 — Incomplete operations reconciled | [Artifact admission/commit matrix](../../../test/integration/phase02_artifacts_test.exs); [transition failure matrix](../../../test/integration/phase02_transitions_test.exs) | Pending admission replays OPERATION_INTERRUPTED; committed uncertain response replays exact data/generation; raised write, actual postcommit timeout and failed publication close readiness and restore disk authority |
+| A10 — Timers/effects recovered | [Delivery tests](../../../test/integration/phase02_delivery_test.exs), “future and overdue schedules…”; [timer unit tests](../../../test/runtime/durable_timers_test.exs) | Overdue amount 3 and preserved future deadline amount 7 reach total 10; actual demo preserves original ID/deadline and delivers value 11 once without Codex |
+| A11 — No duplicate committed delivery | [Delivery tests](../../../test/integration/phase02_delivery_test.exs), three commit/publication boundaries | Target totals 5/9, one edge per step and one child batch; injected duplicate volatile claim after ledger expiry leaves entire store equal; demo original-effect final audit occurs once |
+| A12 — Independent quarantine | [Quarantine tests](../../../test/integration/phase02_quarantine_test.exs), ten corruption variants and paginated diagnostics | Broken originals unchanged, healthy peer continues to total 6, affected routes absent; ready-degraded diagnostics, explicit repair, global fail-closed/readiness/capacity cases asserted |
+| A13 — Codex reconnects and modifies | Automated [replacement continuation](../../../test/integration/phase02_replacement_test.exs) and fresh HTTP client coverage; separate [actual transcript 2](evidence/codex-session02.jsonl) is decisive client evidence | Actual fresh Codex inspects restored 13/31, invokes to 15/46, preserves state during v3 replacement, reaches 21/67, and verifies amount-zero rejection leaves state/selection/PID/revisions unchanged |
+| A14 — Abrupt termination tested | All seven [Phase 2 integration matrices](../../../test/integration) above use [RuntimeFixture.kill/1](../../../test/support/runtime_fixture.ex) | Fixture sends OS `kill -KILL` and waits for exit 137; actual release/demo Docker SIGKILL witnesses show exit 137 with OOM false; normal stop is separately exit zero |
+
+| Milestone | Exit evidence | Owning committed checkpoints |
+| --- | --- | --- |
+| 5 — Durable definitions | Artifact source/recompilation plus desired running/stopped definitions survive SIGKILL with initial state | `12e4c30`, `6d60201` |
+| 6 — Durable worker state | Committed transitions, active implementation and schema restore directly; migration is not repeated | `a0114e0`, `461350f` |
+| 7 — Recovery and reconciliation | Pending work resumes once internally, invalid records isolate, release volume survives, actual Codex reconnects and evolves | `1f43b8c`, `180d853`, `8e3dc2f`, `3bde396`, correction `ffc70ad`, actual demo `048d531`, and this evidence-review checkpoint |
+
+| Task | Verified checkpoint |
+| --- | --- |
+| store-foundation | `b9dea1a` |
+| staged-hosts | `fa5b364` |
+| durable-artifacts | `12e4c30` |
+| durable-lifecycle | `6d60201` |
+| durable-transitions | `a0114e0` |
+| durable-replacement | `461350f` |
+| durable-outbox | `1f43b8c` |
+| durable-delivery | `180d853` |
+| recovery-quarantine | `8e3dc2f` |
+| release-storage | `3bde396`; normal-shutdown correction `ffc70ad` |
+| codex-restart-demo | `048d531` |
+| evidence-review | The commit containing this completed review; no self-referential hash required |
+
+These results establish single-node abrupt-process recovery from the latest
+committed manifest and state. They do not establish machine power-loss durability,
+clustering, a hostile-code sandbox, exactly-once arbitrary external IO, unbounded
+request replay, or Claude Code compatibility. Those remain explicit limits rather
+than missing Phase 2 acceptance work.
 
 ## Actual Codex demonstration
 
 The verified [client checkpoint](#codex-restart-demo) and
 [walkthrough](../../../examples/phase_2_recovery.md) cover every ADR-001 section 10.8
-step with actual clients, separate from automated HTTP tests. Final acceptance
-reconciliation remains the evidence-review task. Claude Code remains untested.
+step with actual clients, separate from automated HTTP tests. The acceptance table above reconciles those results with the automated failure
+matrices. Claude Code remains untested.

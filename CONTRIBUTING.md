@@ -51,7 +51,7 @@ mix run --no-halt
 
 Stop it with Ctrl+C twice. The application starts the in-memory runtime Manager
 and the loopback MCP endpoint at `http://127.0.0.1:4100/mcp`. Kernel development happens in this repository;
-future demonstrations will create application behavior through MCP, as described
+the recorded demonstrations create application behavior through MCP, as described
 in [the architecture](docs/adr/001-architecture-initial-phases.md).
 
 Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
@@ -337,7 +337,8 @@ effect batches commit atomically with state; durable delivery resumes
 after healthy routes are restored. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for disposable experiments or opt into retained storage explicitly.
-The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
+The [restart verification](docs/sdlc/phase02-restart/verification.md) records the
+automated and actual-client evidence.
 
 Worker staging tests exercise prepare/publish/abort directly with a trusted host
 owner. `ProcessHost.snapshot/2` reports only published state. Logical Registry
@@ -479,7 +480,7 @@ timers without a client, and interrupts a log after output. Logs retain effect I
 for recipient deduplication, but logging followed by completion has an at-least-once
 boundary: an interruption between them repeats output. Store uncertainty closes
 availability; it never terminally fails an intent based on an uncertain write.
-See the [retained-store restart example](README.md#try-durable-worker-definitions-in-progress).
+See the [retained-store restart example](README.md#try-durable-worker-definitions).
 Trusted `Manager` constructor timer/clock/barrier options support deterministic
 tests; production defaults use OTP timers and UTC. Test-only subprocess controls
 can hold timers while testing intent acceptance and cancellation independently.
@@ -517,4 +518,4 @@ are reconstructed. Large backward UTC jumps rearm in bounded timer intervals whi
 preserving the original deadline. To retain damaged checkpoint evidence before
 explicit repair, stop the runtime and copy its directory. Stop preserves the
 checkpoint; a subsequent explicit start initializes and replaces it. Source
-artifacts remain retained. See the [repair guidance](README.md#try-durable-worker-definitions-in-progress).
+artifacts remain retained. See the [repair guidance](README.md#try-durable-worker-definitions).

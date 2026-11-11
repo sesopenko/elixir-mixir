@@ -1,6 +1,6 @@
 # evidence-review: Reconcile acceptance evidence and close the phase
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -87,15 +87,26 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `048d531` verified and pushed before
+review. All eleven prerequisite task documents and commits have verified checklists,
+explanatory bodies and ordered origin ancestry. The final acceptance table maps
+all fourteen ADR criteria and milestones 5–7 to inspected persisted/live assertions
+and actual Codex artifacts. Growing suite passes 122 tests; full `mix check` passes
+280 tests, two doctests, Doctor 100%, strict Credo and Dialyzer zero errors/skips.
+Both client evidence verifiers pass (59 Phase 1 calls; 44 Phase 2 calls). Structural
+verification passes; 206 local/heading links across 21 current documents and diff
+checks pass. Public guidance is reconciled without changing client syntax, runtime
+code or tests. Claude Code remains explicitly untested. See the
+[review entry](../verification.md#evidence-review) and
+[acceptance table](../verification.md#acceptance-and-milestone-evidence).
 
 ## Relative size
 

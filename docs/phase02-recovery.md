@@ -52,7 +52,7 @@ codex
 ```
 
 Skip registration if the matching URL is already registered. Follow the concrete
-[counter, replacement and scheduling prompts](../README.md#try-durable-worker-definitions-in-progress).
+[counter, replacement and scheduling prompts](../README.md#try-durable-worker-definitions).
 Inspect existing workers first: a reused volume can already contain those IDs.
 Confirm actual state, selected implementations and pending work before disconnecting.
 The build agent edits kernel source; the experiment creates behavior through MCP.

@@ -1,31 +1,43 @@
 # elixir-mixir architecture entry point
 
 The governing design is [ADR-001](docs/adr/001-architecture-initial-phases.md). The implemented
-Phase 1 contract, limits and failure boundaries are in the
+memory and durable contracts, limits and failure boundaries are in the
 [runtime API](docs/runtime-api.md); task checkpoints and evidence are in the
 [Phase 1 plan](docs/sdlc/phase01/plan.md) and
-[verification record](docs/sdlc/phase01/verification.md).
+[verification record](docs/sdlc/phase01/verification.md). Durable recovery and its
+actual Codex demonstration are recorded in the
+[Phase 2 plan](docs/sdlc/phase02-restart/plan.md) and
+[verification record](docs/sdlc/phase02-restart/verification.md).
 
 The permanent Elixir/OTP kernel under lib/ provides a loopback MCP endpoint,
 serialized Manager, bounded compilation into immutable module slots, temporary
 supervised hosts, bounded callbacks, logical effect dispatch and read-only
 inspection/history. Generated application behavior enters only through MCP and
-stays in the in-memory artifact registry. No counter or aggregator starts with the
+is compiled into bounded artifact slots. No counter or aggregator starts with the
 kernel. Kernel development and runtime evolution are separate activities.
 
 Worker IDs route events independently of diagnostic PIDs. Replacement changes a
-host's active immutable artifact while keeping its PID/mailbox and compatible
-state; schema changes require explicit migration. Request IDs cache complete
-outcomes across client sessions. Effect admission precedes state commit; dispatch
-is asynchronous and best effort across the documented Phase 1 commit/publication
-crash gap. Per-worker restart budgets contain host crashes, rerunning init and
-losing volatile state. Manager, artifact registry or dispatcher authority loss
-stops the kernel rather than pretending to recover empty metadata.
+host's active immutable artifact while keeping its PID and compatible state;
+schema changes require explicit migration. The coordinator prepares and validates
+callback results before publication. Memory mode retains metadata only for its
+runtime lifetime; host recovery reruns init and loses volatile state.
 
-Definitions, state, request outcomes, timers, graph counts and history are in
-memory. Logical identity, immutable artifact/schema revisions, deterministic effect
-IDs and explicit commit boundaries leave Phase 2 seams; there is no persistence,
-durable outbox, kernel recovery, clustering or autonomous controller in Phase 1.
+Setting `ELIXIR_MIXIR_DATA_DIR` selects an exclusive local CubDB store. Durable
+mutations commit authoritative source, definitions, state, revisions, request
+outcomes and outgoing effects before live publication and acknowledgement. Boot
+validates/recompiles retained sources, creates fresh hosts from committed state
+without init or migration, and reconstructs routes and timers before readiness.
+It quarantines invalid generated records while healthy workers recover. Store
+uncertainty closes availability rather than continuing from stale memory.
+
+Internal delivery consumes its pending ID atomically with target state and child
+effects, preventing duplicate committed transitions after interruption. Timers keep
+absolute UTC deadlines. Logs and direct generated IO can repeat; exactly-once
+external effects are outside this phase. Request outcomes have bounded retention,
+so an expired caller key may execute again. Durable recovery needs no LLM. The
+[restart walkthrough](docs/phase02-recovery.md) covers retained-volume deployment;
+[actual Codex evidence](examples/phase_2_recovery.md) shows further evolution after
+SIGKILL and automatic recovery. Clustering and autonomous control remain future work.
 
 The [Dockerfile](Dockerfile) builds a production OTP release. The
 [release environment](rel/env.sh.eex) disables distribution, keeps temporary files

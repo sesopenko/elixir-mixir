@@ -1,11 +1,12 @@
 # Phase 2 restart feature plan — Durable Genesis
 
-Status: store-foundation through codex-restart-demo verified; evidence-review is pending.
+Status: Phase 2 complete in this checkpoint commit; all twelve tasks verified.
 Governing assignment: [immutable snapshot](../../prompts/phase02-restart-planning.md).
 Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
 Architecture: [ADR-001](../../adr/001-architecture-initial-phases.md), section 10 and
 milestones 5–7. [Planning verification](planning-verification.md) records planning
-checks; [implementation verification](verification.md) must record future evidence.
+checks; [implementation verification](verification.md) records checkpoint results and the
+final criterion-by-criterion acceptance audit.
 
 ## Starting, resuming, and tracking work
 
@@ -19,9 +20,9 @@ complete context clear, inspect `git status --short`, `git log --oneline -15`,
 relevant commits, and verification evidence. Select the first unfinished task in
 the order below only after verifying that its prerequisites are committed.
 
-This assignment is one documentation-and-rules checkpoint, not twelve implementation
-checkpoints. The implementation assignment must also be preserved and linked here
-when it is received. Check off task completion only after its tests and full gate
+The planning assignment produced one documentation-and-rules checkpoint, followed
+by the implementation checkpoints below. The implementation assignment is preserved
+and linked above. Check off task completion only after its tests and full gate
 pass and its commit exists. The commit containing a checked task identifies that
 checkpoint; record its hash in a subsequent checkpoint or final report rather than
 attempting a self-referential hash. Keep evidence and plan status synchronized.
@@ -46,7 +47,7 @@ Codex demonstration is committed in `8631dbd`, with verification reconciled in
 [evidence index](../phase01/evidence/codex-sessions.json) show two actual sessions
 and 59 MCP calls. Phase 1 is complete; its original bootstrap baseline is obsolete.
 
-Manager owns volatile definitions, generation and request ledger. ProcessHost
+At that original baseline, Manager owned volatile definitions, generation and request ledger. ProcessHost
 publishes callback state/replacement before Manager completes the request. The
 dispatcher reserves and delivers effects in memory, with separate completion.
 ArtifactRegistry has 128 fixed module atoms and a BEAM-lifetime slot counter;
@@ -66,7 +67,12 @@ effects and machine power-loss certification are outside this proof.
 ## Task index and deterministic execution order
 
 Execute in numeric order; dependencies below are also the full graph edge set.
-Store-foundation (`b9dea1a`), staged-hosts (`fa5b364`), durable-artifacts (`12e4c30`), durable-lifecycle (`6d60201`), durable-transitions (`a0114e0`), durable-replacement (`461350f`), durable-outbox (`1f43b8c`), durable-delivery (`180d853`), recovery-quarantine (`8e3dc2f`) release-storage (`3bde396`, shutdown correction `ffc70ad`) and codex-restart-demo are verified in their checkpoint commits. Evidence-review remains pending. Sizes are relative, not hours.
+Store-foundation through codex-restart-demo are verified in their committed
+checkpoints, ending with `048d531`. The release shutdown correction is `ffc70ad`.
+The commit containing this completed evidence-review closes the final task.
+[Checkpoint IDs and acceptance evidence](verification.md#acceptance-and-milestone-evidence)
+record all results. Every prerequisite is an ordered ancestor of `origin/main`.
+Sizes are relative, not hours.
 
 | Order | Task ID and document | Outcome | Prerequisites | Size | Milestone |
 | --- | --- | --- | --- | --- | --- |
@@ -399,8 +405,10 @@ Each row follows ADR section 10.9 in order. IDs are stable coverage references.
 Completion requires every task verified and committed, all fourteen criteria backed
 by automated evidence, separate actual Codex evidence for the client journey, no
 open architectural choices, and current README/contributor/API/recovery guidance.
-Until then full Phase 2 completion remains pending. Verified task boundaries above
-describe the partial capabilities that are already available.
+The [final acceptance audit](verification.md#acceptance-and-milestone-evidence)
+proves these requirements and milestone exits from current tests and the separate
+actual Codex demonstration. All twelve tasks are complete. Earlier task evidence
+retains its historical intermediate boundaries.
 
 ## Late sizing review
 

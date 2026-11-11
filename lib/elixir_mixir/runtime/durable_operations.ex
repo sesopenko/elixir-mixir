@@ -92,6 +92,8 @@ defmodule ElixirMixir.Runtime.DurableOperations do
       "operation_id" => entry["operation_id"],
       "request_id" => args["request_id"],
       "operation" => operation,
+      "worker_id" => args["worker_id"],
+      "logical_id" => args["logical_name"] || args["worker_id"],
       "outcome" => if(status == :ok, do: "ok", else: data["code"])
     }
 
@@ -101,9 +103,12 @@ defmodule ElixirMixir.Runtime.DurableOperations do
       |> Map.put({:audit, sequence}, audit)
 
     deletes = prepared.deletes ++ audit_expiry(records, sequence, state.limits.history_records)
+    state.durability_barrier.(:before_commit)
     commit!(state, puts, deletes, prepared.changed, entry["operation_id"], data)
     state.durability_barrier.(:after_commit)
+    state.durability_barrier.(:before_publish)
     next = prepared.publish.(state)
+    state.durability_barrier.(:before_response)
 
     EventLog.append(%{
       "type" => event_type(operation, status),
@@ -120,6 +125,8 @@ defmodule ElixirMixir.Runtime.DurableOperations do
 
   defp event_type("define", :ok), do: "compile_succeeded"
   defp event_type("define", :error), do: "compile_failed"
+  defp event_type("invoke", :ok), do: "event_delivered"
+  defp event_type("invoke", :error), do: "event_failed"
   defp event_type("start", :ok), do: "worker_started"
   defp event_type("stop", :ok), do: "worker_stopped"
   defp event_type(_operation, _status), do: "operation_failed"

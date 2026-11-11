@@ -8,6 +8,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.CallbackBarrier
+  alias ElixirMixir.TestSupport.StoreProxy
 
   @doc "Handles bounded JSON control lines until the owning port closes stdin."
   @spec run() :: no_return()
@@ -28,6 +29,21 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "store_fault", "mode" => mode}) do
+    mode =
+      case mode do
+        "raise_before_commit" -> :raise_before_commit
+        "timeout_after_commit" -> :timeout_after_commit
+      end
+
+    {:ok, proxy} = StoreProxy.start(Store, mode)
+    :sys.replace_state(Manager, &%{&1 | store: proxy})
+    %{"armed" => true}
+  end
+
+  def request(%{"op" => "runtime_status"}),
+    do: %{"ready" => Manager.ready?(), "manager_alive" => is_pid(Process.whereis(Manager))}
+
   def request(%{"op" => "restoration_barrier"}) do
     hook = &restore_with_barrier/1
     :sys.replace_state(Manager, &%{&1 | restore_host: hook})

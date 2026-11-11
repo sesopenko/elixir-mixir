@@ -145,8 +145,8 @@ Live replacement and reconnecting from a fresh Codex session are implemented and
 tested. The default memory mode keeps the application running when Codex closes,
 but restarting the runtime or container loses its workers, code, state and history.
 A crashed worker can restart under supervision, starting from its initial state.
-Optional durable source and worker definitions are described below; durable event
-transitions and effect recovery are still being implemented. There is no autonomous controller yet.
+Optional durable workers and event state are described below; durable replacement
+and effect recovery are still being implemented. There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -164,10 +164,12 @@ docker rm -f elixir-mixir-phase01
 ## Try durable worker definitions (in progress)
 
 Durable mode retains source artifacts, running and stopped worker definitions,
-configuration, initial state and request outcomes across abrupt BEAM termination.
+configuration, committed event state and request outcomes across abrupt BEAM
+termination.
 It reconstructs running workers without a client and keeps stopped workers stopped.
-Durable event invocation, replacement and effects are still being implemented; use
-the default memory mode for the full application experiments above.
+Effect-free event invocation is supported. Durable replacement and effects are
+still being implemented; use the default memory mode for the full application
+experiments above.
 
 To try durable worker definitions from the repository root, use a local directory
 owned exclusively by this runtime:
@@ -183,13 +185,23 @@ Code connection commands:
 curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
 ```
 
-Ask the connected agent to define and start a worker whose initial state contains
-count 7, then inspect its state. `runtime_define`, `runtime_start` and `runtime_stop`
-now survive restart using that same directory. Boot restores the committed state
+For a new, empty directory, ask the connected agent:
+
+> Inspect existing workers first. If durable_counter already exists, report its
+> state and skip the remaining steps. Otherwise define and start durable_counter
+> with JSON state containing count 7. Its event handler should add the integer
+> amount from an event, return the resulting count, and produce no effects.
+> Invoke it with amount 3 and inspect its state to confirm count 10.
+
+`runtime_define`, `runtime_start`, `runtime_stop` and accepted effect-free invocations
+survive restart using that same directory. Boot restores the committed state
 into fresh processes without rerunning generated init or migration callbacks.
 An explicit start after stop initializes from the supplied configuration again.
 Use a fresh MCP session after restart and wait for health before reconnecting.
-Durable invocation and replacement currently return `DURABILITY_UNAVAILABLE`.
+Durable replacement and events returning effects currently return
+`DURABILITY_UNAVAILABLE` without changing committed state. Successful invocation
+commits state and the exact result before acknowledging it. After an uncertain
+response, retry the identical request ID and arguments to replay that result.
 A pending mutation interrupted before commit replays `OPERATION_INTERRUPTED`;
 retry it with a new request ID. Completed responses replay for a bounded interval
 (default 10 minutes, including downtime); an expired ID may execute again. Module

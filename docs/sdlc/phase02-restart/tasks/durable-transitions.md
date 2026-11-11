@@ -1,6 +1,6 @@
 # durable-transitions: Commit event state before acknowledgement
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -90,15 +90,21 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `6d60201` verified and pushed before
+work. Focused transition/recovery checks passed (11 tests), independent HTTP
+transition checks passed (8 tests), growing MCP/integration suite passed (83 tests),
+and full `mix check` passed (212 tests, 2 doctests, Credo clean, Doctor 100%, Dialyzer
+zero findings). See the [evidence entry](../verification.md#durable-transitions) for
+actual SIGKILL boundaries, commit exception/timeout and failed publication results.
+Effect-free invocation is available; replacement and durable effects remain pending.
 
 ## Relative size
 

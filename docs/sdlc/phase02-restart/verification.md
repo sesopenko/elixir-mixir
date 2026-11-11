@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation, staged-hosts, durable-artifacts and durable-lifecycle verified; remaining checkpoints and application recovery
+Status: store-foundation through durable-transitions verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -196,7 +196,50 @@ actual Codex restart demonstration and final evidence review remain pending.
 
 ## durable-transitions
 
-Pending. Owning [task](tasks/durable-transitions.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `6d60201` was committed, verified and pushed.
+
+- `mix test test/runtime/durable_transitions_test.exs test/runtime/worker_recovery_test.exs --warnings-as-errors`: 11 passed.
+- `mix test test/integration/phase02_transitions_test.exs --warnings-as-errors`: 8 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 83 passed.
+- Full `mix check`: 212 tests, 2 doctests; warnings-as-errors, strict Credo and
+  Doctor 100% passed; Dialyzer zero errors/skips. Plan/diff checks passed and
+  `.githooks` remains installed for the checkpoint's full pre-commit gate.
+
+Four independent-BEAM cases SIGKILL before commit, after commit, before publication
+and before response, retaining the same owned temporary directory. Stored state
+and completed outcome are one transaction: an initial count 2 remains 2 with an
+interrupted retained request before commit, or becomes 7 with the exact reply,
+state revision 3 and saved generation afterward. Direct host snapshots stay at 2
+until publication; the before-response case sees 7. After a fresh VM, stored worker/
+state records match and replay does not increment again. A new event continues
+from the recovered value.
+
+The test-only Store protocol proxy passes admission to the real Store, then either
+raises before the final write or commits it and deliberately never replies. The
+latter reaches the actual Store API timeout. Both close Manager and readiness;
+after VM restart, the former retains old state and `OPERATION_INTERRUPTED`, while
+the latter restores state 9 and a successful exact result at generation 3. No
+assumed rollback replaces the disk outcome. A separate post-commit host death
+forces publication failure and kernel shutdown; restart preserves state 13 and
+the unchanged successful request record rather than recording `CALLBACK_FAILED`.
+Initial cleanup tried to DELETE a session on the deliberately stopped listener;
+local disconnect fixed that test-fixture cause without changing runtime behavior.
+
+Unit and HTTP failure paths cover callback error/raise/exit/deadline, invalid and
+non-JSON/oversized state/reply, full wire preflight, request conflict and replay,
+peer health and latest-state host restoration without a new state revision.
+Valid nonempty emit/schedule/log batches fail `DURABILITY_UNAVAILABLE` before
+reservation, dispatch or state commit; memory effects stay covered by prior tests.
+An initial host-recovery wait used two snapshots across a status change; using one
+atomic observation fixed that measurement race. The healthy restored worker then
+continues from count 11 to 12.
+
+The Manager reads a matching owner-bound prepared checkpoint, commits worker/state/
+request/audit together, then publishes the same host ticket. Checkpoint and request
+operation IDs agree. Host recovery caches only the latest committed data after
+publication. README, contributor and API guidance describe effect-free durable
+invocation, uncertain responses, bounded retention and the limits on direct callback
+IO. Replacement and durable effect acceptance/delivery remain pending.
 
 ## durable-replacement
 
@@ -229,8 +272,8 @@ Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
 ## Acceptance and milestone evidence
 
 Source recovery evidence for A01, desired definitions/logical identities/fresh hosts
-for A02/A05/A06, automated no-client recovery for A07, and source/lifecycle boundary
-evidence for A09/A14 are recorded above. Milestone 5's automated exit is verified.
+for A02/A05/A06, committed event-state evidence for A04, automated no-client recovery
+for A07, and source/lifecycle/event boundary evidence for A08/A09/A14 are recorded above. Milestone 5's automated exit is verified.
 Full acceptance reconciliation, the actual-client portion of A07, and milestones
 6–7 remain pending. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.

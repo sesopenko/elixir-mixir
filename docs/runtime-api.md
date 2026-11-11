@@ -486,8 +486,9 @@ across BEAM lifetimes and never share it between running VMs.
 Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 `storage.format_version` (null in memory, currently 1 in durable mode). Absolute
 host paths are omitted. Durable mode supports source definitions and retained
-outcomes, start/stop and initial-state recovery as described below. Durable invoke
-and replacement still fail with `DURABILITY_UNAVAILABLE` before callbacks; memory tools keep their existing
+outcomes, start/stop and effect-free event state recovery as described below.
+Durable replacement still fails with `DURABILITY_UNAVAILABLE` before callbacks;
+nonempty effects are rejected before state commit. Memory tools keep their existing
 behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
 
@@ -507,7 +508,7 @@ the Registry value after init and response preflight, and removes that route on
 stop or host death. The Registry registrant is the Manager, so kernel lookups must
 use the explicit value. Owner death terminates candidates and releases reserved
 capacity. Durable lifecycle operations use the same unrouted candidate boundary;
-durable invocation and replacement retain the restriction above.
+durable replacement and nonempty effect batches retain the restriction above.
 
 ### Durable source definitions and request replay
 
@@ -516,7 +517,7 @@ with a unique operation ID, compiles without publishing the registry entry, then
 atomically stores the source, hash, logical revision, exact response and bounded
 audit record. Registry publication follows that commit. Source artifacts and
 completed definition errors survive abrupt BEAM termination. Start/stop and initial
-state recovery are also integrated; invoke and replacement remain disabled in durable mode.
+state recovery and effect-free invocation are integrated; replacement remains disabled in durable mode.
 
 Boot validates retained hashes/contracts and recompiles valid definitions in
 artifact-ID order using fresh slots from the fixed module pool. Artifact IDs are
@@ -532,7 +533,7 @@ return `RUNTIME_RECOVERING` before admitting mutations. Summary inspection inclu
 `recovery.status`, artifact counts, `degraded`, bounded diagnostics, `boot_id` and `lineage_id`.
 The lineage stays with the store; each Manager boot gets a new boot ID. Absolute
 storage paths and source text remain omitted from public inspection. Desired worker
-definitions and committed initial state now restore as described below; event and
+definitions and committed event state restore as described below; replacement and
 effect durability remain pending.
 
 An admitted definition or lifecycle operation with no committed outcome becomes a retained
@@ -571,7 +572,7 @@ committed state remains inspectable. Explicit start initializes from supplied
 config again and advances the state revision. Worker detail inspection adds config;
 durable worker summaries add `desired_status`. Existing bounded omission applies.
 
-Unexpected durable host death also restores its committed initial state. A crash
+Unexpected durable host death also restores its latest committed event state. A crash
 and each retry persist lifecycle revisions and generation, but restoration does
 not advance the committed state revision. The three-attempt/ten-second rolling
 budget uses persisted UTC timestamps. Exhaustion remains failed across VM restart;
@@ -587,6 +588,38 @@ to repair one; recovery never silently migrates stored state.
 Readiness stays closed through worker validation, reconstruction and routing.
 Reads and mutations return `RUNTIME_RECOVERING` before admission even if Manager
 is occupied reconstructing hosts. Wait for health 200, then initialize a new MCP
-session. No client is needed to perform reconstruction. Invoke, replacement and
-effect durability are still pending, so durable invocation and replacement remain
-gated at this stage.
+session. No client is needed to perform reconstruction. Replacement and
+effect durability are still pending. Durable replacement and nonempty effect
+batches remain gated at this stage.
+
+
+### Durable event transitions
+
+`runtime_invoke` now accepts effect-free durable events. The host runs its bounded
+callback once while keeping the old state public. Manager reads the validated
+prepared checkpoint, then atomically commits state/schema/revision, exact request
+result, generation and audit. It publishes the matching host candidate only after
+the durable commit, then acknowledges. The request operation ID and checkpoint's
+last operation ID identify that same transaction. Replays and callback failures
+never advance committed state or generation.
+
+Until the outbox is integrated, a valid nonempty emit/schedule/log batch returns
+`DURABILITY_UNAVAILABLE` before reserving or dispatching it, leaving old state and
+revisions intact. Invalid state/reply/effects, callback failure or timeout, and
+response-size rejection similarly preserve the prior checkpoint. Memory mode
+retains its complete existing effect behavior.
+
+If a Store commit raises, times out or has an uncertain result, runtime authority
+and readiness close. A failed publication after a known commit follows that same
+shutdown path; it never replaces durable success with `CALLBACK_FAILED` or continues
+from old volatile state. Restart reads actual disk authority. Before-commit
+interruption replays `OPERATION_INTERRUPTED` with old state; an already committed
+request replays its exact historical reply and generation with new state. Use the
+same request ID and arguments after an uncertain response. Expired replay records
+may execute again, including after downtime.
+
+Unexpected host death and VM reconstruction inject the latest committed event
+state without init/migration or a new state revision. Lifecycle crash/retry revisions
+and budget changes remain durable. Generated direct IO is outside this boundary:
+callbacks retain trusted VM privileges and their external effects cannot be rolled
+back or made exactly-once by committing kernel state.

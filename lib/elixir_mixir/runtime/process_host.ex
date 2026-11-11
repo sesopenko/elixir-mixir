@@ -37,6 +37,10 @@ defmodule ElixirMixir.Runtime.ProcessHost do
   def prepare_replace(pid, artifact, expected, context, timeout),
     do: call(pid, {:prepare_replace, artifact, expected, context}, timeout)
 
+  @doc "Reads a matching prepared checkpoint for its owning Manager without publishing it."
+  @spec prepared_snapshot(pid(), map()) :: {:ok, map()} | {:error, Error.t()}
+  def prepared_snapshot(pid, ticket), do: call(pid, {:prepared_snapshot, ticket}, 1_000)
+
   @doc "Publishes the matching candidate once; repeating its ticket is harmless."
   @spec publish(pid(), map()) :: {:ok, map(), reference() | :none} | {:error, Error.t()}
   def publish(pid, ticket), do: call(pid, {:publish, ticket}, 1_000)
@@ -130,6 +134,15 @@ defmodule ElixirMixir.Runtime.ProcessHost do
 
   def handle_call({:prepare_replace, _, _, _}, {manager, _}, %{manager: manager} = state),
     do: {:reply, {:error, Error.new("BUSY")}, state}
+
+  def handle_call(
+        {:prepared_snapshot, ticket},
+        {manager, _},
+        %{manager: manager, staged: %{ticket: ticket, next: next}} = state
+      ) do
+    snapshot = Map.take(next, [:artifact, :data, :worker_revision, :state_revision, :worker_id])
+    {:reply, {:ok, snapshot}, state}
+  end
 
   def handle_call(
         {:publish, ticket},

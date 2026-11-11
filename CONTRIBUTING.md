@@ -304,8 +304,9 @@ environment variables. CubDB 2.0.2 is locked with synchronous writes and automat
 compaction enabled. Loss of the authoritative store shuts down the kernel.
 
 Durable source definitions, desired workers, initial state and request outcomes
-are integrated with the store. Event transitions and effects are still pending.
-In durable mode, invoke and replacement return `DURABILITY_UNAVAILABLE` before callbacks. Inspection
+are integrated with the store, together with effect-free event transitions.
+Durable replacement is still disabled. A nonempty kernel effect batch returns
+`DURABILITY_UNAVAILABLE` without committing state or dispatching effects. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for current running-application experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
@@ -335,8 +336,9 @@ mix test test/runtime/durable_artifacts_test.exs test/runtime/durable_requests_t
 mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
 ```
 
-Durable start/stop and initial-state recovery are also integrated. Invoke and
-replacement remain unavailable in durable mode. Wait for `/health` before connecting. Recompilation can
+Durable start/stop, initial state and event state recovery are integrated. Only
+replacement remains unavailable in durable mode. Effect-free invoke is supported.
+Wait for `/health` before connecting. Recompilation can
 execute compile-time IO again, so the same trusted-code isolation requirements
 apply after restart. Definition response module strings can describe an old slot;
 artifact IDs and current inspection are authoritative. Request replay retention
@@ -354,7 +356,7 @@ mix test test/runtime/durable_lifecycle_test.exs --warnings-as-errors
 mix test test/integration/phase02_lifecycle_test.exs --warnings-as-errors
 ```
 
-Boot and unexpected host death inject the committed JSON checkpoint; they do not
+Boot and unexpected host death inject the latest committed JSON checkpoint; they do not
 rerun generated init or migration. Explicit start after stop initializes from new
 supplied config. Restart budget timestamps use UTC and exhaustion survives a BEAM
 restart; manual start resets the budget. Failed or quarantined definitions must be
@@ -367,3 +369,24 @@ mailbox, so reads and mutations return `RUNTIME_RECOVERING` promptly even while 
 creation is held. Health stays 503 until healthy routes have been published; a
 fresh client session is required after each BEAM restart. The automated tests do
 not replace the separate actual Phase 2 Codex demonstration, which is pending.
+
+
+Durable event tests add prepared state checkpoints and interruption barriers before
+commit, after commit, before publication and before response. The test-only Store
+protocol proxy injects an exception before a final write and a lost reply after a
+successful real write; it is compiled only in tests. Actual disk state after VM
+restart decides the result, rather than an assumed rollback:
+
+```sh
+mix test test/runtime/durable_transitions_test.exs test/runtime/worker_recovery_test.exs --warnings-as-errors
+mix test test/integration/phase02_transitions_test.exs --warnings-as-errors
+```
+
+A successful effect-free invocation persists state, schema, state revision, request
+outcome and audit atomically before host publication and acknowledgement. Retry
+identical arguments/request ID after an uncertain response. Retention still expires
+including downtime, and an expired ID can run again. Host recovery uses the latest
+committed event state without reinitializing or advancing its state revision.
+Nonempty emit/schedule/log batches remain disabled in durable mode; memory mode
+keeps its existing effects. Direct callback IO has VM privileges and cannot be
+rolled back or deduplicated by kernel state transactions.

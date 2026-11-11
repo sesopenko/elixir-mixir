@@ -87,9 +87,10 @@ defmodule ElixirMixir.Integration.Phase02LifecycleTest do
     assert result["state_revision"] == 2
     assert inspect_worker(fresh, "stopped")["state"]["count"] == 42
 
-    assert tool(fresh, "runtime_invoke", %{
+    assert tool(fresh, "runtime_replace", %{
              "worker_id" => "source",
-             "event" => %{},
+             "artifact_id" => artifact["artifact_id"],
+             "expected_revision" => 1,
              "request_id" => "gated"
            })["code"] == "DURABILITY_UNAVAILABLE"
   end

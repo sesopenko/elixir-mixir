@@ -1,0 +1,18 @@
+{
+  "killed_at": "2026-11-11T23:00:45.432367+00:00",
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 137,
+    "Error": "",
+    "StartedAt": "2026-11-11T22:59:16.654274924Z",
+    "FinishedAt": "2026-11-11T23:00:45.457537804Z"
+  },
+  "container_id": "909eb237baa297798bbb906174e4eb6dbf82a5cf217f85b9288d17bfaae26e5f",
+  "effect_id": "79f60b85cdde498b7fd2603c31ae92fbd0091d9ee7403f0d71f167875ec34ce8"
+}

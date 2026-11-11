@@ -146,8 +146,9 @@ tested. The default memory mode keeps the application running when Codex closes,
 but restarting the runtime or container loses its workers, code, state and history.
 A crashed worker can restart under supervision, starting from its initial state.
 Optional durable workers, event state, replacement and resumed effects are described
-below. Durable restart behavior has automated coverage; the full Codex restart
-demonstration is still pending. There is no autonomous controller yet.
+below. The [durable restart experiment](examples/phase_2_recovery.md) records two
+actual Codex sessions, automatic recovery after SIGKILL and resumed timer delivery.
+There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -162,7 +163,7 @@ docker rm -f elixir-mixir-phase01
 - [Verification](docs/sdlc/phase01/verification.md): automated checks and actual Codex demonstration evidence.
 - [Contributing](CONTRIBUTING.md): development setup, troubleshooting and the required `mix check` quality gate.
 
-## Try durable worker definitions (in progress)
+## Try durable worker definitions
 
 Durable mode retains source artifacts, running and stopped worker definitions,
 configuration, committed event state and request outcomes across abrupt BEAM

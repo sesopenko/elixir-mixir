@@ -1,0 +1,181 @@
+{
+  "success": false,
+  "failure": {
+    "request_id": "p2s2_invoke_2",
+    "code": "INVALID_TRANSITION",
+    "explanation": "The authored v3 callback returned an invalid transition shape. Count 21 and aggregate total 67 were not achieved. The application remains on v3; no workers were started or stopped."
+  },
+  "initial_workers": {
+    "counter": {
+      "status": "running",
+      "pid": "#PID<0.1615.0>",
+      "worker_revision": 2,
+      "state_revision": 6,
+      "artifact_id": "artifact_e1a0d78b65ebb0b950bb410d277f9e3b",
+      "artifact_revision": 2,
+      "source_hash": "4beefb54c27c79ccfa08c31e9a8aa2825dcee8482676ca17258e726efeb27d21",
+      "state_schema": 2,
+      "state": {
+        "schema": 2,
+        "counter": {
+          "count": 13,
+          "target": "aggregate"
+        }
+      }
+    },
+    "aggregate": {
+      "status": "running",
+      "pid": "#PID<0.1614.0>",
+      "worker_revision": 1,
+      "state_revision": 5,
+      "artifact_id": "artifact_9c3c6aab41d79feb40f0a2d4a840a26a",
+      "artifact_revision": 1,
+      "source_hash": "75b42c4ee45a3b2ec3991f121e9fbcd19ac991fce5d2a6d8ff6f3333668fa14e",
+      "state_schema": 1,
+      "state": {
+        "events": 4,
+        "total": 31
+      }
+    },
+    "stopped_probe": {
+      "status": "stopped",
+      "pid": null,
+      "worker_revision": 2,
+      "state_revision": 1,
+      "artifact_id": "artifact_39248ac5d7f2ef46e621382222a2e09a",
+      "artifact_revision": 1,
+      "source_hash": "14120ef4c447781b7800c4a3d8f990e2bb535d329f6cc00a9bb2c0cf91ef3d94",
+      "state_schema": 1,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      }
+    }
+  },
+  "final_workers": {
+    "counter": {
+      "status": "running",
+      "pid": "#PID<0.1615.0>",
+      "worker_revision": 3,
+      "state_revision": 7,
+      "artifact_id": "artifact_e8b9c3132122e04aa479e12382be5fc6",
+      "artifact_revision": 3,
+      "state_schema": 2,
+      "state": {
+        "schema": 2,
+        "counter": {
+          "count": 15,
+          "target": "aggregate"
+        }
+      }
+    },
+    "aggregate": {
+      "status": "running",
+      "pid": "#PID<0.1614.0>",
+      "worker_revision": 1,
+      "state_revision": 6,
+      "artifact_id": "artifact_9c3c6aab41d79feb40f0a2d4a840a26a",
+      "artifact_revision": 1,
+      "state": {
+        "events": 5,
+        "total": 46
+      }
+    },
+    "stopped_probe": {
+      "status": "stopped",
+      "pid": null,
+      "worker_revision": 2,
+      "state_revision": 1,
+      "artifact_id": "artifact_39248ac5d7f2ef46e621382222a2e09a",
+      "artifact_revision": 1,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      }
+    }
+  },
+  "runtime_summary": {
+    "initial_generation": 16,
+    "final_generation": 20,
+    "storage": {
+      "mode": "durable",
+      "format_version": 1
+    },
+    "health": "ok",
+    "recovery_status": "ready",
+    "degraded": false,
+    "boot_id": "a57f09e8873f45938e07362743fecf0b",
+    "lineage_id": "469cc3f2283953918b6d10450d222090",
+    "effects": {
+      "dispatch": "enabled",
+      "pending": 0,
+      "reserved": 0,
+      "timers": 0
+    },
+    "worker_count": 3,
+    "workers_failed": 0,
+    "workers_quarantined": 0,
+    "topology": [
+      {
+        "from": "counter",
+        "to": "aggregate",
+        "count": 5,
+        "pending": 0
+      }
+    ]
+  },
+  "new_artifact": {
+    "artifact_id": "artifact_e8b9c3132122e04aa479e12382be5fc6",
+    "logical_name": "counter",
+    "revision": 3,
+    "source_hash": "dc079d05cac8a01d34b2330a73a55d8a3224cd35d8193f01216957489d6c9453",
+    "state_schema": 2,
+    "compilation_status": "compiled",
+    "callbacks_valid": true,
+    "diagnostics": [],
+    "migration_result": "preserved",
+    "replacement_expected_revision": 2,
+    "pid_preserved": true,
+    "replacement_preserved_count": 15
+  },
+  "rejection": {
+    "request_id": "p2s2_reject_zero",
+    "amount": 0,
+    "code": "CALLBACK_FAILED",
+    "reason": "amount must be positive",
+    "state_unchanged": true,
+    "artifact_unchanged": true,
+    "pid_unchanged": true,
+    "worker_revision_unchanged": true,
+    "state_revision_unchanged": true
+  },
+  "observed_assertions": {
+    "initial_recovery_requirements_passed": true,
+    "recovered_v2_amount_1_produced_15": true,
+    "aggregate_reached_events_5_total_46": true,
+    "artifact_revision_high_water_survived": true,
+    "same_schema_replacement_preserved_state": true,
+    "post_recovery_counter_pid_preserved": true,
+    "v3_amount_2_succeeded": false,
+    "counter_reached_21": false,
+    "aggregate_reached_events_6_total_67": false,
+    "failed_amount_2_left_state_unchanged": true,
+    "recovered_timer_delivery": {
+      "request_id": "p2s1_schedule_11",
+      "sequence": 2,
+      "effect_id": "2f9e2ba2034412250063380da4bcebf4fd2d3f50f85be680d0bb7ac4f652eeae",
+      "outcome": "ok",
+      "observed_delivery_count": 1
+    },
+    "subsequent_amount_1_effect_delivery": {
+      "sequence": 4,
+      "outcome": "ok"
+    },
+    "history_gap": false,
+    "history_dropped": 0,
+    "history_final_cursor": 8,
+    "no_pending_work": true,
+    "counter_and_aggregate_running": true,
+    "stopped_probe_remained_stopped": true
+  }
+}

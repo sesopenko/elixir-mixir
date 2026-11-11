@@ -1,0 +1,1369 @@
+[
+  {
+    "stage": "before-kill",
+    "observed_at": "2026-11-11T22:45:21.859091+00:00",
+    "summary": {
+      "api_version": "1",
+      "edge_count": 1,
+      "effects": {
+        "dispatch": "enabled",
+        "pending": 1,
+        "reserved": 0,
+        "timers": 1
+      },
+      "generation": 15,
+      "health": "ok",
+      "ledger": {
+        "capacity": 1024,
+        "retention_ms": 600000
+      },
+      "limits": {
+        "artifact_slots": 128,
+        "body_bytes": 65536,
+        "callback_heap_words": 1048576,
+        "callback_timeout_ms": 200,
+        "compile_timeout_ms": 5000,
+        "compiler_heap_words": 8388608,
+        "config_bytes": 16384,
+        "depth": 16,
+        "diagnostic_bytes": 2048,
+        "diagnostics": 10,
+        "effect_hops": 16,
+        "effects": 16,
+        "event_bytes": 16384,
+        "history_records": 1000,
+        "ledger_entries": 1024,
+        "ledger_retention_ms": 600000,
+        "metadata_bytes": 2048,
+        "operation_timeout_ms": 7000,
+        "page_default": 25,
+        "page_max": 100,
+        "pending_effects": 256,
+        "reply_bytes": 16384,
+        "response_bytes": 65536,
+        "source_bytes": 32768,
+        "state_bytes": 16384,
+        "timer_delay_ms": 60000,
+        "workers": 32
+      },
+      "next_cursor": null,
+      "recovery": {
+        "artifacts": 0,
+        "boot_id": "a0c06ac8da3da0b8a22f7b0c303e1e15",
+        "degraded": false,
+        "diagnostics": [],
+        "effect_diagnostics": [],
+        "effects_quarantined": 0,
+        "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+        "quarantine_count": 0,
+        "quarantined": 0,
+        "restored": 0,
+        "status": "ready",
+        "worker_diagnostics": [],
+        "workers": 0,
+        "workers_failed": 0,
+        "workers_quarantined": 0,
+        "workers_restored": 0
+      },
+      "storage": {
+        "format_version": 1,
+        "mode": "durable"
+      },
+      "topology": [
+        {
+          "count": 3,
+          "from": "counter",
+          "pending": 1,
+          "to": "aggregate"
+        }
+      ],
+      "truncated": false,
+      "worker_count": 3,
+      "workers": [
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+            "logical_name": "aggregate",
+            "revision": 1,
+            "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+          "desired_status": "running",
+          "implementation_version": 1,
+          "pid": "#PID<0.1620.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 4,
+          "status": "running",
+          "worker_id": "aggregate",
+          "worker_revision": 1
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+            "logical_name": "counter",
+            "revision": 2,
+            "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+            "state_schema": 2
+          },
+          "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+          "desired_status": "running",
+          "implementation_version": 2,
+          "pid": "#PID<0.1625.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 6,
+          "status": "running",
+          "worker_id": "counter",
+          "worker_revision": 2
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+            "logical_name": "counter",
+            "revision": 1,
+            "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+          "desired_status": "stopped",
+          "implementation_version": 1,
+          "pid": null,
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_omitted": true,
+          "state_revision": 1,
+          "status": "stopped",
+          "worker_id": "stopped_probe",
+          "worker_revision": 2
+        }
+      ]
+    },
+    "counter": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+        "logical_name": "counter",
+        "revision": 2,
+        "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+        "state_schema": 2
+      },
+      "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "config": {},
+      "desired_status": "running",
+      "generation": 15,
+      "implementation_version": 2,
+      "pid": "#PID<0.1625.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "counter": {
+          "count": 13,
+          "target": "aggregate"
+        },
+        "schema": 2
+      },
+      "state_revision": 6,
+      "status": "running",
+      "worker_id": "counter",
+      "worker_revision": 2
+    },
+    "aggregate": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+        "logical_name": "aggregate",
+        "revision": 1,
+        "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "config": {},
+      "desired_status": "running",
+      "generation": 15,
+      "implementation_version": 1,
+      "pid": "#PID<0.1620.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "events": 3,
+        "total": 20
+      },
+      "state_revision": 4,
+      "status": "running",
+      "worker_id": "aggregate",
+      "worker_revision": 1
+    },
+    "stopped_probe": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+        "logical_name": "counter",
+        "revision": 1,
+        "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "config": {},
+      "desired_status": "stopped",
+      "generation": 15,
+      "implementation_version": 1,
+      "pid": null,
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      },
+      "state_revision": 1,
+      "status": "stopped",
+      "worker_id": "stopped_probe",
+      "worker_revision": 2
+    },
+    "events": {
+      "api_version": "1",
+      "dropped": 0,
+      "events": [
+        {
+          "metadata": {
+            "quarantines": 0
+          },
+          "outcome": "ready",
+          "sequence": 1,
+          "timestamp": "2026-11-11T22:43:43.448900Z",
+          "truncated": false,
+          "type": "recovery_completed"
+        },
+        {
+          "artifact_revision": 1,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+            "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_define_counter_v1",
+          "sequence": 2,
+          "timestamp": "2026-11-11T22:43:58.782081Z",
+          "truncated": false,
+          "type": "compile_succeeded",
+          "worker_id": null
+        },
+        {
+          "artifact_revision": 1,
+          "logical_id": "aggregate",
+          "metadata": {
+            "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+            "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_define_aggregate",
+          "sequence": 3,
+          "timestamp": "2026-11-11T22:44:04.583783Z",
+          "truncated": false,
+          "type": "compile_succeeded",
+          "worker_id": null
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "aggregate",
+          "metadata": {
+            "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_start_aggregate",
+          "sequence": 4,
+          "timestamp": "2026-11-11T22:44:09.467867Z",
+          "truncated": false,
+          "type": "worker_started",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_start_counter",
+          "sequence": 5,
+          "timestamp": "2026-11-11T22:44:09.470882Z",
+          "truncated": false,
+          "type": "worker_started",
+          "worker_id": "counter"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s1_amount_2",
+          "sequence": 6,
+          "timestamp": "2026-11-11T22:44:13.467205Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        },
+        {
+          "effect_id": "537be578df8a8b1f0342e3485a2186d93196df5e88ee773f1e88b9ba04b93b21",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "537be578df8a8b1f0342e3485a2186d93196df5e88ee773f1e88b9ba04b93b21",
+          "outcome": "ok",
+          "request_id": "p2s1_amount_2",
+          "sequence": 7,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:44:13.470265Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s1_amount_3",
+          "sequence": 8,
+          "timestamp": "2026-11-11T22:44:13.474295Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        },
+        {
+          "effect_id": "0a41b03b5457ce0b18d3887261b758dc33a49bc3f8049559dc4bd9b96fc10968",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "0a41b03b5457ce0b18d3887261b758dc33a49bc3f8049559dc4bd9b96fc10968",
+          "outcome": "ok",
+          "request_id": "p2s1_amount_3",
+          "sequence": 9,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:44:13.477078Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": 2,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+            "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_define_counter_v2",
+          "sequence": 10,
+          "timestamp": "2026-11-11T22:44:23.600917Z",
+          "truncated": false,
+          "type": "compile_succeeded",
+          "worker_id": null
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "CALLBACK_FAILED",
+          "request_id": "p2s1_invalid_amount",
+          "sequence": 11,
+          "timestamp": "2026-11-11T22:44:31.794841Z",
+          "truncated": false,
+          "type": "event_failed",
+          "worker_id": "counter"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_replace_counter",
+          "sequence": 12,
+          "timestamp": "2026-11-11T22:44:31.798687Z",
+          "truncated": false,
+          "type": "implementation_replaced",
+          "worker_id": "counter"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s1_amount_4",
+          "sequence": 13,
+          "timestamp": "2026-11-11T22:44:31.803534Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        },
+        {
+          "effect_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+          "outcome": "ok",
+          "request_id": "p2s1_amount_4",
+          "sequence": 14,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:44:31.806638Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "stopped_probe",
+          "metadata": {
+            "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4"
+          },
+          "outcome": "ok",
+          "request_id": "p2s1_start_probe",
+          "sequence": 15,
+          "timestamp": "2026-11-11T22:44:36.084775Z",
+          "truncated": false,
+          "type": "worker_started",
+          "worker_id": "stopped_probe"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "stopped_probe",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s1_stop_probe",
+          "sequence": 16,
+          "timestamp": "2026-11-11T22:44:36.091478Z",
+          "truncated": false,
+          "type": "worker_stopped",
+          "worker_id": "stopped_probe"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s1_schedule_11",
+          "sequence": 17,
+          "timestamp": "2026-11-11T22:44:41.851953Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        }
+      ],
+      "gap": false,
+      "generation": 15,
+      "next_cursor": 17,
+      "oldest_sequence": 1,
+      "truncated": 0
+    }
+  },
+  {
+    "stage": "restored-before-timer",
+    "observed_at": "2026-11-11T22:45:23.263124+00:00",
+    "summary": {
+      "api_version": "1",
+      "edge_count": 1,
+      "effects": {
+        "dispatch": "enabled",
+        "pending": 1,
+        "reserved": 0,
+        "timers": 1
+      },
+      "generation": 15,
+      "health": "ok",
+      "ledger": {
+        "capacity": 1024,
+        "retention_ms": 600000
+      },
+      "limits": {
+        "artifact_slots": 128,
+        "body_bytes": 65536,
+        "callback_heap_words": 1048576,
+        "callback_timeout_ms": 200,
+        "compile_timeout_ms": 5000,
+        "compiler_heap_words": 8388608,
+        "config_bytes": 16384,
+        "depth": 16,
+        "diagnostic_bytes": 2048,
+        "diagnostics": 10,
+        "effect_hops": 16,
+        "effects": 16,
+        "event_bytes": 16384,
+        "history_records": 1000,
+        "ledger_entries": 1024,
+        "ledger_retention_ms": 600000,
+        "metadata_bytes": 2048,
+        "operation_timeout_ms": 7000,
+        "page_default": 25,
+        "page_max": 100,
+        "pending_effects": 256,
+        "reply_bytes": 16384,
+        "response_bytes": 65536,
+        "source_bytes": 32768,
+        "state_bytes": 16384,
+        "timer_delay_ms": 60000,
+        "workers": 32
+      },
+      "next_cursor": null,
+      "recovery": {
+        "artifacts": 3,
+        "boot_id": "762c448c7c509c1623951462d8873f9c",
+        "degraded": false,
+        "diagnostics": [],
+        "effect_diagnostics": [],
+        "effects_quarantined": 0,
+        "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+        "quarantine_count": 0,
+        "quarantined": 0,
+        "restored": 3,
+        "status": "ready",
+        "worker_diagnostics": [],
+        "workers": 3,
+        "workers_failed": 0,
+        "workers_quarantined": 0,
+        "workers_restored": 2
+      },
+      "storage": {
+        "format_version": 1,
+        "mode": "durable"
+      },
+      "topology": [
+        {
+          "count": 3,
+          "from": "counter",
+          "pending": 1,
+          "to": "aggregate"
+        }
+      ],
+      "truncated": false,
+      "worker_count": 3,
+      "workers": [
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+            "logical_name": "aggregate",
+            "revision": 1,
+            "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+          "desired_status": "running",
+          "implementation_version": 1,
+          "pid": "#PID<0.1615.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 4,
+          "status": "running",
+          "worker_id": "aggregate",
+          "worker_revision": 1
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+            "logical_name": "counter",
+            "revision": 2,
+            "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+            "state_schema": 2
+          },
+          "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+          "desired_status": "running",
+          "implementation_version": 2,
+          "pid": "#PID<0.1616.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 6,
+          "status": "running",
+          "worker_id": "counter",
+          "worker_revision": 2
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+            "logical_name": "counter",
+            "revision": 1,
+            "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+          "desired_status": "stopped",
+          "implementation_version": 1,
+          "pid": null,
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_omitted": true,
+          "state_revision": 1,
+          "status": "stopped",
+          "worker_id": "stopped_probe",
+          "worker_revision": 2
+        }
+      ]
+    },
+    "counter": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+        "logical_name": "counter",
+        "revision": 2,
+        "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+        "state_schema": 2
+      },
+      "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "config": {},
+      "desired_status": "running",
+      "generation": 15,
+      "implementation_version": 2,
+      "pid": "#PID<0.1616.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "counter": {
+          "count": 13,
+          "target": "aggregate"
+        },
+        "schema": 2
+      },
+      "state_revision": 6,
+      "status": "running",
+      "worker_id": "counter",
+      "worker_revision": 2
+    },
+    "aggregate": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+        "logical_name": "aggregate",
+        "revision": 1,
+        "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "config": {},
+      "desired_status": "running",
+      "generation": 15,
+      "implementation_version": 1,
+      "pid": "#PID<0.1615.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "events": 3,
+        "total": 20
+      },
+      "state_revision": 4,
+      "status": "running",
+      "worker_id": "aggregate",
+      "worker_revision": 1
+    },
+    "stopped_probe": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+        "logical_name": "counter",
+        "revision": 1,
+        "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "config": {},
+      "desired_status": "stopped",
+      "generation": 15,
+      "implementation_version": 1,
+      "pid": null,
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      },
+      "state_revision": 1,
+      "status": "stopped",
+      "worker_id": "stopped_probe",
+      "worker_revision": 2
+    },
+    "events": {
+      "api_version": "1",
+      "dropped": 0,
+      "events": [
+        {
+          "metadata": {
+            "quarantines": 0
+          },
+          "outcome": "ready",
+          "sequence": 1,
+          "timestamp": "2026-11-11T22:45:23.179375Z",
+          "truncated": false,
+          "type": "recovery_completed"
+        }
+      ],
+      "gap": false,
+      "generation": 15,
+      "next_cursor": 1,
+      "oldest_sequence": 1,
+      "truncated": 0
+    }
+  },
+  {
+    "stage": "timer-completed-without-codex",
+    "observed_at": "2026-11-11T22:45:42.294102+00:00",
+    "summary": {
+      "api_version": "1",
+      "edge_count": 1,
+      "effects": {
+        "dispatch": "enabled",
+        "pending": 0,
+        "reserved": 0,
+        "timers": 0
+      },
+      "generation": 16,
+      "health": "ok",
+      "ledger": {
+        "capacity": 1024,
+        "retention_ms": 600000
+      },
+      "limits": {
+        "artifact_slots": 128,
+        "body_bytes": 65536,
+        "callback_heap_words": 1048576,
+        "callback_timeout_ms": 200,
+        "compile_timeout_ms": 5000,
+        "compiler_heap_words": 8388608,
+        "config_bytes": 16384,
+        "depth": 16,
+        "diagnostic_bytes": 2048,
+        "diagnostics": 10,
+        "effect_hops": 16,
+        "effects": 16,
+        "event_bytes": 16384,
+        "history_records": 1000,
+        "ledger_entries": 1024,
+        "ledger_retention_ms": 600000,
+        "metadata_bytes": 2048,
+        "operation_timeout_ms": 7000,
+        "page_default": 25,
+        "page_max": 100,
+        "pending_effects": 256,
+        "reply_bytes": 16384,
+        "response_bytes": 65536,
+        "source_bytes": 32768,
+        "state_bytes": 16384,
+        "timer_delay_ms": 60000,
+        "workers": 32
+      },
+      "next_cursor": null,
+      "recovery": {
+        "artifacts": 3,
+        "boot_id": "762c448c7c509c1623951462d8873f9c",
+        "degraded": false,
+        "diagnostics": [],
+        "effect_diagnostics": [],
+        "effects_quarantined": 0,
+        "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+        "quarantine_count": 0,
+        "quarantined": 0,
+        "restored": 3,
+        "status": "ready",
+        "worker_diagnostics": [],
+        "workers": 3,
+        "workers_failed": 0,
+        "workers_quarantined": 0,
+        "workers_restored": 2
+      },
+      "storage": {
+        "format_version": 1,
+        "mode": "durable"
+      },
+      "topology": [
+        {
+          "count": 4,
+          "from": "counter",
+          "pending": 0,
+          "to": "aggregate"
+        }
+      ],
+      "truncated": false,
+      "worker_count": 3,
+      "workers": [
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+            "logical_name": "aggregate",
+            "revision": 1,
+            "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+          "desired_status": "running",
+          "implementation_version": 1,
+          "pid": "#PID<0.1615.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 5,
+          "status": "running",
+          "worker_id": "aggregate",
+          "worker_revision": 1
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+            "logical_name": "counter",
+            "revision": 2,
+            "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+            "state_schema": 2
+          },
+          "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+          "desired_status": "running",
+          "implementation_version": 2,
+          "pid": "#PID<0.1616.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 6,
+          "status": "running",
+          "worker_id": "counter",
+          "worker_revision": 2
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+            "logical_name": "counter",
+            "revision": 1,
+            "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+          "desired_status": "stopped",
+          "implementation_version": 1,
+          "pid": null,
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_omitted": true,
+          "state_revision": 1,
+          "status": "stopped",
+          "worker_id": "stopped_probe",
+          "worker_revision": 2
+        }
+      ]
+    },
+    "counter": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+        "logical_name": "counter",
+        "revision": 2,
+        "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+        "state_schema": 2
+      },
+      "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "config": {},
+      "desired_status": "running",
+      "generation": 16,
+      "implementation_version": 2,
+      "pid": "#PID<0.1616.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "counter": {
+          "count": 13,
+          "target": "aggregate"
+        },
+        "schema": 2
+      },
+      "state_revision": 6,
+      "status": "running",
+      "worker_id": "counter",
+      "worker_revision": 2
+    },
+    "aggregate": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+        "logical_name": "aggregate",
+        "revision": 1,
+        "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "config": {},
+      "desired_status": "running",
+      "generation": 16,
+      "implementation_version": 1,
+      "pid": "#PID<0.1615.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "events": 4,
+        "total": 31
+      },
+      "state_revision": 5,
+      "status": "running",
+      "worker_id": "aggregate",
+      "worker_revision": 1
+    },
+    "stopped_probe": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+        "logical_name": "counter",
+        "revision": 1,
+        "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "config": {},
+      "desired_status": "stopped",
+      "generation": 16,
+      "implementation_version": 1,
+      "pid": null,
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      },
+      "state_revision": 1,
+      "status": "stopped",
+      "worker_id": "stopped_probe",
+      "worker_revision": 2
+    },
+    "events": {
+      "api_version": "1",
+      "dropped": 0,
+      "events": [
+        {
+          "metadata": {
+            "quarantines": 0
+          },
+          "outcome": "ready",
+          "sequence": 1,
+          "timestamp": "2026-11-11T22:45:23.179375Z",
+          "truncated": false,
+          "type": "recovery_completed"
+        },
+        {
+          "effect_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+          "outcome": "ok",
+          "request_id": "p2s1_schedule_11",
+          "sequence": 2,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:45:41.853484Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        }
+      ],
+      "gap": false,
+      "generation": 16,
+      "next_cursor": 2,
+      "oldest_sequence": 1,
+      "truncated": 0
+    }
+  },
+  {
+    "stage": "after-second-codex",
+    "observed_at": "2026-11-11T22:46:55.885249+00:00",
+    "summary": {
+      "api_version": "1",
+      "edge_count": 1,
+      "effects": {
+        "dispatch": "enabled",
+        "pending": 0,
+        "reserved": 0,
+        "timers": 0
+      },
+      "generation": 22,
+      "health": "ok",
+      "ledger": {
+        "capacity": 1024,
+        "retention_ms": 600000
+      },
+      "limits": {
+        "artifact_slots": 128,
+        "body_bytes": 65536,
+        "callback_heap_words": 1048576,
+        "callback_timeout_ms": 200,
+        "compile_timeout_ms": 5000,
+        "compiler_heap_words": 8388608,
+        "config_bytes": 16384,
+        "depth": 16,
+        "diagnostic_bytes": 2048,
+        "diagnostics": 10,
+        "effect_hops": 16,
+        "effects": 16,
+        "event_bytes": 16384,
+        "history_records": 1000,
+        "ledger_entries": 1024,
+        "ledger_retention_ms": 600000,
+        "metadata_bytes": 2048,
+        "operation_timeout_ms": 7000,
+        "page_default": 25,
+        "page_max": 100,
+        "pending_effects": 256,
+        "reply_bytes": 16384,
+        "response_bytes": 65536,
+        "source_bytes": 32768,
+        "state_bytes": 16384,
+        "timer_delay_ms": 60000,
+        "workers": 32
+      },
+      "next_cursor": null,
+      "recovery": {
+        "artifacts": 3,
+        "boot_id": "762c448c7c509c1623951462d8873f9c",
+        "degraded": false,
+        "diagnostics": [],
+        "effect_diagnostics": [],
+        "effects_quarantined": 0,
+        "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+        "quarantine_count": 0,
+        "quarantined": 0,
+        "restored": 3,
+        "status": "ready",
+        "worker_diagnostics": [],
+        "workers": 3,
+        "workers_failed": 0,
+        "workers_quarantined": 0,
+        "workers_restored": 2
+      },
+      "storage": {
+        "format_version": 1,
+        "mode": "durable"
+      },
+      "topology": [
+        {
+          "count": 6,
+          "from": "counter",
+          "pending": 0,
+          "to": "aggregate"
+        }
+      ],
+      "truncated": false,
+      "worker_count": 3,
+      "workers": [
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+            "logical_name": "aggregate",
+            "revision": 1,
+            "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+          "desired_status": "running",
+          "implementation_version": 1,
+          "pid": "#PID<0.1615.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 7,
+          "status": "running",
+          "worker_id": "aggregate",
+          "worker_revision": 1
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_b2585b5587f82948688bb494e25126d5",
+            "logical_name": "counter",
+            "revision": 3,
+            "source_hash": "b90f082c46f17926501b6dd7962d1f01518cf5563e33c48fb2819b7b7d3d75da",
+            "state_schema": 2
+          },
+          "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5",
+          "desired_status": "running",
+          "implementation_version": 3,
+          "pid": "#PID<0.1616.0>",
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_revision": 8,
+          "status": "running",
+          "worker_id": "counter",
+          "worker_revision": 3
+        },
+        {
+          "artifact": {
+            "contract_version": "elixir_mixir.behavior.v1",
+            "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+            "logical_name": "counter",
+            "revision": 1,
+            "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+            "state_schema": 1
+          },
+          "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+          "desired_status": "stopped",
+          "implementation_version": 1,
+          "pid": null,
+          "restart_count": 0,
+          "restart_limit": 3,
+          "restart_window_ms": 10000,
+          "state_omitted": true,
+          "state_revision": 1,
+          "status": "stopped",
+          "worker_id": "stopped_probe",
+          "worker_revision": 2
+        }
+      ]
+    },
+    "counter": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_b2585b5587f82948688bb494e25126d5",
+        "logical_name": "counter",
+        "revision": 3,
+        "source_hash": "b90f082c46f17926501b6dd7962d1f01518cf5563e33c48fb2819b7b7d3d75da",
+        "state_schema": 2
+      },
+      "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5",
+      "config": {},
+      "desired_status": "running",
+      "generation": 22,
+      "implementation_version": 3,
+      "pid": "#PID<0.1616.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "counter": {
+          "count": 21,
+          "target": "aggregate"
+        },
+        "schema": 2
+      },
+      "state_revision": 8,
+      "status": "running",
+      "worker_id": "counter",
+      "worker_revision": 3
+    },
+    "aggregate": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+        "logical_name": "aggregate",
+        "revision": 1,
+        "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "config": {},
+      "desired_status": "running",
+      "generation": 22,
+      "implementation_version": 1,
+      "pid": "#PID<0.1615.0>",
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "events": 6,
+        "total": 67
+      },
+      "state_revision": 7,
+      "status": "running",
+      "worker_id": "aggregate",
+      "worker_revision": 1
+    },
+    "stopped_probe": {
+      "api_version": "1",
+      "artifact": {
+        "contract_version": "elixir_mixir.behavior.v1",
+        "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+        "logical_name": "counter",
+        "revision": 1,
+        "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+        "state_schema": 1
+      },
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "config": {},
+      "desired_status": "stopped",
+      "generation": 22,
+      "implementation_version": 1,
+      "pid": null,
+      "restart_count": 0,
+      "restart_limit": 3,
+      "restart_window_ms": 10000,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      },
+      "state_revision": 1,
+      "status": "stopped",
+      "worker_id": "stopped_probe",
+      "worker_revision": 2
+    },
+    "events": {
+      "api_version": "1",
+      "dropped": 0,
+      "events": [
+        {
+          "metadata": {
+            "quarantines": 0
+          },
+          "outcome": "ready",
+          "sequence": 1,
+          "timestamp": "2026-11-11T22:45:23.179375Z",
+          "truncated": false,
+          "type": "recovery_completed"
+        },
+        {
+          "effect_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+          "outcome": "ok",
+          "request_id": "p2s1_schedule_11",
+          "sequence": 2,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:45:41.853484Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s2_invoke_v2_1",
+          "sequence": 3,
+          "timestamp": "2026-11-11T22:45:53.421945Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        },
+        {
+          "effect_id": "13838ebeabcdb9da1d2f7ebf3196edea6ec0467e10487b9c9fad2fc525d840d0",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "13838ebeabcdb9da1d2f7ebf3196edea6ec0467e10487b9c9fad2fc525d840d0",
+          "outcome": "ok",
+          "request_id": "p2s2_invoke_v2_1",
+          "sequence": 4,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:45:53.424153Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": 3,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5",
+            "source_hash": "b90f082c46f17926501b6dd7962d1f01518cf5563e33c48fb2819b7b7d3d75da"
+          },
+          "outcome": "ok",
+          "request_id": "p2s2_define_v3_1",
+          "sequence": 5,
+          "timestamp": "2026-11-11T22:46:04.143047Z",
+          "truncated": false,
+          "type": "compile_succeeded",
+          "worker_id": null
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {
+            "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5"
+          },
+          "outcome": "ok",
+          "request_id": "p2s2_replace_v3_1",
+          "sequence": 6,
+          "timestamp": "2026-11-11T22:46:07.250099Z",
+          "truncated": false,
+          "type": "implementation_replaced",
+          "worker_id": "counter"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "ok",
+          "request_id": "p2s2_invoke_v3_2",
+          "sequence": 7,
+          "timestamp": "2026-11-11T22:46:12.555179Z",
+          "truncated": false,
+          "type": "event_delivered",
+          "worker_id": "counter"
+        },
+        {
+          "effect_id": "16fdc95c8fbb0f758ea7b5ed2826155c694063475b21ed59e14f39f1169c45a7",
+          "logical_id": "aggregate",
+          "metadata": {},
+          "operation": "delivery",
+          "operation_id": "16fdc95c8fbb0f758ea7b5ed2826155c694063475b21ed59e14f39f1169c45a7",
+          "outcome": "ok",
+          "request_id": "p2s2_invoke_v3_2",
+          "sequence": 8,
+          "source": "counter",
+          "timestamp": "2026-11-11T22:46:12.559781Z",
+          "truncated": false,
+          "type": "effect_delivered",
+          "worker_id": "aggregate"
+        },
+        {
+          "artifact_revision": null,
+          "logical_id": "counter",
+          "metadata": {},
+          "outcome": "CALLBACK_FAILED",
+          "request_id": "p2s2_reject_zero_1",
+          "sequence": 9,
+          "timestamp": "2026-11-11T22:46:17.167333Z",
+          "truncated": false,
+          "type": "event_failed",
+          "worker_id": "counter"
+        }
+      ],
+      "gap": false,
+      "generation": 22,
+      "next_cursor": 9,
+      "oldest_sequence": 1,
+      "truncated": 0
+    }
+  }
+]

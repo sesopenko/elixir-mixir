@@ -1,0 +1,209 @@
+{
+  "success": true,
+  "initial_workers": {
+    "counter": {
+      "status": "running",
+      "pid": "#PID<0.1616.0>",
+      "worker_revision": 2,
+      "state_revision": 6,
+      "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "artifact_revision": 2,
+      "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+      "state_schema": 2,
+      "state": {
+        "schema": 2,
+        "counter": {
+          "count": 13,
+          "target": "aggregate"
+        }
+      }
+    },
+    "aggregate": {
+      "status": "running",
+      "pid": "#PID<0.1615.0>",
+      "worker_revision": 1,
+      "state_revision": 5,
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "artifact_revision": 1,
+      "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+      "state_schema": 1,
+      "state": {
+        "events": 4,
+        "total": 31
+      }
+    },
+    "stopped_probe": {
+      "status": "stopped",
+      "pid": null,
+      "worker_revision": 2,
+      "state_revision": 1,
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "artifact_revision": 1,
+      "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+      "state_schema": 1,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      }
+    }
+  },
+  "final_workers": {
+    "counter": {
+      "status": "running",
+      "pid": "#PID<0.1616.0>",
+      "worker_revision": 3,
+      "state_revision": 8,
+      "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5",
+      "artifact_revision": 3,
+      "source_hash": "b90f082c46f17926501b6dd7962d1f01518cf5563e33c48fb2819b7b7d3d75da",
+      "state_schema": 2,
+      "state": {
+        "schema": 2,
+        "counter": {
+          "count": 21,
+          "target": "aggregate"
+        }
+      }
+    },
+    "aggregate": {
+      "status": "running",
+      "pid": "#PID<0.1615.0>",
+      "worker_revision": 1,
+      "state_revision": 7,
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "artifact_revision": 1,
+      "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+      "state_schema": 1,
+      "state": {
+        "events": 6,
+        "total": 67
+      }
+    },
+    "stopped_probe": {
+      "status": "stopped",
+      "pid": null,
+      "worker_revision": 2,
+      "state_revision": 1,
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "artifact_revision": 1,
+      "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+      "state_schema": 1,
+      "state": {
+        "count": 0,
+        "target": "aggregate"
+      }
+    }
+  },
+  "runtime_summary": {
+    "initial_generation": 16,
+    "final_generation": 22,
+    "health": "ok",
+    "storage": {
+      "mode": "durable",
+      "format_version": 1
+    },
+    "recovery_status": "ready",
+    "boot_id": "762c448c7c509c1623951462d8873f9c",
+    "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+    "degraded": false,
+    "workers_restored": 2,
+    "workers_failed": 0,
+    "quarantines": 0,
+    "effects": {
+      "dispatch": "enabled",
+      "pending": 0,
+      "reserved": 0,
+      "timers": 0
+    },
+    "topology": [
+      {
+        "from": "counter",
+        "to": "aggregate",
+        "count": 6,
+        "pending": 0
+      }
+    ]
+  },
+  "new_artifact": {
+    "artifact_id": "artifact_b2585b5587f82948688bb494e25126d5",
+    "revision": 3,
+    "source_hash": "b90f082c46f17926501b6dd7962d1f01518cf5563e33c48fb2819b7b7d3d75da",
+    "state_schema": 2,
+    "compilation_status": "compiled",
+    "callbacks_valid": true,
+    "diagnostics": [],
+    "define_request_id": "p2s2_define_v3_1",
+    "replace_request_id": "p2s2_replace_v3_1",
+    "expected_revision": 2,
+    "migration_result": "preserved",
+    "count_after_replacement": 15,
+    "state_revision_after_replacement": 7,
+    "pid_before": "#PID<0.1616.0>",
+    "pid_after": "#PID<0.1616.0>"
+  },
+  "rejection": {
+    "request_id": "p2s2_reject_zero_1",
+    "amount": 0,
+    "code": "CALLBACK_FAILED",
+    "reason": "amount must be positive",
+    "counter_state_unchanged": true,
+    "artifact_unchanged": true,
+    "pid_unchanged": true,
+    "worker_revision_unchanged": true,
+    "state_revision_unchanged": true
+  },
+  "observed_assertions": {
+    "initial_recovery_requirements_met": true,
+    "recovered_v2_amount_1": {
+      "reply": 15,
+      "count": 15,
+      "aggregate": {
+        "events": 5,
+        "total": 46
+      }
+    },
+    "artifact_revision_high_water_survived": true,
+    "same_schema_state_preserved": true,
+    "counter_pid_preserved": true,
+    "v3_amount_2": {
+      "reply": 21,
+      "count": 21,
+      "aggregate": {
+        "events": 6,
+        "total": 67
+      }
+    },
+    "history": {
+      "gap": false,
+      "dropped": 0,
+      "truncated": 0,
+      "last_sequence": 9,
+      "recovery_completed_sequence": 1,
+      "recovered_timer": {
+        "request_id": "p2s1_schedule_11",
+        "effect_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+        "delivery_sequence": 2,
+        "delivery_timestamp": "2026-11-11T22:45:41.853484Z",
+        "outcome": "ok",
+        "observed_delivery_count": 1
+      },
+      "subsequent_effect_deliveries": [
+        {
+          "request_id": "p2s2_invoke_v2_1",
+          "sequence": 4,
+          "outcome": "ok"
+        },
+        {
+          "request_id": "p2s2_invoke_v3_2",
+          "sequence": 8,
+          "outcome": "ok"
+        }
+      ],
+      "rejection_sequence": 9
+    },
+    "no_pending_work": true,
+    "stopped_probe_remained_stopped": true,
+    "no_workers_started": true,
+    "application_left_intact": true
+  }
+}

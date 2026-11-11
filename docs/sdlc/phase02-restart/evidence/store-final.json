@@ -1,0 +1,425 @@
+{
+  "artifacts": [
+    {
+      "id": "artifact_9e0a9d918a0a8fd70a2397776afceebf",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "aggregate",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot002",
+        "revision": 1,
+        "source_hash": "75b42c4ee45a3b2ec3991f121e9fbcd19ac991fce5d2a6d8ff6f3333668fa14e",
+        "state_schema": 1
+      },
+      "stored_source_sha256": "75b42c4ee45a3b2ec3991f121e9fbcd19ac991fce5d2a6d8ff6f3333668fa14e"
+    },
+    {
+      "id": "artifact_d3518a62eb899809bfab8b92eebdc384",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "counter",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot001",
+        "revision": 1,
+        "source_hash": "14120ef4c447781b7800c4a3d8f990e2bb535d329f6cc00a9bb2c0cf91ef3d94",
+        "state_schema": 1
+      },
+      "stored_source_sha256": "14120ef4c447781b7800c4a3d8f990e2bb535d329f6cc00a9bb2c0cf91ef3d94"
+    },
+    {
+      "id": "artifact_ce260df8d3de54d9ee5c1e8bffb78ea9",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "counter",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot004",
+        "revision": 3,
+        "source_hash": "c0590f2188d057c41d3346624f2c868bb0003658e5d9e61bf2d156609655228f",
+        "state_schema": 2
+      },
+      "stored_source_sha256": "c0590f2188d057c41d3346624f2c868bb0003658e5d9e61bf2d156609655228f"
+    },
+    {
+      "id": "artifact_274dbccb3576ff051b0db1feebe9f594",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "counter",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot003",
+        "revision": 2,
+        "source_hash": "c4d8b05bd1f75c2333f2b22b524ea6168a87a2fbc376048e719d3950cce04198",
+        "state_schema": 2
+      },
+      "stored_source_sha256": "c4d8b05bd1f75c2333f2b22b524ea6168a87a2fbc376048e719d3950cce04198"
+    }
+  ],
+  "audits": [
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "eabf5adde97f2ab7fc74823131ac122c",
+        "outcome": "ok",
+        "request_id": "p2s1_schedule_11",
+        "worker_id": "counter"
+      },
+      "sequence": 14
+    },
+    {
+      "record": {
+        "logical_id": "stopped_probe",
+        "operation": "stop",
+        "operation_id": "e55e9d4f1343615954730c73ab3cb98f",
+        "outcome": "ok",
+        "request_id": "p2s1_stop_probe",
+        "worker_id": "stopped_probe"
+      },
+      "sequence": 13
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "c576bb302cfd38916da09241be8185fd",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_3",
+        "worker_id": "counter"
+      },
+      "sequence": 6
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "ea0bf575e1b617002765542536a2946f",
+        "outcome": "ok",
+        "request_id": "p2s2_invoke_v2_1",
+        "worker_id": "counter"
+      },
+      "sequence": 16
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "97e3276bfeaafa924d6ab79248736ea8",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_2",
+        "worker_id": "counter"
+      },
+      "sequence": 4
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "replace",
+        "operation_id": "700e5cc567588ce72ec4cafe9743050c",
+        "outcome": "ok",
+        "request_id": "p2s1_replace_counter",
+        "worker_id": "counter"
+      },
+      "sequence": 9
+    },
+    {
+      "record": {
+        "effect_id": "b5be42243672e59ef7f7dcde2e47e97e73b2983c075a32b135e39691952b5ce1",
+        "operation": "delivery",
+        "operation_id": "b5be42243672e59ef7f7dcde2e47e97e73b2983c075a32b135e39691952b5ce1",
+        "outcome": "ok",
+        "request_id": "p2s2_invoke_v3_2",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 21
+    },
+    {
+      "record": {
+        "effect_id": "187ad63b2460a40c0586f703a8974429a7f18136fe232314e2e612d20b851158",
+        "operation": "delivery",
+        "operation_id": "187ad63b2460a40c0586f703a8974429a7f18136fe232314e2e612d20b851158",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_2",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 5
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "define",
+        "operation_id": "e1056bd515857a062fe7853e1359746c",
+        "outcome": "ok",
+        "request_id": "p2s2_define_v3_1",
+        "worker_id": null
+      },
+      "sequence": 18
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "define",
+        "operation_id": "79e279d6328b5b208106ac564db90176",
+        "outcome": "ok",
+        "request_id": "p2s1_define_counter_v2",
+        "worker_id": null
+      },
+      "sequence": 8
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "start",
+        "operation_id": "967e5ece34867789bdac74a1715a06fc",
+        "outcome": "ok",
+        "request_id": "p2s1_start_counter",
+        "worker_id": "counter"
+      },
+      "sequence": 3
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "define",
+        "operation_id": "4b207831bd1f08b59e68d7e5d3eaa4e3",
+        "outcome": "ok",
+        "request_id": "p2s1_define_counter_v1",
+        "worker_id": null
+      },
+      "sequence": 0
+    },
+    {
+      "record": {
+        "effect_id": "91bcca6550f95170bb8236104c3282589dd1fc55d028eae2d8bd19f0e308030c",
+        "operation": "delivery",
+        "operation_id": "91bcca6550f95170bb8236104c3282589dd1fc55d028eae2d8bd19f0e308030c",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_3",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 7
+    },
+    {
+      "record": {
+        "effect_id": "79f60b85cdde498b7fd2603c31ae92fbd0091d9ee7403f0d71f167875ec34ce8",
+        "operation": "delivery",
+        "operation_id": "79f60b85cdde498b7fd2603c31ae92fbd0091d9ee7403f0d71f167875ec34ce8",
+        "outcome": "ok",
+        "request_id": "p2s1_schedule_11",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 15
+    },
+    {
+      "record": {
+        "logical_id": "aggregate",
+        "operation": "start",
+        "operation_id": "8aaac66f5b6ec477b6fef9b5199bfb55",
+        "outcome": "ok",
+        "request_id": "p2s1_start_aggregate",
+        "worker_id": "aggregate"
+      },
+      "sequence": 2
+    },
+    {
+      "record": {
+        "logical_id": "aggregate",
+        "operation": "define",
+        "operation_id": "e8273dec5b0a66df5c0525e166d77db3",
+        "outcome": "ok",
+        "request_id": "p2s1_define_aggregate",
+        "worker_id": null
+      },
+      "sequence": 1
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "dcdea7e2bde1b79dbbee96b0dd733f07",
+        "outcome": "ok",
+        "request_id": "p2s2_invoke_v3_2",
+        "worker_id": "counter"
+      },
+      "sequence": 20
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "replace",
+        "operation_id": "15a0eb983f2a7d670c9645a7f28f8839",
+        "outcome": "ok",
+        "request_id": "p2s2_replace_v3_1",
+        "worker_id": "counter"
+      },
+      "sequence": 19
+    },
+    {
+      "record": {
+        "logical_id": "stopped_probe",
+        "operation": "start",
+        "operation_id": "10586a914be9cd346e679ba014be37d6",
+        "outcome": "ok",
+        "request_id": "p2s1_start_probe",
+        "worker_id": "stopped_probe"
+      },
+      "sequence": 12
+    },
+    {
+      "record": {
+        "effect_id": "a82b96a48189c8f4968860d91ccde9bb8b2ec274a2e44b64aa847358e96aaf16",
+        "operation": "delivery",
+        "operation_id": "a82b96a48189c8f4968860d91ccde9bb8b2ec274a2e44b64aa847358e96aaf16",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_4",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 11
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "9cd62b08ebffc3ff96beb00bb95c7490",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_4",
+        "worker_id": "counter"
+      },
+      "sequence": 10
+    },
+    {
+      "record": {
+        "effect_id": "6b7860fe0bdf0a4c92a2f4ac4696c861cf50134a09ed660af979a4954cbc23b3",
+        "operation": "delivery",
+        "operation_id": "6b7860fe0bdf0a4c92a2f4ac4696c861cf50134a09ed660af979a4954cbc23b3",
+        "outcome": "ok",
+        "request_id": "p2s2_invoke_v2_1",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 17
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "393c9fd8f50097c53cc57e37e859e8b5",
+        "outcome": "CALLBACK_FAILED",
+        "request_id": "p2s2_reject_zero_1",
+        "worker_id": "counter"
+      },
+      "sequence": 22
+    }
+  ],
+  "edges": [
+    {
+      "record": {
+        "count": 6
+      },
+      "source": "counter",
+      "target": "aggregate"
+    }
+  ],
+  "effects": [],
+  "meta": {
+    "format_version": 1,
+    "generation": 22,
+    "lineage_id": "0bd3811b109b1a5782f4198db9ad7caa",
+    "next_audit_sequence": 23
+  },
+  "states": [
+    {
+      "id": "stopped_probe",
+      "record": {
+        "checkpoint_at": 1794438005520,
+        "data": {
+          "count": 0,
+          "target": "aggregate"
+        },
+        "last_operation_id": "10586a914be9cd346e679ba014be37d6",
+        "schema": 1,
+        "state_revision": 1
+      }
+    },
+    {
+      "id": "counter",
+      "record": {
+        "checkpoint_at": 1794438099758,
+        "data": {
+          "counter": {
+            "count": 21,
+            "target": "aggregate"
+          },
+          "schema": 2
+        },
+        "last_operation_id": "dcdea7e2bde1b79dbbee96b0dd733f07",
+        "schema": 2,
+        "state_revision": 8
+      }
+    },
+    {
+      "id": "aggregate",
+      "record": {
+        "checkpoint_at": 1794438099761,
+        "data": {
+          "events": 6,
+          "total": 67
+        },
+        "last_operation_id": "b5be42243672e59ef7f7dcde2e47e97e73b2983c075a32b135e39691952b5ce1",
+        "schema": 1,
+        "state_revision": 7
+      }
+    }
+  ],
+  "workers": [
+    {
+      "id": "aggregate",
+      "record": {
+        "artifact_id": "artifact_9e0a9d918a0a8fd70a2397776afceebf",
+        "config": {},
+        "desired_status": "running",
+        "observed_status": "running",
+        "request_id": "b5be42243672e59ef7f7dcde2e47e97e73b2983c075a32b135e39691952b5ce1",
+        "restarts": [],
+        "worker_revision": 1
+      }
+    },
+    {
+      "id": "counter",
+      "record": {
+        "artifact_id": "artifact_ce260df8d3de54d9ee5c1e8bffb78ea9",
+        "config": {},
+        "desired_status": "running",
+        "observed_status": "running",
+        "request_id": "p2s2_invoke_v3_2",
+        "restarts": [],
+        "worker_revision": 3
+      }
+    },
+    {
+      "id": "stopped_probe",
+      "record": {
+        "artifact_id": "artifact_d3518a62eb899809bfab8b92eebdc384",
+        "config": {},
+        "desired_status": "stopped",
+        "observed_status": "stopped",
+        "request_id": "p2s1_stop_probe",
+        "restarts": [],
+        "worker_revision": 2
+      }
+    }
+  ]
+}

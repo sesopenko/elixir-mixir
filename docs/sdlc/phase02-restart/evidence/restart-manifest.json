@@ -1,0 +1,281 @@
+{
+  "verified_at": "2026-11-11T23:02:38.139073+00:00",
+  "volume": "mixir-phase02-codex-0b84c8e5a01f-data",
+  "volume_retained": true,
+  "image": "elixir-mixir:phase02",
+  "image_id": "sha256:41783a3c9f3230c9204e483dd1ddbed2b91bfe9c829a0afd924cc7e91468c2c2",
+  "endpoint": "http://127.0.0.1:48761/mcp",
+  "safety": {
+    "user": "1000:1000",
+    "read_only_root": true,
+    "application_owner_uid": 0,
+    "data_writable": true,
+    "test_and_generated_modules_absent": true,
+    "only_volume": "mixir-phase02-codex-0b84c8e5a01f-data"
+  },
+  "killed_at": "2026-11-11T23:00:45.432367+00:00",
+  "kill_exit_code": 137,
+  "oom_killed": false,
+  "container_ids": [
+    "909eb237baa297798bbb906174e4eb6dbf82a5cf217f85b9288d17bfaae26e5f",
+    "43bf99ad626facb59e77d74acd33525d48243fa543fc552b0a4271fcca437890"
+  ],
+  "host_pids": [
+    667491,
+    668698
+  ],
+  "started_at": [
+    "2026-11-11T22:59:16.654274924Z",
+    "2026-11-11T23:00:46.006588254Z"
+  ],
+  "effect_id": "79f60b85cdde498b7fd2603c31ae92fbd0091d9ee7403f0d71f167875ec34ce8",
+  "due_at": 1794438069393,
+  "no_codex_interval": {
+    "from": "2026-11-11T23:00:45.424609+00:00",
+    "until": "2026-11-11T23:01:09.852309+00:00"
+  },
+  "commands": [
+    [
+      "docker",
+      "volume",
+      "create",
+      "--label",
+      "elixir-mixir.demo=phase02",
+      "mixir-phase02-codex-0b84c8e5a01f-data"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-codex-0b84c8e5a01f-before",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-codex-0b84c8e5a01f-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=48761",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "exec",
+      "mixir-phase02-codex-0b84c8e5a01f-before",
+      "sh",
+      "-c",
+      "set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "kill",
+      "--signal",
+      "KILL",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "wait",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "rm",
+      "mixir-phase02-codex-0b84c8e5a01f-before"
+    ],
+    [
+      "docker",
+      "run",
+      "--rm",
+      "--name",
+      "mixir-phase02-codex-0b84c8e5a01f-snapshot-after-kill",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-codex-0b84c8e5a01f-data,target=/data",
+      "elixir-mixir:phase02",
+      "eval",
+      "{:ok, _} = Application.ensure_all_started(:cubdb)\n{:ok, db} = CubDB.start_link(data_dir: \"/data\", auto_compact: false, auto_file_sync: true)\nrows = Map.new(CubDB.select(db))\nartifacts = for {{:artifact, id}, record} <- rows do\n  hash = Base.encode16(:crypto.hash(:sha256, record[\"source\"]), case: :lower)\n  %{\"id\" => id, \"record\" => Map.delete(record, \"source\"), \"stored_source_sha256\" => hash}\nend\nresult = %{\"meta\" => rows[:meta], \"artifacts\" => artifacts,\n  \"workers\" => for({{:worker, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"states\" => for({{:state, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"effects\" => for({{:effect, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"edges\" => for({{:edge, source, target}, record} <- rows, do: %{\"source\" => source, \"target\" => target, \"record\" => record}),\n  \"audits\" => for({{:audit, sequence}, record} <- rows, do: %{\"sequence\" => sequence, \"record\" => record})}\nIO.puts(\"MIXIR_RECORDS:\" <> Jason.encode!(result))\nGenServer.stop(db)\n"
+    ],
+    [
+      "docker",
+      "run",
+      "-d",
+      "--name",
+      "mixir-phase02-codex-0b84c8e5a01f-after",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-codex-0b84c8e5a01f-data,target=/data",
+      "--env",
+      "ELIXIR_MIXIR_DATA_DIR=/data",
+      "--env",
+      "ELIXIR_MIXIR_PORT=48761",
+      "elixir-mixir:phase02"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "stop",
+      "--time",
+      "30",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "inspect",
+      "mixir-phase02-codex-0b84c8e5a01f-after"
+    ],
+    [
+      "docker",
+      "run",
+      "--rm",
+      "--name",
+      "mixir-phase02-codex-0b84c8e5a01f-snapshot-final",
+      "--network",
+      "host",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=128m",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--cpus",
+      "1",
+      "--pids-limit",
+      "128",
+      "--mount",
+      "type=volume,source=mixir-phase02-codex-0b84c8e5a01f-data,target=/data",
+      "elixir-mixir:phase02",
+      "eval",
+      "{:ok, _} = Application.ensure_all_started(:cubdb)\n{:ok, db} = CubDB.start_link(data_dir: \"/data\", auto_compact: false, auto_file_sync: true)\nrows = Map.new(CubDB.select(db))\nartifacts = for {{:artifact, id}, record} <- rows do\n  hash = Base.encode16(:crypto.hash(:sha256, record[\"source\"]), case: :lower)\n  %{\"id\" => id, \"record\" => Map.delete(record, \"source\"), \"stored_source_sha256\" => hash}\nend\nresult = %{\"meta\" => rows[:meta], \"artifacts\" => artifacts,\n  \"workers\" => for({{:worker, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"states\" => for({{:state, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"effects\" => for({{:effect, id}, record} <- rows, do: %{\"id\" => id, \"record\" => record}),\n  \"edges\" => for({{:edge, source, target}, record} <- rows, do: %{\"source\" => source, \"target\" => target, \"record\" => record}),\n  \"audits\" => for({{:audit, sequence}, record} <- rows, do: %{\"sequence\" => sequence, \"record\" => record})}\nIO.puts(\"MIXIR_RECORDS:\" <> Jason.encode!(result))\nGenServer.stop(db)\n"
+    ]
+  ]
+}

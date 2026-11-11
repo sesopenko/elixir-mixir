@@ -1,0 +1,353 @@
+{
+  "artifacts": [
+    {
+      "id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "aggregate",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot002",
+        "revision": 1,
+        "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+        "state_schema": 1
+      },
+      "stored_source_sha256": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c"
+    },
+    {
+      "id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "counter",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot003",
+        "revision": 2,
+        "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+        "state_schema": 2
+      },
+      "stored_source_sha256": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b"
+    },
+    {
+      "id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "record": {
+        "compiler_helpers": 5,
+        "contract_version": "elixir_mixir.behavior.v1",
+        "diagnostics": [],
+        "logical_name": "counter",
+        "original_module": "Elixir.ElixirMixir.Generated.Slot001",
+        "revision": 1,
+        "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+        "state_schema": 1
+      },
+      "stored_source_sha256": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea"
+    }
+  ],
+  "audits": [
+    {
+      "record": {
+        "logical_id": "stopped_probe",
+        "operation": "stop",
+        "operation_id": "a4287d965cfa33e599aefbd84cea9b07",
+        "outcome": "ok",
+        "request_id": "p2s1_stop_probe",
+        "worker_id": "stopped_probe"
+      },
+      "sequence": 14
+    },
+    {
+      "record": {
+        "logical_id": "stopped_probe",
+        "operation": "start",
+        "operation_id": "f65c04a0915ff88d4d66cadb933e1270",
+        "outcome": "ok",
+        "request_id": "p2s1_start_probe",
+        "worker_id": "stopped_probe"
+      },
+      "sequence": 13
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "064dba0d78fa530bac0dc54f1200a48f",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_3",
+        "worker_id": "counter"
+      },
+      "sequence": 6
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "92afd835ce0e3ed16198b966b336d9b5",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_2",
+        "worker_id": "counter"
+      },
+      "sequence": 4
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "9cff5d56f6319cb1f5433f6f7c0c1ed8",
+        "outcome": "CALLBACK_FAILED",
+        "request_id": "p2s1_invalid_amount",
+        "worker_id": "counter"
+      },
+      "sequence": 9
+    },
+    {
+      "record": {
+        "effect_id": "537be578df8a8b1f0342e3485a2186d93196df5e88ee773f1e88b9ba04b93b21",
+        "operation": "delivery",
+        "operation_id": "537be578df8a8b1f0342e3485a2186d93196df5e88ee773f1e88b9ba04b93b21",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_2",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 5
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "define",
+        "operation_id": "d0036052fa38d12f9403dbb3f70b4e8d",
+        "outcome": "ok",
+        "request_id": "p2s1_define_counter_v2",
+        "worker_id": null
+      },
+      "sequence": 8
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "start",
+        "operation_id": "603dd384e607f7de020bb30965e346bd",
+        "outcome": "ok",
+        "request_id": "p2s1_start_counter",
+        "worker_id": "counter"
+      },
+      "sequence": 3
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "define",
+        "operation_id": "d99afa6a51a252db1d83e92538cc6120",
+        "outcome": "ok",
+        "request_id": "p2s1_define_counter_v1",
+        "worker_id": null
+      },
+      "sequence": 0
+    },
+    {
+      "record": {
+        "effect_id": "0a41b03b5457ce0b18d3887261b758dc33a49bc3f8049559dc4bd9b96fc10968",
+        "operation": "delivery",
+        "operation_id": "0a41b03b5457ce0b18d3887261b758dc33a49bc3f8049559dc4bd9b96fc10968",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_3",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 7
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "c878a29c48723518720911c7305585e5",
+        "outcome": "ok",
+        "request_id": "p2s1_schedule_11",
+        "worker_id": "counter"
+      },
+      "sequence": 15
+    },
+    {
+      "record": {
+        "logical_id": "aggregate",
+        "operation": "start",
+        "operation_id": "e0033591d72beacc31896ef4b3dfa3f1",
+        "outcome": "ok",
+        "request_id": "p2s1_start_aggregate",
+        "worker_id": "aggregate"
+      },
+      "sequence": 2
+    },
+    {
+      "record": {
+        "logical_id": "aggregate",
+        "operation": "define",
+        "operation_id": "4afd9c64f2efc7d517cb356ed16f0e4f",
+        "outcome": "ok",
+        "request_id": "p2s1_define_aggregate",
+        "worker_id": null
+      },
+      "sequence": 1
+    },
+    {
+      "record": {
+        "effect_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+        "operation": "delivery",
+        "operation_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_4",
+        "source": "counter",
+        "type": "effect_delivered",
+        "worker_id": "aggregate"
+      },
+      "sequence": 12
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "invoke",
+        "operation_id": "108b6f022c4b6913d7f088900bf158f3",
+        "outcome": "ok",
+        "request_id": "p2s1_amount_4",
+        "worker_id": "counter"
+      },
+      "sequence": 11
+    },
+    {
+      "record": {
+        "logical_id": "counter",
+        "operation": "replace",
+        "operation_id": "989ba7276b3b6e8629ac95d2202d97c8",
+        "outcome": "ok",
+        "request_id": "p2s1_replace_counter",
+        "worker_id": "counter"
+      },
+      "sequence": 10
+    }
+  ],
+  "edges": [
+    {
+      "record": {
+        "count": 3
+      },
+      "source": "counter",
+      "target": "aggregate"
+    }
+  ],
+  "effects": [
+    {
+      "id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+      "record": {
+        "artifact_revision": 2,
+        "correlation_id": "p2s1_schedule_11",
+        "due_at": 1794437141849,
+        "effect": {
+          "delay_ms": 60000,
+          "event": {
+            "value": 11
+          },
+          "to": "aggregate",
+          "type": "schedule"
+        },
+        "operation_id": "c878a29c48723518720911c7305585e5",
+        "path": [
+          1
+        ],
+        "remaining_hops": 16,
+        "source": "counter",
+        "status": "pending",
+        "target": "aggregate"
+      }
+    }
+  ],
+  "meta": {
+    "format_version": 1,
+    "generation": 15,
+    "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+    "next_audit_sequence": 16
+  },
+  "states": [
+    {
+      "id": "stopped_probe",
+      "record": {
+        "checkpoint_at": 1794437076082,
+        "data": {
+          "count": 0,
+          "target": "aggregate"
+        },
+        "last_operation_id": "f65c04a0915ff88d4d66cadb933e1270",
+        "schema": 1,
+        "state_revision": 1
+      }
+    },
+    {
+      "id": "counter",
+      "record": {
+        "checkpoint_at": 1794437081850,
+        "data": {
+          "counter": {
+            "count": 13,
+            "target": "aggregate"
+          },
+          "schema": 2
+        },
+        "last_operation_id": "c878a29c48723518720911c7305585e5",
+        "schema": 2,
+        "state_revision": 6
+      }
+    },
+    {
+      "id": "aggregate",
+      "record": {
+        "checkpoint_at": 1794437071804,
+        "data": {
+          "events": 3,
+          "total": 20
+        },
+        "last_operation_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+        "schema": 1,
+        "state_revision": 4
+      }
+    }
+  ],
+  "workers": [
+    {
+      "id": "aggregate",
+      "record": {
+        "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+        "config": {},
+        "desired_status": "running",
+        "observed_status": "running",
+        "request_id": "883ec83b35d12d46ad304d7bdbdcf501dc2fdd12807ec04e34b3c921316fb2a3",
+        "restarts": [],
+        "worker_revision": 1
+      }
+    },
+    {
+      "id": "counter",
+      "record": {
+        "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+        "config": {},
+        "desired_status": "running",
+        "observed_status": "running",
+        "request_id": "p2s1_schedule_11",
+        "restarts": [],
+        "worker_revision": 2
+      }
+    },
+    {
+      "id": "stopped_probe",
+      "record": {
+        "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+        "config": {},
+        "desired_status": "stopped",
+        "observed_status": "stopped",
+        "request_id": "p2s1_stop_probe",
+        "restarts": [],
+        "worker_revision": 2
+      }
+    }
+  ]
+}

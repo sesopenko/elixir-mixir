@@ -1,0 +1,76 @@
+[
+  {
+    "session": 1,
+    "thread_id": "01a1ccc8-07a9-7ad1-86af-cf649bb5ff12",
+    "mcp_calls": 29,
+    "tools": [
+      "runtime_define",
+      "runtime_events",
+      "runtime_inspect",
+      "runtime_invoke",
+      "runtime_replace",
+      "runtime_start",
+      "runtime_stop"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-11T22:43:43.579278+00:00",
+    "exited_at": "2026-11-11T22:45:21.856237+00:00",
+    "client_pid": 645126,
+    "prompt": "../../../prompts/phase02-demo-session01.md",
+    "amendments": [],
+    "command": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--cd",
+      "/tmp/mixir-phase02-client-zxnp1bf8",
+      "--json",
+      "--config",
+      "mcp_servers.elixir_mixir={url=\"http://127.0.0.1:50919/mcp\",required=true,default_tools_approval_mode=\"approve\",startup_timeout_sec=15,tool_timeout_sec=15}",
+      "--output-last-message",
+      "/tmp/mixir-phase02-client-zxnp1bf8/session01.final.json",
+      "-"
+    ]
+  },
+  {
+    "session": 2,
+    "thread_id": "01a1ccc9-d765-7ef2-abd1-b1db976cf0fb",
+    "mcp_calls": 19,
+    "tools": [
+      "runtime_define",
+      "runtime_events",
+      "runtime_inspect",
+      "runtime_invoke",
+      "runtime_replace"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-11T22:45:42.298680+00:00",
+    "exited_at": "2026-11-11T22:46:55.882720+00:00",
+    "client_pid": 645865,
+    "prompt": "../../../prompts/phase02-demo-session02.md",
+    "amendments": [
+      "../../../prompts/phase02-demo-session02-contract-amendment.md"
+    ],
+    "command": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--cd",
+      "/tmp/mixir-phase02-client-zxnp1bf8",
+      "--json",
+      "--config",
+      "mcp_servers.elixir_mixir={url=\"http://127.0.0.1:50919/mcp\",required=true,default_tools_approval_mode=\"approve\",startup_timeout_sec=15,tool_timeout_sec=15}",
+      "--output-last-message",
+      "/tmp/mixir-phase02-client-zxnp1bf8/session02.final.json",
+      "-"
+    ]
+  }
+]

@@ -3,7 +3,8 @@
 This Linux Docker workflow keeps generated implementations, worker definitions,
 committed state and pending work in a named volume. Recovery runs without a client.
 The automated production-release smoke test below verifies this deployment; the
-actual Codex restart demonstration is recorded separately when completed.
+[actual Codex restart demonstration](../examples/phase_2_recovery.md) records two
+client sessions around a disconnected SIGKILL and automatic timer recovery.
 
 Use a disposable Linux environment without credentials or valuable infrastructure.
 Generated code has the privileges of the Erlang VM. The container uses host

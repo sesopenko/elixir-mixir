@@ -1,6 +1,6 @@
 # Phase 2 restart feature plan — Durable Genesis
 
-Status: store-foundation through release-storage verified; remaining implementation tasks are pending.
+Status: store-foundation through codex-restart-demo verified; evidence-review is pending.
 Governing assignment: [immutable snapshot](../../prompts/phase02-restart-planning.md).
 Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
 Architecture: [ADR-001](../../adr/001-architecture-initial-phases.md), section 10 and
@@ -66,7 +66,7 @@ effects and machine power-loss certification are outside this proof.
 ## Task index and deterministic execution order
 
 Execute in numeric order; dependencies below are also the full graph edge set.
-Store-foundation (`b9dea1a`), staged-hosts (`fa5b364`), durable-artifacts (`12e4c30`), durable-lifecycle (`6d60201`), durable-transitions (`a0114e0`), durable-replacement (`461350f`), durable-outbox (`1f43b8c`), durable-delivery (`180d853`), recovery-quarantine (`8e3dc2f`) and release-storage are verified in their checkpoint commits. Remaining tasks are pending. Sizes are relative, not hours.
+Store-foundation (`b9dea1a`), staged-hosts (`fa5b364`), durable-artifacts (`12e4c30`), durable-lifecycle (`6d60201`), durable-transitions (`a0114e0`), durable-replacement (`461350f`), durable-outbox (`1f43b8c`), durable-delivery (`180d853`), recovery-quarantine (`8e3dc2f`) release-storage (`3bde396`, shutdown correction `ffc70ad`) and codex-restart-demo are verified in their checkpoint commits. Evidence-review remains pending. Sizes are relative, not hours.
 
 | Order | Task ID and document | Outcome | Prerequisites | Size | Milestone |
 | --- | --- | --- | --- | --- | --- |

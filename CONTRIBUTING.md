@@ -317,7 +317,7 @@ identity. Source, client auth and Docker sockets must remain outside the contain
   that worker's volatile state; BEAM/container restart loses the complete application.
   Client reconnect alone preserves it.
 
-## Durable storage foundation (Phase 2 in progress)
+## Durable storage
 
 The default runtime remains in memory. To open the experimental durable kernel
 store, set `ELIXIR_MIXIR_DATA_DIR=/absolute/path/to/data` before startup. The
@@ -396,7 +396,8 @@ Public default-runtime calls consult the readiness table before entering Manager
 mailbox, so reads and mutations return `RUNTIME_RECOVERING` promptly even while host
 creation is held. Health stays 503 until healthy routes have been published; a
 fresh client session is required after each BEAM restart. The automated tests do
-not replace the separate actual Phase 2 Codex demonstration, which is pending.
+not replace the separate [actual Phase 2 Codex demonstration](examples/phase_2_recovery.md),
+which records client creation, disconnected recovery and subsequent evolution.
 
 
 Durable event tests add prepared state checkpoints and interruption barriers before

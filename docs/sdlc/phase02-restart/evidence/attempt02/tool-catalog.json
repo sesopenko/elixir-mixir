@@ -1,0 +1,183 @@
+{
+  "tools": [
+    {
+      "description": "Compile a Generated template as an inactive immutable artifact; retries require the same request ID and arguments.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_behavior": {
+            "type": "string"
+          },
+          "logical_name": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "request_id",
+          "expected_behavior",
+          "logical_name"
+        ],
+        "type": "object"
+      },
+      "name": "runtime_define"
+    },
+    {
+      "description": "Read bounded correlated lifecycle and effect history after an exclusive sequence cursor.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "runtime_events"
+    },
+    {
+      "description": "Read bounded live worker state, artifact metadata, pending effects and paginated topology.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string"
+          },
+          "detail": {
+            "enum": [
+              "summary",
+              "state",
+              "recovery"
+            ]
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "runtime_inspect"
+    },
+    {
+      "description": "Invoke one bounded worker event, committing valid state once per request ID; accepted effect IDs acknowledge bounded asynchronous dispatch.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "event",
+          "worker_id"
+        ],
+        "type": "object"
+      },
+      "name": "runtime_invoke"
+    },
+    {
+      "description": "Replace a running implementation at an expected worker revision, preserving PID and explicitly migrating schemas.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "expected_revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "artifact_id",
+          "worker_id",
+          "expected_revision"
+        ],
+        "type": "object"
+      },
+      "name": "runtime_replace"
+    },
+    {
+      "description": "Start or explicitly reinitialize a logical worker from an immutable artifact and bounded JSON config.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "config",
+          "request_id",
+          "artifact_id",
+          "worker_id"
+        ],
+        "type": "object"
+      },
+      "name": "runtime_start"
+    },
+    {
+      "description": "Explicitly stop a logical worker while retaining its definition for reinitialization.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "worker_id"
+        ],
+        "type": "object"
+      },
+      "name": "runtime_stop"
+    }
+  ]
+}

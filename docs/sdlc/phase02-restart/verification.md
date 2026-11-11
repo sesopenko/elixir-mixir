@@ -1,7 +1,7 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through release-storage verified; remaining checkpoints and application recovery
-evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
+Status: store-foundation through codex-restart-demo verified; final evidence review
+is pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
 For each checkpoint record date, baseline and resulting commit, actual commands,
@@ -550,7 +550,63 @@ in its owning release task before a fresh final Codex demonstration.
 
 ## codex-restart-demo
 
-Pending. Owning [task](tasks/codex-restart-demo.md). No execution evidence yet.
+Verified 2026-11-11, prerequisite release `3bde396` and its SSE shutdown correction
+`ffc70ad` committed and pushed before the final run. The [walkthrough](../../../examples/phase_2_recovery.md)
+records reproduction, arithmetic and incomplete attempts. Preserved prompts are
+[session 1](../../prompts/phase02-demo-session01.md),
+[session 2](../../prompts/phase02-demo-session02.md), plus its
+[callback-contract clarification](../../prompts/phase02-demo-session02-contract-amendment.md).
+
+Commands and results:
+
+- `mix test test/mcp test/integration --warnings-as-errors`: 122 tests passed
+  before the actual run.
+- `python3 -u scripts/run-phase02-codex-demo.py`: two actual Codex CLI 0.167.1
+  processes, exit zero, 44 actual MCP calls, successful SIGKILL/recovery and normal
+  shutdown. No simulated client calls or production kernel changes.
+- `python3 scripts/verify-phase02-demo.py`: passed source hashes, empty-store
+  admission, all seven tools, migration, known arithmetic, retained state/revisions,
+  boot/container/process identity, pending intent, exact original completion,
+  fresh-client evolution, failure preservation and credential-marker checks.
+- Full `mix check`: 280 tests, two doctests, strict Credo clean, Doctor 100%,
+  Dialyzer zero errors/skips. Plan, local-link and diff checks passed; the installed
+  pre-commit hook reruns the full gate.
+
+| Evidence | Actual observation |
+| --- | --- |
+| [CLI sessions and commands](evidence/codex-sessions.json) | Threads `01a1ccd6-478a-7e63-9fdc-aa7c9e007388` (27 calls) and `01a1ccd7-fea4-74e2-8995-e634ead6eed8` (17 calls), both exit zero |
+| [First transcript](evidence/codex-session01.jsonl) | Defines v1 and aggregate; amounts 2/3 reach 5 and total 7; migrated v2 amount 4 reaches 13 and total 20; stops probe; schedules 11 |
+| [Second transcript](evidence/codex-session02.jsonl) | Inspects recovered 13/31; v2 amount 1 reaches 15/46; schema-compatible v3 amount 2 reaches 21/67; amount 0 rejected without state change |
+| [HTTP observations](evidence/runtime-observations.json) | Before/after counter selection and revisions equal; stopped probe remains stopped; timer alone reaches aggregate 4/31; final aggregate 6/67 |
+| [Store after kill](evidence/store-after-kill.json) | Captured only after the application stopped: original source hashes, desired definitions/checkpoint and one pending schedule value 11, due_at 1794438069393 |
+| [Final store](evidence/store-final.json) | Counter 21, aggregate 6/67, original effect completed once, queue empty, selected artifact revision 3 |
+| [Restart manifest](evidence/restart-manifest.json) | Fresh empty volume, same image/lineage, different boot/container IDs and OS PIDs 667491/668698, SIGKILL exit 137, OOM false, retained volume |
+| [Container before](evidence/container-before.json) / [after](evidence/container-after.json) | Incremental process/image/start witnesses agree with the final manifest |
+| [Termination](evidence/termination-witness.json) / [normal stop](evidence/normal-stop-witness.json) | Forced termination was intentional; subsequent normal stop with 30-second allowance exits zero |
+| [Tool catalog](evidence/tool-catalog.json) | Exactly the seven API-version-1 tools |
+| [Timer observations](evidence/timer-observations.json) | Read-only polling observes one change from 3/20 to 4/31 before second Codex starts |
+
+The first CLI exits at 23:00:45.424609 UTC; SIGKILL follows at
+23:00:45.432367. Automatic restoration is inspected at 23:00:46.809092 and the
+original effect's delivery at 23:01:09.847817, before the second CLI starts at
+23:01:09.852309. No Codex runs during that interval. Observer calls only inspect
+already restored state; cold readers run only while the application owner is
+stopped and never write records. Readiness precedes observer connection.
+
+Normalized transcripts retain actual source arguments, request/effect IDs and tool
+results, excluding reasoning, authentication and client stderr. The verifier's
+initial blanket completed-status assumption rejected the intentional negative
+call; actual Codex marks that MCP error as `failed`. It now accepts only the
+specified amount-zero `CALLBACK_FAILED` case and still verifies unchanged snapshots.
+
+Earlier attempts remain explicitly incomplete: [attempt 1](evidence/attempt01/failure.json)
+had a generated tuple-order error correctly rejected by the runtime;
+[attempt 2](evidence/attempt02/cleanup-failure.json) completed domain behavior but
+exposed the release shutdown deadline. Its Docker events corroborate forced KILL
+five seconds after TERM; the separately committed owning-feature fix and real SSE
+regression precede this final fresh-volume run. Neither attempt is substituted for
+the final complete evidence. The final owned containers are gone and volume
+`mixir-phase02-codex-0b84c8e5a01f-data` is retained. Claude Code remains untested.
 
 ## evidence-review
 
@@ -564,16 +620,15 @@ evidence for A04, automated no-client recovery
 for A07, timer/effect recovery and internal deduplication evidence for A10/A11,
 isolated quarantine/repair evidence for A12,
 and source/lifecycle/event/delivery boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
-Full acceptance reconciliation, the actual-client portion of A07, and milestone 7
-remain pending. Add an evidence table mapping
+The actual-client portion of A07 and A13 is verified in codex-restart-demo.
+Full acceptance reconciliation and milestone 7 remain pending evidence-review. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.
 The final evidence-review reconciles these existing records; it does not create
 missing runtime coverage.
 
 ## Actual Codex demonstration
 
-Pending. No Phase 2 actual Codex session has been run for this planning checkpoint.
-Record prompt snapshots, session provenance, tool calls, pre-kill state, disconnected
-SIGKILL/restart, automatic restoration, resumed timers/effects and fresh-session
-post-recovery evolution. Preserve the distinction from automated HTTP fixtures and
-from Claude Code, which remains untested with this project.
+The verified [client checkpoint](#codex-restart-demo) and
+[walkthrough](../../../examples/phase_2_recovery.md) cover every ADR-001 section 10.8
+step with actual clients, separate from automated HTTP tests. Final acceptance
+reconciliation remains the evidence-review task. Claude Code remains untested.

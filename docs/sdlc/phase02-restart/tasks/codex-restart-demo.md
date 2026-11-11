@@ -1,6 +1,6 @@
 # codex-restart-demo: Demonstrate actual Codex recovery and continued evolution
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -17,6 +17,10 @@ Also read CONTRIBUTING.md and ADR-001. After a new session or full context clear
 inspect `git status --short`, `git log --oneline -15`, relevant commits and evidence;
 determine progress from committed state and verify prerequisites before selecting work.
 Preserve unrelated user changes, including the archived-prompt relocation and scripts/codex.sh.
+
+Preserved demonstration prompts: [session 1](../../../prompts/phase02-demo-session01.md)
+and [session 2](../../../prompts/phase02-demo-session02.md), with the separately
+preserved [callback-contract clarification](../../../prompts/phase02-demo-session02-contract-amendment.md).
 
 ## Objective and observable outcome
 
@@ -94,15 +98,24 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, release prerequisite and correction `ffc70ad`
+verified and pushed. Two actual Codex sessions completed 44 MCP calls on a fresh
+empty named volume. Counter reached 13 before SIGKILL and 21 after reconnection;
+aggregate reached 3/20, autonomously 4/31, then 6/67. Exact source/selection/state,
+stopped definition and original timer intent were preserved. The offline verifier
+passes, normal stop exits zero, and only owned containers were removed while the
+volume remains retained. Growing suite passes 122 tests; full `mix check` passes
+280 tests, two doctests and zero Dialyzer errors. See the
+[evidence entry](../verification.md#codex-restart-demo) for exact sessions, timestamps,
+commands, reports and preserved incomplete attempts. Claude Code remains untested.
 
 ## Relative size
 

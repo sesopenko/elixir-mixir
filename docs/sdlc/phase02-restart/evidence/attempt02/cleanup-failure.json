@@ -1,0 +1,12 @@
+{
+  "domain_experiment_passed": true,
+  "counter": 21,
+  "aggregate": {
+    "events": 6,
+    "total": 67
+  },
+  "cleanup_passed": false,
+  "cleanup_exit_code": 137,
+  "volume": "mixir-phase02-codex-c39baba95f28-data",
+  "reason": "Docker normal-stop timeout 5 seconds is shorter than the listener connection-drain timeout 15 seconds; Docker events show SIGTERM followed by forced SIGKILL after 5 seconds. Primary manifest was not written, so a complete fresh evidence run will follow the owning release correction."
+}

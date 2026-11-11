@@ -1,0 +1,375 @@
+[
+  {
+    "status": "create",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "create",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437022,
+    "timeNano": 1794437022689336981
+  },
+  {
+    "status": "start",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "start",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437022,
+    "timeNano": 1794437022799760792
+  },
+  {
+    "status": "exec_create: sh -c set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "exec_create: sh -c set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "execID": "42f1aa1946699ad2b48208c51c88ef2c1693cface55b95a340a2675f3d08f586",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437023,
+    "timeNano": 1794437023498659322
+  },
+  {
+    "status": "exec_start: sh -c set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "exec_start: sh -c set -eu\n[ \"$(id -u)\" = 1000 ]\n[ \"$(stat -c %u /app/bin/elixir_mixir)\" = 0 ]\ntest -w /data\ntest ! -w /app\ntest ! -e /app/test\ntest ! -e /app/.git\ntest ! -e /app/.codex\ntest ! -e /app/.aws\ntest -z \"$(find /app/lib -name '*TestSupport*' -o -name 'Elixir.ElixirMixir.Generated.Slot*.beam')\"\ntouch /data/release-permission-proof\nrm /data/release-permission-proof\n",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "execID": "42f1aa1946699ad2b48208c51c88ef2c1693cface55b95a340a2675f3d08f586",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437023,
+    "timeNano": 1794437023498870127
+  },
+  {
+    "status": "exec_die",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "exec_die",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "execID": "42f1aa1946699ad2b48208c51c88ef2c1693cface55b95a340a2675f3d08f586",
+        "exitCode": "0",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437023,
+    "timeNano": 1794437023563610606
+  },
+  {
+    "status": "kill",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "kill",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4",
+        "signal": "9"
+      }
+    },
+    "scope": "local",
+    "time": 1794437121,
+    "timeNano": 1794437121878599380
+  },
+  {
+    "status": "die",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "die",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "execDuration": "99",
+        "exitCode": "137",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437121,
+    "timeNano": 1794437121915430888
+  },
+  {
+    "status": "destroy",
+    "id": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "destroy",
+    "Actor": {
+      "ID": "fe2ac66fbfb668714e0d4b081b091554e17bf2062c4bca9e962861e5a2d48113",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-before",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437121,
+    "timeNano": 1794437121947537730
+  },
+  {
+    "status": "create",
+    "id": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "create",
+    "Actor": {
+      "ID": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-snapshot-after-kill",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437121,
+    "timeNano": 1794437121965894986
+  },
+  {
+    "status": "attach",
+    "id": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "attach",
+    "Actor": {
+      "ID": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-snapshot-after-kill",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437121,
+    "timeNano": 1794437121966622348
+  },
+  {
+    "status": "start",
+    "id": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "start",
+    "Actor": {
+      "ID": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-snapshot-after-kill",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437122,
+    "timeNano": 1794437122072370009
+  },
+  {
+    "status": "die",
+    "id": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "die",
+    "Actor": {
+      "ID": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+      "Attributes": {
+        "execDuration": "0",
+        "exitCode": "0",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-snapshot-after-kill",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437122,
+    "timeNano": 1794437122353533694
+  },
+  {
+    "status": "destroy",
+    "id": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "destroy",
+    "Actor": {
+      "ID": "901bdcbaccb7a3205fa937098a09e3f834a98111b07955503b91e0bc567a1a7f",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-snapshot-after-kill",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437122,
+    "timeNano": 1794437122356508714
+  },
+  {
+    "status": "create",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "create",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437122,
+    "timeNano": 1794437122376591749
+  },
+  {
+    "status": "start",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "start",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437122,
+    "timeNano": 1794437122468634913
+  },
+  {
+    "status": "kill",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "kill",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4",
+        "signal": "15"
+      }
+    },
+    "scope": "local",
+    "time": 1794437215,
+    "timeNano": 1794437215905673414
+  },
+  {
+    "status": "kill",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "kill",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4",
+        "signal": "9"
+      }
+    },
+    "scope": "local",
+    "time": 1794437220,
+    "timeNano": 1794437220911545986
+  },
+  {
+    "status": "stop",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "stop",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437220,
+    "timeNano": 1794437220942096815
+  },
+  {
+    "status": "die",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "die",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "execDuration": "98",
+        "exitCode": "137",
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437220,
+    "timeNano": 1794437220943311185
+  },
+  {
+    "status": "destroy",
+    "id": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+    "from": "elixir-mixir:phase02",
+    "Type": "container",
+    "Action": "destroy",
+    "Actor": {
+      "ID": "af616a9bee1cd8d605ebf3d01bb99636a54294d8777e89d7421f46e75511dc91",
+      "Attributes": {
+        "image": "elixir-mixir:phase02",
+        "name": "mixir-phase02-codex-c39baba95f28-after",
+        "org.opencontainers.image.version": "27.3.4"
+      }
+    },
+    "scope": "local",
+    "time": 1794437220,
+    "timeNano": 1794437220984320717
+  }
+]

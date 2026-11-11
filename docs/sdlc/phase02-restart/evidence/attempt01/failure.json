@@ -1,0 +1,8 @@
+{
+  "status": "incomplete",
+  "volume": "mixir-phase02-codex-b1cf0deb3738-data",
+  "reason": "Session 2 source returned {:ok, new_state, new_count, effects}; the mandatory third element is the state map. Runtime correctly returned INVALID_TRANSITION and retained count 15 / aggregate total 46.",
+  "recovery_and_timer_passed": true,
+  "final_requested_arithmetic_passed": false,
+  "amendment": "../../../../prompts/phase02-demo-session02-contract-amendment.md"
+}

@@ -1,0 +1,271 @@
+{
+  "lineage_id": "85f6b66a9a860e53d2f90b4973249154",
+  "boot_id": "a0c06ac8da3da0b8a22f7b0c303e1e15",
+  "counter": {
+    "generation": 15,
+    "worker_id": "counter",
+    "status": "running",
+    "desired_status": "running",
+    "pid": "#PID<0.1625.0>",
+    "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+    "implementation_version": 2,
+    "worker_revision": 2,
+    "state_revision": 6,
+    "config": {},
+    "state": {
+      "schema": 2,
+      "counter": {
+        "count": 13,
+        "target": "aggregate"
+      }
+    },
+    "restart_count": 0
+  },
+  "aggregate": {
+    "generation": 15,
+    "worker_id": "aggregate",
+    "status": "running",
+    "desired_status": "running",
+    "pid": "#PID<0.1620.0>",
+    "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+    "implementation_version": 1,
+    "worker_revision": 1,
+    "state_revision": 4,
+    "config": {},
+    "state": {
+      "events": 3,
+      "total": 20
+    },
+    "restart_count": 0
+  },
+  "stopped_probe": {
+    "state_inspected_at_generation": 14,
+    "status_confirmed_at_generation": 15,
+    "worker_id": "stopped_probe",
+    "status": "stopped",
+    "desired_status": "stopped",
+    "pid": null,
+    "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+    "implementation_version": 1,
+    "worker_revision": 2,
+    "state_revision": 1,
+    "config": {},
+    "state": {
+      "count": 0,
+      "target": "aggregate"
+    },
+    "restart_count": 0,
+    "definition_retained": true
+  },
+  "summary": {
+    "api_version": "1",
+    "generation": 15,
+    "health": "ok",
+    "storage": {
+      "format_version": 1,
+      "mode": "durable"
+    },
+    "worker_count": 3,
+    "edge_count": 1,
+    "effects": {
+      "dispatch": "enabled",
+      "pending": 1,
+      "reserved": 0,
+      "timers": 1
+    },
+    "topology": [
+      {
+        "from": "counter",
+        "to": "aggregate",
+        "count": 3,
+        "pending": 1
+      }
+    ],
+    "recovery_status": "ready",
+    "recovery_degraded": false,
+    "next_cursor": null,
+    "truncated": false
+  },
+  "schedule": {
+    "request_id": "p2s1_schedule_11",
+    "effect_id": "d34ea7c3cd74b06466c23a93cb809773d3e079166d4d23557a7567c88314d81b",
+    "status": "accepted",
+    "reply": "scheduled",
+    "event": {
+      "op": "schedule",
+      "value": 11,
+      "delay_ms": 60000
+    },
+    "delivery": "not observed; timer not awaited"
+  },
+  "artifacts": [
+    {
+      "logical_name": "counter",
+      "artifact_id": "artifact_0fca7828c9381deceed9d15d26d0fdd4",
+      "revision": 1,
+      "state_schema": 1,
+      "source_hash": "4927d8187fd82be84db69df80693e823cd54dadcd439f4ece05326e4b6f7b5ea",
+      "callbacks_valid": true,
+      "diagnostics": []
+    },
+    {
+      "logical_name": "aggregate",
+      "artifact_id": "artifact_4ee3a119eee294716b1791ec5ec56aba",
+      "revision": 1,
+      "state_schema": 1,
+      "source_hash": "bea867a92e82f644072a8b20511d083f89f12af8e302d631475cd425e51f238c",
+      "callbacks_valid": true,
+      "diagnostics": []
+    },
+    {
+      "logical_name": "counter",
+      "artifact_id": "artifact_d4099e7a8745a26d2b7e2fbbb27e6cb2",
+      "revision": 2,
+      "state_schema": 2,
+      "source_hash": "9272393cb8b85f0a5e85a7e77040c99b7032d9e8ab9aa3043ca5b4ef7e9b772b",
+      "callbacks_valid": true,
+      "diagnostics": []
+    }
+  ],
+  "assertions": {
+    "initial_runtime": {
+      "passed": true,
+      "observed": {
+        "storage_mode": "durable",
+        "format_version": 1,
+        "health": "ok",
+        "generation": 0,
+        "worker_count": 0,
+        "pending": 0
+      }
+    },
+    "initial_states": {
+      "passed": true,
+      "observed": {
+        "counter": {
+          "count": 0,
+          "target": "aggregate"
+        },
+        "aggregate": {
+          "events": 0,
+          "total": 0
+        },
+        "counter_pid": "#PID<0.1625.0>",
+        "aggregate_pid": "#PID<0.1620.0>"
+      }
+    },
+    "v1_additions_and_deliveries": {
+      "passed": true,
+      "observed": {
+        "replies": [
+          2,
+          5
+        ],
+        "counter_count": 5,
+        "aggregate_events": 2,
+        "aggregate_total": 7,
+        "topology_count": 2
+      }
+    },
+    "invalid_amount_rejection": {
+      "passed": true,
+      "observed": {
+        "amount": 0,
+        "code": "CALLBACK_FAILED",
+        "reason": "invalid_amount",
+        "generation_unchanged": 9
+      },
+      "coverage": "Zero tested; other invalid inputs were not invoked."
+    },
+    "replacement_and_migration": {
+      "passed": true,
+      "observed": {
+        "expected_revision": 1,
+        "migration_result": "migrated",
+        "pid_before": "#PID<0.1625.0>",
+        "pid_after": "#PID<0.1625.0>",
+        "artifact_revision": 2,
+        "state_schema": 2,
+        "state": {
+          "schema": 2,
+          "counter": {
+            "count": 5,
+            "target": "aggregate"
+          }
+        }
+      }
+    },
+    "v2_doubled_addition": {
+      "passed": true,
+      "observed": {
+        "amount": 4,
+        "reply": 13,
+        "counter_count": 13,
+        "aggregate_events": 3,
+        "aggregate_total": 20,
+        "topology_count": 3
+      }
+    },
+    "retained_stopped_definition": {
+      "passed": true,
+      "observed": {
+        "status": "stopped",
+        "definition_retained": true,
+        "count": 0,
+        "state_revision": 1,
+        "invocations": 0
+      }
+    },
+    "history": {
+      "passed": true,
+      "observed": {
+        "successful_effect_delivery_sequences": [
+          7,
+          9,
+          14
+        ],
+        "successful_replacement_sequence": 12,
+        "worker_stopped_sequence": 16,
+        "next_cursor": 16,
+        "gap": false,
+        "dropped": 0
+      }
+    },
+    "all_seven_runtime_tool_types": {
+      "passed": true,
+      "observed": [
+        "runtime_inspect",
+        "runtime_define",
+        "runtime_start",
+        "runtime_invoke",
+        "runtime_replace",
+        "runtime_stop",
+        "runtime_events"
+      ]
+    },
+    "final_schedule_admission_and_state": {
+      "passed": true,
+      "observed": {
+        "reply": "scheduled",
+        "accepted_effects": 1,
+        "counter_count": 13,
+        "aggregate_events": 3,
+        "aggregate_total": 20,
+        "pending": 1,
+        "timers": 1,
+        "reserved": 0
+      }
+    },
+    "workers_left_running": {
+      "passed": true,
+      "observed": {
+        "counter": "running",
+        "aggregate": "running"
+      }
+    },
+    "v2_init_execution": {
+      "result": "not observed",
+      "reason": "V2 was installed through migration; its init callback was not executed."
+    }
+  }
+}

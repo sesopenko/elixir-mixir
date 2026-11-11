@@ -1,0 +1,72 @@
+[
+  {
+    "session": 1,
+    "thread_id": "01a1ccc3-7a57-7921-be67-c567a85a2c1d",
+    "mcp_calls": 28,
+    "tools": [
+      "runtime_define",
+      "runtime_events",
+      "runtime_inspect",
+      "runtime_invoke",
+      "runtime_replace",
+      "runtime_start",
+      "runtime_stop"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-11T22:38:45.257123+00:00",
+    "exited_at": "2026-11-11T22:40:20.480086+00:00",
+    "client_pid": 642128,
+    "prompt": "../../../prompts/phase02-demo-session01.md",
+    "command": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--cd",
+      "/tmp/mixir-phase02-client-vftsejuh",
+      "--json",
+      "--config",
+      "mcp_servers.elixir_mixir={url=\"http://127.0.0.1:45633/mcp\",required=true,default_tools_approval_mode=\"approve\",startup_timeout_sec=15,tool_timeout_sec=15}",
+      "--output-last-message",
+      "/tmp/mixir-phase02-client-vftsejuh/session01.final.json",
+      "-"
+    ]
+  },
+  {
+    "session": 2,
+    "thread_id": "01a1ccc5-4214-7db2-9b02-625b88dff9be",
+    "mcp_calls": 19,
+    "tools": [
+      "runtime_define",
+      "runtime_events",
+      "runtime_inspect",
+      "runtime_invoke",
+      "runtime_replace"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-11T22:40:41.925603+00:00",
+    "exited_at": "2026-11-11T22:42:00.645721+00:00",
+    "client_pid": 643910,
+    "prompt": "../../../prompts/phase02-demo-session02.md",
+    "command": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--cd",
+      "/tmp/mixir-phase02-client-vftsejuh",
+      "--json",
+      "--config",
+      "mcp_servers.elixir_mixir={url=\"http://127.0.0.1:45633/mcp\",required=true,default_tools_approval_mode=\"approve\",startup_timeout_sec=15,tool_timeout_sec=15}",
+      "--output-last-message",
+      "/tmp/mixir-phase02-client-vftsejuh/session02.final.json",
+      "-"
+    ]
+  }
+]

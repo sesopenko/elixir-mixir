@@ -2,10 +2,12 @@ defmodule ElixirMixir.Runtime.Inspector do
   @moduledoc "Read-only generation-bound worker/topology pages and bounded event history without generated callbacks."
 
   alias ElixirMixir.Runtime.ArtifactRegistry
+  alias ElixirMixir.Runtime.DurableOutbox
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.ResponseBudget
+  alias ElixirMixir.Runtime.Store
   alias ElixirMixir.Runtime.Workers
 
   @doc "Reads actual worker state or a sorted worker/edge page, visibly omitting fields to fit the wire budget."
@@ -18,7 +20,7 @@ defmodule ElixirMixir.Runtime.Inspector do
   end
 
   def inspect_runtime(args, state) do
-    stats = EffectDispatcher.snapshot(state.dispatcher, self())
+    stats = effect_stats(state)
     workers = Enum.sort_by(state.workers, &elem(&1, 0))
     edges = topology(stats, state.workers)
     detail = Map.get(args, "detail", "summary")
@@ -77,9 +79,32 @@ defmodule ElixirMixir.Runtime.Inspector do
     end
   end
 
+  defp effect_stats(%{storage: %{mode: :durable}} = state) do
+    stats = EffectDispatcher.snapshot(state.dispatcher, self())
+
+    records = Store.snapshot(state.store)
+
+    edges =
+      for {{:edge, source, target}, record} <- records,
+          do: %{"from" => source, "to" => target, "count" => record["count"]}
+
+    pending =
+      records
+      |> DurableOutbox.pending(state.limits)
+      |> Enum.filter(fn {_id, record} -> is_binary(record["target"]) end)
+      |> Enum.frequencies_by(fn {_id, record} -> {record["source"], record["target"]} end)
+      |> Enum.map(fn {{source, target}, count} ->
+        %{"from" => source, "to" => target, "pending" => count}
+      end)
+
+    Map.merge(stats, %{"topology" => edges, "pending_edges" => pending})
+  end
+
+  defp effect_stats(state), do: EffectDispatcher.snapshot(state.dispatcher, self())
+
   defp effect_counts(stats, state) do
     counts = Map.take(stats, ["pending", "timers", "reserved"])
-    if state.storage.mode == :durable, do: Map.put(counts, "dispatch", "paused"), else: counts
+    if state.storage.mode == :durable, do: Map.put(counts, "dispatch", "enabled"), else: counts
   end
 
   defp worker_snapshot(worker, detail, state) do

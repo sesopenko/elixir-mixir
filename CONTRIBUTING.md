@@ -305,8 +305,8 @@ compaction enabled. Loss of the authoritative store shuts down the kernel.
 
 Durable source definitions, desired workers, initial state and request outcomes
 are integrated with the store, together with event transitions and implementation replacement. Complete outgoing
-effect batches commit atomically with state; durable delivery is currently paused,
-including logs. Inspection
+effect batches commit atomically with state; durable delivery resumes
+after healthy routes are restored. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for current running-application experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
@@ -337,7 +337,7 @@ mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
 ```
 
 Durable start/stop, event state recovery and replacement are integrated.
-Invoke accepts complete pending effect batches; durable delivery remains paused.
+Invoke accepts complete pending effect batches; durable delivery resumes after recovery.
 Wait for `/health` before connecting. Recompilation can
 execute compile-time IO again, so the same trusted-code isolation requirements
 apply after restart. Definition response module strings can describe an old slot;
@@ -387,8 +387,9 @@ outcome and audit atomically before host publication and acknowledgement. Retry
 identical arguments/request ID after an uncertain response. Retention still expires
 including downtime, and an expired ID can run again. Host recovery uses the latest
 committed event state without reinitializing or advancing its state revision.
-Emit/schedule/log intents remain pending in durable mode; memory mode
-keeps its existing delivery behavior. Direct callback IO has VM privileges and cannot be
+Emit/schedule/log intents commit with state in durable mode. Internal delivery
+consumes an intent with target state and children; logs can repeat after interruption.
+Memory mode keeps its existing delivery behavior. Direct callback IO has VM privileges and cannot be
 rolled back or deduplicated by kernel state transactions.
 
 
@@ -407,7 +408,7 @@ Matching schemas preserve state revision; explicit schema-changing migration
 advances it. Live PID continuity applies within one uninterrupted VM, while boot
 creates fresh hosts. Invalid candidates, stale expected revisions, migration
 failures/deadlines and response-size errors leave the old selection/state intact.
-Kernel state transactions do not undo direct migration IO. Durable effect intents are retained; delivery remains paused.
+Kernel state transactions do not undo direct migration IO. Durable effect intents are retained and resume after recovery.
 
 
 Durable outbox tests verify complete batches, request expiry, capacity and preflight
@@ -425,4 +426,31 @@ reopening the store does not reset them. Pending records plus transient reservat
 share the capacity limit. Boot reconstructs counts with no stale reservations and
 fails readiness if a lowered limit cannot hold the retained queue. Stop cancels
 pending intents from that source atomically; host crashes and replacement preserve
-them. Summary inspection reports `effects.dispatch: "paused"` in durable mode.
+them. Summary inspection reports `effects.dispatch: "enabled"` in durable mode.
+
+
+Durable delivery uses one volatile OTP timer reconstructed from retained UTC
+millisecond deadlines. Each wakeup rechecks disk and wall-clock eligibility.
+Eligible work is ordered by deadline then effect ID. Backward clock changes rearm
+work; forward changes make overdue work eligible when scheduling is rechecked.
+Transient restarting/BUSY targets retry after 100 ms without a durable mutation;
+unknown/stopped/failed/quarantined targets and permanent callback/limit/hop errors
+consume the parent with a failure audit. Successful consumption commits target
+state, children and observed topology together, reclaiming the consumed parent's
+capacity. It never relies on the expiring external request ledger for deduplication.
+
+```sh
+mix test test/runtime/durable_delivery_test.exs test/runtime/durable_timers_test.exs --warnings-as-errors
+mix test test/integration/phase02_delivery_test.exs --warnings-as-errors
+```
+
+The HTTP suite uses actual SIGKILL before/after target commit and publication,
+reopens the same directory, forces duplicate volatile claims, checks future/overdue
+timers without a client, and interrupts a log after output. Logs retain effect IDs
+for recipient deduplication, but logging followed by completion has an at-least-once
+boundary: an interruption between them repeats output. Store uncertainty closes
+availability; it never terminally fails an intent based on an uncertain write.
+See the [retained-store restart example](README.md#try-durable-worker-definitions-in-progress).
+Trusted `Manager` constructor timer/clock/barrier options support deterministic
+tests; production defaults use OTP timers and UTC. Test-only subprocess controls
+can hold timers while testing intent acceptance and cancellation independently.

@@ -12,6 +12,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.Definition
   alias ElixirMixir.Runtime.DurableArtifacts
   alias ElixirMixir.Runtime.DurableDefinitions
+  alias ElixirMixir.Runtime.DurableDelivery
   alias ElixirMixir.Runtime.DurableLifecycle
   alias ElixirMixir.Runtime.DurableOperations
   alias ElixirMixir.Runtime.DurableOutbox
@@ -147,6 +148,9 @@ defmodule ElixirMixir.Runtime.Manager do
       boot_id: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
       lineage_id: nil,
       recovery_task: nil,
+      delivery_timer: nil,
+      delivery_retries: %{},
+      delivery_clock: Keyword.get(opts, :delivery_timer, &Process.send_after(self(), &1, &2)),
       restore_host:
         Keyword.get(opts, :restore_host, fn opts ->
           DynamicSupervisor.start_child(
@@ -366,7 +370,14 @@ defmodule ElixirMixir.Runtime.Manager do
 
         :ok = DurableOutbox.sync(state)
         if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
-        {:noreply, %{state | workers: workers, recovery: recovery, recovery_task: nil}}
+
+        {:noreply,
+         DurableDelivery.schedule(%{
+           state
+           | workers: workers,
+             recovery: recovery,
+             recovery_task: nil
+         })}
 
       {:error, _error} ->
         {:stop, :recovery_failed, state}
@@ -398,6 +409,9 @@ defmodule ElixirMixir.Runtime.Manager do
     {:noreply,
      %{state | workers: workers, generation: state.generation + if(changed, do: 1, else: 0)}}
   end
+
+  def handle_info({:durable_delivery, id, nonce}, %{storage: %{mode: :durable}} = state),
+    do: {:noreply, DurableDelivery.wake(state, id, nonce)}
 
   def handle_info({:effect_delivery, dispatcher, id}, %{dispatcher: dispatcher} = state) do
     case EffectDispatcher.claim(dispatcher, id) do

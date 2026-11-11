@@ -38,7 +38,7 @@ defmodule ElixirMixir.Integration.Phase02OutboxTest do
       assert stats["reserved"] == 0
       assert stats["pending"] == length(records["effects"])
       assert stats["timers"] == if(committed, do: 1, else: 0)
-      assert tool(fresh, "runtime_inspect", %{})["effects"]["dispatch"] == "paused"
+      assert tool(fresh, "runtime_inspect", %{})["effects"]["dispatch"] == "enabled"
       result = tool(fresh, "runtime_invoke", arguments)
 
       if committed,
@@ -131,7 +131,7 @@ defmodule ElixirMixir.Integration.Phase02OutboxTest do
   end
 
   defp runtime(dir, id) do
-    fixture = start_supervised!({RuntimeFixture, data_dir: dir}, id: id)
+    fixture = start_supervised!({RuntimeFixture, data_dir: dir, pause_delivery: true}, id: id)
     ready = RuntimeFixture.ready(fixture)
     client = Client.new(ready.port)
     on_exit(fn -> Client.close(%{client | session: nil}) end)

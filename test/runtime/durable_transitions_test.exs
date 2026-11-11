@@ -15,6 +15,7 @@ defmodule ElixirMixir.Runtime.DurableTransitionsTest do
       start_supervised!(
         {Manager,
          name: nil,
+         delivery_timer: fn _message, _delay -> make_ref() end,
          store: store,
          limits: Map.get(ctx, :limits, %{}),
          storage: [mode: :durable, data_dir: dir]}

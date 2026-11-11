@@ -281,8 +281,8 @@ fresh client observes exactly one increment in the same host.
 ## Kernel-managed effects
 
 The delivery behavior in this section describes default memory mode. Durable mode
-accepts the same intent shapes and keeps them pending as described under
-[durable pending effects](#durable-pending-effects-delivery-paused).
+accepts the same intent shapes and resumes committed work as described under
+[durable pending effects](#durable-pending-effects-and-delivery).
 
 A successful event may return up to 16 effects, with exact string-key shapes:
 
@@ -337,8 +337,7 @@ All admission, timers and delivery state are in memory. Dispatch is best effort
 once per committed batch, without an exactly-once crash guarantee. A crash between
 host state commit and batch publication can lose effects in Phase 1. Dispatcher
 loss is fatal to the kernel rather than restarting empty admission authority;
-Durable mode retains committed intents across restart as described below; delivery
-remains paused.
+Durable mode retains and resumes committed intents across restart as described below.
 
 ## runtime_events
 
@@ -492,7 +491,7 @@ Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 `storage.format_version` (null in memory, currently 1 in durable mode). Absolute
 host paths are omitted. Durable mode supports source definitions and retained
 outcomes, start/stop, event state recovery and implementation replacement.
-Complete outgoing effect batches commit with state; durable delivery is paused. Memory tools keep their existing
+Complete outgoing effect batches commit with state; durable delivery resumes after recovery. Memory tools keep their existing
 behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
 
@@ -539,7 +538,7 @@ return `RUNTIME_RECOVERING` before admitting mutations. Summary inspection inclu
 The lineage stays with the store; each Manager boot gets a new boot ID. Absolute
 storage paths and source text remain omitted from public inspection. Desired worker
 definitions, selected implementations and committed state restore as described
-below; pending effect intents also survive, with delivery paused.
+below; pending effect intents survive and resume after healthy routes are restored.
 
 An admitted definition or lifecycle operation with no committed outcome becomes a retained
 `OPERATION_INTERRUPTED` error on restart without changing generation. A new request
@@ -594,7 +593,7 @@ Readiness stays closed through worker validation, reconstruction and routing.
 Reads and mutations return `RUNTIME_RECOVERING` before admission even if Manager
 is occupied reconstructing hosts. Wait for health 200, then initialize a new MCP
 session. No client is needed to perform reconstruction. Durable replacement is
-integrated; durable effect intents are accepted with delivery paused.
+integrated; committed durable effects resume after recovery.
 
 
 ### Durable event transitions
@@ -608,7 +607,7 @@ last operation ID identify that same transaction. Replays and callback failures
 never advance committed state or generation.
 
 A valid emit/schedule/log batch is retained atomically with its originating state
-and exact outcome. Delivery is currently paused, including logs. Invalid
+and exact outcome. Delivery follows commit and resumes after recovery. Invalid
 state/reply/effects, callback failure or timeout, and
 response-size rejection similarly preserve the prior checkpoint. Memory mode
 retains its complete existing effect behavior.
@@ -652,7 +651,7 @@ already have happened before an uncommitted interruption and cannot be undone by
 kernel transactions. Replacement preserves pending work.
 
 
-### Durable pending effects (delivery paused)
+### Durable pending effects and delivery
 
 An accepted invocation stores every validated intent with its originating state,
 revisions, exact outcome and audit in one transaction. A batch with an invalid
@@ -670,10 +669,40 @@ reopening unchanged. PIDs, reservation tokens and VM timer handles are transient
 Pending records and all transient reservations share the pending-effect ceiling.
 Boot reconstructs pending/timer counts without recreating reservations, and a
 lowered capacity below the retained queue prevents readiness. Summary inspection
-adds `effects.dispatch: "paused"`; pending counts include logs and timer counts
-include retained schedules even after their deadlines pass. This checkpoint does
-not deliver any durable intent. The following delivery checkpoint enables it.
+adds `effects.dispatch: "enabled"`; pending counts include logs and timer counts
+include retained schedules even after their deadlines pass. Healthy routes and
+queue accounting restore before readiness opens and delivery starts.
 
 Explicit source stop deletes its still-pending intents in the same transaction as
 the stopped definition and outcome. Host crash and replacement preserve them.
 Direct callback IO remains outside kernel transactions and may already have run.
+
+
+Manager processes one eligible intent at a time in `(due_at, effect_id)` order.
+A fresh OTP timer waits for `max(0, due_at - utc_now)` milliseconds, and wakeup
+rechecks both disk existence and UTC eligibility. Overdue work is immediately
+eligible; a backward clock move rearms the timer. Clock changes can advance or
+delay work; there is no scheduling precision guarantee beyond that wall-clock rule.
+
+An internal emit/schedule transition atomically deletes its parent ID and commits
+target state/revision, a bounded outcome audit, observed topology increment and
+all child intents. The consumed parent contributes one slot to child capacity in
+that same transaction. Children retain root operation/correlation and extended
+paths with reduced hop budgets. Internal deduplication uses durable pending
+existence rather than the expiring external request ledger. Even duplicate
+wakeups after ledger expiry cannot repeat a consumed transition. Queue completion
+advances generation once; a timer wakeup/claim or transient retry does not.
+
+Restarting or `BUSY` targets retain their intent and retry after 100 ms with a fresh
+volatile timer. Unknown, stopped, failed or quarantined targets, hop exhaustion,
+invalid callbacks, timeout and permanent limit failures terminally consume it with
+an audit. Store uncertainty instead closes runtime availability, and recovery
+reads the actual committed result. A crash before target commit retains the parent;
+a crash after it restores target/children without repeating the parent transition.
+
+Logs execute after their intent commits, then record completion and remove the
+intent in a separate transaction. A crash between output and completion repeats
+the output. Logger metadata includes effect ID and request correlation for recipient
+deduplication. This is at-least-once external IO; direct generated callback IO also
+remains outside kernel state transactions. Internal state deduplication does not
+make arbitrary external systems exactly-once.

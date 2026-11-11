@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through durable-outbox verified; remaining checkpoints and application recovery
+Status: store-foundation through durable-delivery verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -333,7 +333,76 @@ and quarantine reconciliation remain the next tasks.
 
 ## durable-delivery
 
-Pending. Owning [task](tasks/durable-delivery.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `1f43b8c` was committed and pushed.
+
+- `mix test test/runtime/durable_delivery_test.exs test/runtime/durable_timers_test.exs --warnings-as-errors`: 10 passed.
+- `mix test test/integration/phase02_delivery_test.exs --warnings-as-errors`: 7 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 103 passed.
+- Full `mix check`: 252 tests, 2 doctests; warnings-as-errors clean, strict Credo
+  clean, Doctor 100% documentation/typespec coverage, Dialyzer zero errors/skips.
+- Plan verifier, public-document file links and diff checks pass; `.githooks`
+  repeats the full quality gate before recording this checkpoint.
+
+Real HTTP source/peer/leaf workers produce a two-step effect chain. Actual SIGKILL
+before target commit, after commit and after host publication reopens the same
+owned directory without an LLM. Before commit disk has the parent and old peer
+state; after commit it has one child, new peer state and one topology increment.
+Live state stays old until publication. Recovery produces peer total 5 and leaf
+total 9 exactly once, with one edge increment per step and no pending records.
+A forced duplicate volatile claim for the consumed parent after restart and expired
+external retention leaves the entire store unchanged. A fresh invocation continues
+the peer total to 7. Internal delivery creates no client-ledger entry; a full
+client ledger also cannot block durable consumption.
+
+A separate SIGKILL case retains an overdue schedule and a 60-second future schedule.
+Boot restores healthy routes and delivers the overdue amount 3 without a client;
+the future record, ID and UTC deadline stay exact. A controlled forward UTC change
+then delivers amount 7, reaching total 10 with an empty queue. Controlled unit
+clocks prove zero delay, backward rearming, forward eligibility and ordered
+`(due_at, effect_id)` consumption without mutation on an early wakeup. An actually
+changed source implementation preserves existing schedules; the first delivers its
+old payload and explicit stop cancels the later one despite a stale wakeup.
+
+Log interruption pauses after actual Logger execution and correlated `effect_log`
+recording while its intent remains on disk. SIGKILL/recovery executes that same ID
+again and commits completion. Source state remains committed once and request
+replay emits no further output, demonstrating the external at-least-once boundary.
+Raised precommit Store failure and a timeout after successful commit both close
+authority; recovery reads actual disk and reaches target total 4 once, with one
+edge increment. The timeout fixture observes committed state and deletion before
+waiting for the real five-second Store call timeout.
+
+Focused failures cover unknown/stopped/quarantined targets, callback error/invalid
+state/timeout, restarting and BUSY targets with 100 ms transient retries, hop
+exhaustion, full queue with parent-slot reclamation, and atomic failure when a child
+batch exceeds even reclaimed capacity. A controlled queued-wakeup/host-DOWN race
+first proved that classifying a dead host as permanent discarded work. Delivery
+now reclassifies preparation errors from a dead host as transient, preserving its
+intent until restoration. The regression verifies one subsequent target transition.
+
+The full suite exposed default-Manager generation pollution from shared compiled
+fixtures. Both delivery and prior outbox fixtures now compile through private
+Managers; bootstrap plus delivery tests pass under the failing seed. Compiled test
+support uses ExUnit callbacks, so Dialyzer's PLT includes `:ex_unit` for analysis;
+there is no new production runtime dependency. Alias ordering and validator
+complexity findings were fixed structurally without changing thresholds. A new
+replacement fixture initially had an unused event argument; warning-free generated
+source now exercises the intended replacement and cancellation path.
+
+Manager owns one volatile OTP wakeup rebuilt from committed deadlines. It rechecks
+pending existence and UTC eligibility, prepares outside Store, then atomically
+consumes the parent with target state, children, bounded outcome audit and topology.
+Reservations reclaim the consumed parent's slot; internal deduplication never
+uses expiring client outcomes. Logs commit intent before output and completion
+afterward. Queue completion advances generation once; retries and timer claims do
+not. README, contributor and API guidance explain resumed work, retry/terminal
+behavior, wall-clock semantics, external IO limits and a retained-store restart
+example. The earlier outbox tests explicitly hold the trusted injected timer to
+continue testing acceptance/cancellation independently of delivery.
+
+A10/A11 and the delivery portion of A08/A14 now have automated evidence. Full
+Phase 2 completion remains pending quarantine, release storage and the actual
+Codex demonstration and evidence review.
 
 ## recovery-quarantine
 
@@ -356,7 +425,8 @@ Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
 Source recovery evidence for A01, desired definitions/logical identities/fresh hosts
 for A02/A05/A06, selected implementation evidence for A03, committed event-state
 evidence for A04, automated no-client recovery
-for A07, and source/lifecycle/event boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
+for A07, timer/effect recovery and internal deduplication evidence for A10/A11,
+and source/lifecycle/event/delivery boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
 Full acceptance reconciliation, the actual-client portion of A07, and milestone 7
 remain pending. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.

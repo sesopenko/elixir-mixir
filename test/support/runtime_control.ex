@@ -2,6 +2,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   @moduledoc "Test-only stdin controls for inspecting an independent BEAM without production testing tools."
 
   alias ElixirMixir.Runtime.ArtifactRegistry
+  alias ElixirMixir.Runtime.DurableDelivery
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Manager
@@ -29,6 +30,35 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "resume_delivery"}) do
+    :sys.replace_state(Manager, fn state ->
+      DurableDelivery.schedule(%{state | delivery_clock: &Process.send_after(self(), &1, &2)})
+    end)
+
+    %{"enabled" => true}
+  end
+
+  def request(%{"op" => "delivery_clock_offset", "milliseconds" => delta}) do
+    :sys.replace_state(Manager, fn state ->
+      clock = state.wall_clock
+      DurableDelivery.schedule(%{state | wall_clock: fn -> clock.() + delta end})
+    end)
+
+    %{"offset" => delta}
+  end
+
+  def request(%{"op" => "duplicate_delivery", "id" => id}) do
+    nonce = make_ref()
+
+    :sys.replace_state(Manager, fn state ->
+      %{state | delivery_timer: %{id: id, nonce: nonce, ref: nil}}
+    end)
+
+    send(Manager, {:durable_delivery, id, nonce})
+    send(Manager, {:durable_delivery, id, nonce})
+    %{"queued" => true}
+  end
+
   def request(%{"op" => "store_fault", "mode" => mode}) do
     mode =
       case mode do
@@ -70,6 +100,11 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
         for({{:request, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "workers" => for({{:worker, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "states" => for({{:state, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "edges" =>
+        for(
+          {{:edge, source, target}, record} <- records,
+          do: %{"source" => source, "target" => target, "record" => record}
+        ),
       "effects" => for({{:effect, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "meta" => records[:meta]
     }

@@ -53,7 +53,10 @@ defmodule ElixirMixir.Application do
           {Registry, keys: :unique, name: ElixirMixir.Runtime.ProcessRegistry},
           {DynamicSupervisor, strategy: :one_for_one, name: ElixirMixir.Runtime.WorkerSupervisor},
           Supervisor.child_spec(EffectDispatcher, restart: :temporary, significant: true),
-          Supervisor.child_spec(Manager, restart: :temporary, significant: true)
+          Supervisor.child_spec({Manager, Application.get_env(:elixir_mixir, :manager, [])},
+            restart: :temporary,
+            significant: true
+          )
         ] ++ mcp
 
     opts = [strategy: :one_for_one, auto_shutdown: :any_significant, name: ElixirMixir.Supervisor]

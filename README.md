@@ -145,8 +145,9 @@ Live replacement and reconnecting from a fresh Codex session are implemented and
 tested. The default memory mode keeps the application running when Codex closes,
 but restarting the runtime or container loses its workers, code, state and history.
 A crashed worker can restart under supervision, starting from its initial state.
-Optional durable workers, event state and replacement are described below; durable
-effect recovery is still being implemented. There is no autonomous controller yet.
+Optional durable workers, event state, replacement and resumed effects are described
+below. Durable restart behavior has automated coverage; the full Codex restart
+demonstration is still pending. There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -168,8 +169,7 @@ configuration, committed event state and request outcomes across abrupt BEAM
 termination.
 It reconstructs running workers without a client and keeps stopped workers stopped.
 Event invocation and implementation replacement are supported. Outgoing effects
-are retained with state, but delivery is currently paused; use memory mode for the full
-counter/aggregator experiments above.
+commit with state and resume after recovery has restored the healthy workers.
 
 To try durable worker definitions from the repository root, use a local directory
 owned exclusively by this runtime:
@@ -207,7 +207,10 @@ Use a fresh MCP session after restart and wait for health before reconnecting.
 Live replacement retains its host PID; VM recovery creates a fresh host and restores
 the selected implementation and committed state without repeating migration.
 Accepted emit, schedule and log intents survive restart with their originating state.
-Delivery is currently paused, including logs. Explicit stop cancels pending work from
+Internal deliveries commit once with target state and any child intents. Timers
+retain absolute UTC deadlines; overdue work becomes eligible after recovery. Logs
+can repeat if the runtime dies after output but before recording completion.
+Explicit stop cancels pending work from
 that source; host crash and replacement preserve it. Successful invocation
 commits state and the exact result before acknowledging it. After an uncertain
 response, retry the identical request ID and arguments to replay that result.
@@ -216,6 +219,43 @@ retry it with a new request ID. Completed responses replay for a bounded interva
 (default 10 minutes, including downtime); an expired ID may execute again. Module
 and PID strings in historical responses describe that operation, so use current
 inspection for live information. Generated compile-time IO may repeat during boot.
+
+To exercise an abrupt restart, start the runtime in the background in its own
+terminal, retaining the directory you chose above:
+
+```sh
+export ELIXIR_MIXIR_DATA_DIR=/absolute/path/to/data
+mix run --no-halt > /tmp/elixir-mixir-durable.log 2>&1 &
+mixir_pid=$!
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
+```
+
+Connect Codex in another terminal. After the counter prompts above, try:
+
+> Inspect durable_counter and durable_aggregator first. If the aggregator already
+> exists, report both states and skip the remaining steps. Otherwise define and
+> start durable_aggregator with total 0; each event adds its amount to total, returns
+> total and produces no effects. Replace durable_counter using its inspected worker
+> revision and the same state schema. Preserve count; each event adds its amount,
+> returns count and produces one schedule to durable_aggregator with that amount
+> and delay_ms 50000. Invoke amount 3 and inspect both states and pending work.
+
+Disconnect Codex. In the runtime terminal, kill only the process you
+started and reopen the same store:
+
+```sh
+kill -KILL "$mixir_pid"
+wait "$mixir_pid" || true
+mix run --no-halt > /tmp/elixir-mixir-durable.log 2>&1 &
+mixir_pid=$!
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
+```
+
+Recovery and pending delivery run without Codex. Reconnect with a fresh MCP session,
+inspect the restored state and graph, then invoke another event. A schedule's delay
+must be at most 60 seconds. Internal delivery consumes its retained ID atomically;
+a stale wakeup cannot repeat its committed transition. Each newly accepted caller
+operation can still create new work, including reuse after request retention expires.
 
 See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress),
 the [runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay)

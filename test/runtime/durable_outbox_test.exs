@@ -19,13 +19,20 @@ defmodule ElixirMixir.Runtime.DurableOutboxTest do
         "{:ok, Map.get(event, \"reply\", count), next, effects}"
       )
 
+    {:ok, manager} = Manager.start_link(name: nil)
+
     {:ok, result} =
-      Manager.define(%{
-        "logical_name" => unique(),
-        "source" => source,
-        "request_id" => unique(),
-        "expected_behavior" => "elixir_mixir.behavior.v1"
-      })
+      Manager.define(
+        %{
+          "logical_name" => unique(),
+          "source" => source,
+          "request_id" => unique(),
+          "expected_behavior" => "elixir_mixir.behavior.v1"
+        },
+        manager
+      )
+
+    GenServer.stop(manager)
 
     {:ok, artifact} = ArtifactRegistry.fetch(result["artifact_id"])
     %{artifact: artifact}
@@ -42,6 +49,7 @@ defmodule ElixirMixir.Runtime.DurableOutboxTest do
       start_supervised!(
         {Manager,
          name: nil,
+         delivery_timer: fn _message, _delay -> make_ref() end,
          store: store,
          limits: limits,
          storage: [mode: :durable, data_dir: dir],

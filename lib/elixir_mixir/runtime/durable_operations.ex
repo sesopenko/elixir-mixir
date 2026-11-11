@@ -1,6 +1,7 @@
 defmodule ElixirMixir.Runtime.DurableOperations do
   @moduledoc "Serializes durable admission, bounded preparation, atomic outcomes and live publication."
 
+  alias ElixirMixir.Runtime.DurableDelivery
   alias ElixirMixir.Runtime.DurableOutbox
   alias ElixirMixir.Runtime.DurableRequests
   alias ElixirMixir.Runtime.Error
@@ -110,6 +111,7 @@ defmodule ElixirMixir.Runtime.DurableOperations do
     state.durability_barrier.(:before_publish)
     next = prepared.publish.(state)
     :ok = DurableOutbox.sync(next)
+    next = DurableDelivery.schedule(%{next | generation: generation})
     state.durability_barrier.(:before_response)
 
     EventLog.append(%{
@@ -122,7 +124,7 @@ defmodule ElixirMixir.Runtime.DurableOperations do
       "metadata" => Map.take(data, ["artifact_id", "source_hash"])
     })
 
-    {result, %{next | generation: generation}}
+    {result, next}
   end
 
   defp event_type("replace", :error, %{"code" => "MIGRATION_FAILED"}), do: "migration_failed"

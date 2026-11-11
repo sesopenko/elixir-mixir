@@ -1,7 +1,8 @@
 defmodule ElixirMixir.Runtime.DurableOutbox do
-  @moduledoc "Serializes complete pending effect intents and reconstructs bounded queue accounting with delivery paused."
+  @moduledoc "Serializes complete pending effect intents and reconstructs bounded queue accounting before ordered durable delivery."
 
   alias ElixirMixir.Runtime.EffectDispatcher
+  alias ElixirMixir.Runtime.Effects
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.Store
@@ -33,6 +34,37 @@ defmodule ElixirMixir.Runtime.DurableOutbox do
   def counts(records) do
     effects = for {{:effect, _id}, effect} <- records, do: effect
     %{"pending" => length(effects), "timers" => Enum.count(effects, &scheduled?/1)}
+  end
+
+  @doc "Selects valid pending intents without dispatching malformed retained records."
+  @spec pending(map(), Limits.t()) :: [{String.t(), map()}]
+  def pending(records, limits) do
+    for {{:effect, id}, record} <- records, valid?(id, record, limits), do: {id, record}
+  end
+
+  defp valid?(id, %{"status" => "pending", "effect" => effect} = record, limits) do
+    with true <- valid_context?(record, limits),
+         true <- valid_path?(record["path"], limits),
+         :ok <- Effects.validate([effect], limits) do
+      record["target"] == effect["to"] and
+        id == Effects.identity(record["operation_id"], record["path"])
+    else
+      _invalid -> false
+    end
+  end
+
+  defp valid?(_id, _record, _limits), do: false
+
+  defp valid_context?(record, limits) do
+    is_integer(record["due_at"]) and record["due_at"] >= 0 and
+      is_integer(record["remaining_hops"]) and record["remaining_hops"] in 0..limits.effect_hops and
+      is_binary(record["operation_id"]) and is_binary(record["source"]) and
+      is_binary(record["correlation_id"])
+  end
+
+  defp valid_path?(path, limits) do
+    is_list(path) and length(path) in 1..(limits.effect_hops + 1) and
+      Enum.all?(path, &(is_integer(&1) and &1 > 0))
   end
 
   defp scheduled?(%{"effect" => %{"type" => "schedule"}}), do: true

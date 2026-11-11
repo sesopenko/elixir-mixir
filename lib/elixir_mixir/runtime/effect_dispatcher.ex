@@ -81,7 +81,7 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   @impl true
   def handle_call({:reserve, effects, context, limits}, {host, _}, state) do
     with :ok <- Effects.validate(effects, limits),
-         true <- used(state) + length(effects) <= limits.pending_effects do
+         true <- used(state) + length(effects) <= limits.pending_effects + credit(context, state) do
       token = make_ref()
       monitor = Process.monitor(host)
       expiry = Process.send_after(self(), {:expire, token}, state.reservation_ms)
@@ -348,6 +348,15 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
       "metadata" => metadata
     })
   end
+
+  @doc "Executes an already committed durable log intent, retaining its effect ID in output."
+  @spec execute_log(map()) :: :ok
+  def execute_log(item), do: log(item)
+
+  defp credit(%{consumed_effect: _id, manager: manager}, state),
+    do: min(1, get_in(state.retained, [manager, "pending"]) || 0)
+
+  defp credit(_context, _state), do: 0
 
   defp used(state),
     do:

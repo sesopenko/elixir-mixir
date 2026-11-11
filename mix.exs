@@ -9,7 +9,11 @@ defmodule ElixirMixir.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       preferred_cli_env: [check: :test],
-      dialyzer: [plt_core_path: "_build/dialyzer", plt_local_path: "_build/dialyzer"],
+      dialyzer: [
+        plt_core_path: "_build/dialyzer",
+        plt_local_path: "_build/dialyzer",
+        plt_add_apps: [:ex_unit]
+      ],
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps()
     ]

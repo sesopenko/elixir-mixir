@@ -31,7 +31,9 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
     end)
   end
 
-  defp prepare(args, worker, entry, state) do
+  @doc "Prepares one event with trusted inherited delivery context, without admitting a client request."
+  @spec prepare(map(), map(), map(), map(), map()) :: {:ok, map()} | {:error, Error.t()}
+  def prepare(args, worker, entry, state, inherited \\ %{}) do
     context = %{
       request_id: args["request_id"],
       operation_id: entry["operation_id"],
@@ -44,6 +46,8 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
       remaining_hops: state.limits.effect_hops,
       wall_now: state.wall_clock.()
     }
+
+    context = Map.merge(context, inherited)
 
     with {:ok, data, ticket} <-
            ProcessHost.prepare_invoke(

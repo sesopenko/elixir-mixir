@@ -202,7 +202,7 @@ defmodule ElixirMixir.Integration.Phase02TransitionsTest do
   end
 
   defp runtime(dir, id) do
-    fixture = start_supervised!({RuntimeFixture, data_dir: dir}, id: id)
+    fixture = start_supervised!({RuntimeFixture, data_dir: dir, pause_delivery: true}, id: id)
     ready = RuntimeFixture.ready(fixture)
     client = Client.new(ready.port)
     on_exit(fn -> Client.close(%{client | session: nil}) end)

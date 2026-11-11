@@ -77,6 +77,37 @@ all `test/support` modules and the test-only boot script.
 mix test test/mcp test/integration --warnings-as-errors
 ```
 
+## Connect Claude Code (untested)
+
+Claude Code is untested with elixir-mixir, but it should theoretically work through
+its HTTP MCP support. The automated tests and recorded client demonstration do not
+establish Claude Code compatibility; the actual demonstration used Codex.
+
+Start the runtime using the instructions above or the disposable container in
+[README](README.md#try-it-with-codex). With Claude Code installed, run the following
+from the repository root in a separate terminal on the runtime's machine:
+
+```sh
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
+claude mcp add --transport http elixir-mixir http://127.0.0.1:4100/mcp
+claude mcp list
+claude
+```
+
+Skip the add command if this project already has the same server registered.
+If you changed the runtime port, replace 4100 in both URLs. Inside Claude Code,
+run `/mcp` to check the server connection, then ask:
+
+> Use the elixir-mixir MCP tools to inspect the runtime without changing anything.
+> Show me which workers exist and their current state.
+
+After inspection, try the [README example prompts](README.md#example-prompts).
+Keep the runtime running independently of the client; closing Claude Code should
+leave it alive. These commands follow the
+[official Claude Code MCP documentation](https://code.claude.com/docs/en/mcp).
+The shared [MCP troubleshooting guidance](#mcp-connection-troubleshooting) covers
+the endpoint, readiness, ports and tool errors.
+
 ## In-memory runtime foundation
 
 Inspect the current runtime in IEx:

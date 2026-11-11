@@ -73,9 +73,34 @@ alternative to Docker; both use port 4100 by default. Set
 `ELIXIR_MIXIR_PORT=4101 mix run --no-halt` to choose another port, and use that port
 in the readiness and MCP connection commands too.
 
+## Try it with Claude Code
+
+Claude Code is untested with elixir-mixir, but it should theoretically work because
+it supports HTTP MCP servers. Start the runtime and wait for readiness as shown
+above. With Claude Code installed, run these commands from the repository root on
+the same machine as the runtime:
+
+```sh
+claude mcp add --transport http elixir-mixir http://127.0.0.1:4100/mcp
+claude mcp list
+claude
+```
+
+If this server is already registered for this project, skip the add command.
+Inside Claude Code, use `/mcp` to check the connection, then try:
+
+> Use the elixir-mixir MCP tools to inspect the runtime without changing anything.
+> Show me which workers exist and their current state.
+
+You can then try the example prompts below. Keep the runtime running when closing
+or switching clients. The connection commands follow the
+[official Claude Code MCP instructions](https://code.claude.com/docs/en/mcp);
+this project's recorded demonstration used Codex.
+
 ## Example prompts
 
-Try these in order in Codex. They ask the agent to use the running application's
+Try these in order in Codex, or experiment with Claude Code using the untested
+connection above. They ask the agent to use the running application's
 tools, so you can see state change without editing the runtime's source code. The
 `demo_` names keep the examples separate from other experiments; the first prompt
 asks the agent to check for existing workers.

@@ -1,0 +1,67 @@
+{
+  "verified_at": "2026-11-11",
+  "client_version": "codex-cli 0.167.1",
+  "runtime_versions": {
+    "app": "0.1.0",
+    "elixir": "1.18.3",
+    "otp": "27.3.4",
+    "erts": "15.2.7"
+  },
+  "base_image": "docker.io/library/elixir:1.18.3-otp-27-slim@sha256:fc227cb4b0c568a1f7cf6a8e40269185248cd29204c0d4e95cdefe31f5d1a873",
+  "image_id": "sha256:8cfeb62aa2885ea16b7e76d7e429b75978511948e92ce9b2bfa33782fcdebf6c",
+  "platform": "linux/amd64",
+  "container_before_session1": {
+    "id": "6be756fce6235f20928a908d7c61a8e8638994c49f530fae6ea26f84ae4dd0fe",
+    "host_pid": 232827,
+    "started_at": "2026-11-11T08:51:26.544177969Z",
+    "image_id": "sha256:8cfeb62aa2885ea16b7e76d7e429b75978511948e92ce9b2bfa33782fcdebf6c",
+    "restart_count": 0,
+    "running": true
+  },
+  "container_after_session2": {
+    "id": "6be756fce6235f20928a908d7c61a8e8638994c49f530fae6ea26f84ae4dd0fe",
+    "host_pid": 232827,
+    "started_at": "2026-11-11T08:51:26.544177969Z",
+    "image_id": "sha256:8cfeb62aa2885ea16b7e76d7e429b75978511948e92ce9b2bfa33782fcdebf6c",
+    "restart_count": 0,
+    "running": true
+  },
+  "isolation": {
+    "user": "1000:1000",
+    "read_only": true,
+    "tmpfs": {
+      "/tmp": "rw,noexec,nosuid,size=128m"
+    },
+    "cap_drop": [
+      "ALL"
+    ],
+    "security_opt": [
+      "no-new-privileges"
+    ],
+    "memory_bytes": 536870912,
+    "nano_cpus": 1000000000,
+    "pids_limit": 128,
+    "network_mode": "host",
+    "mounts": [],
+    "distribution_disabled": true,
+    "vm_port_limit": 65536,
+    "loopback_listener": "127.0.0.1:4100"
+  },
+  "offline_startup": {
+    "image_id": "sha256:8cfeb62aa2885ea16b7e76d7e429b75978511948e92ce9b2bfa33782fcdebf6c",
+    "network_mode": "none",
+    "http_status": 200,
+    "health_status": "ready",
+    "same_resource_limits": true,
+    "container_removed": true
+  },
+  "cleanup": {
+    "demo_container_removed": true,
+    "version_probe_removed": true,
+    "offline_probe_removed": true,
+    "command": "docker rm -f elixir-mixir-phase01",
+    "exit_code": 0,
+    "verified_absent": true
+  },
+  "sanitization": "MCP arguments and structured results retained verbatim as JSON values; duplicate text was checked equal then omitted. Agent narration, authentication, unrelated settings and stderr are excluded."
+}

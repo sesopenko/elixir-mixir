@@ -1,6 +1,7 @@
 # Phase 1 — Live Genesis implementation plan
 
-Status: implementation in progress. kernel-api is committed at `14f8d10`;
+Status: Phase 1 verified and complete in the commit containing the checked
+codex-demo task. kernel-api is committed at `14f8d10`;
 mcp-bootstrap is complete in the commit containing its checked task document.
 artifact-compiler is complete in the commit containing its checked task document.
 worker-start is complete in the commit containing its checked task document.
@@ -9,7 +10,9 @@ worker-recovery is complete in the commit containing its checked task document.
 event-effects is complete in the commit containing its checked task document.
 runtime-inspection is complete in the commit containing its checked task document.
 live-replacement is complete in the commit containing its checked task document.
-codex-demo is next. Governing architecture:
+codex-demo is complete in the commit containing its checked task document.
+Actual demonstration: [59 Codex MCP calls in two fresh sessions](evidence/codex-sessions.json).
+Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).
@@ -57,7 +60,7 @@ coverage, ExUnit, and Dialyzer. Keep those gates and existing tests working.
 
 Only the trusted execution kernel lives under `lib/`. Phase 1 stores definitions,
 artifacts, state, request outcomes, events, and topology in memory. There is no CubDB,
-manifest disk storage, restart recovery, autonomous controller, remote deployment,
+manifest disk storage, BEAM/kernel restart recovery, autonomous controller, remote deployment,
 UI, clustering, dependency installation by generated code, or native OTP hot upgrade.
 BEAM restart loses the application. Record schema versions, logical IDs, effect IDs,
 operation IDs, and commit boundaries to leave Phase 2 seams; do not implement a
@@ -537,8 +540,15 @@ all A01–A14 evidence is present, all seven tools have passing incremental real
 Codex demonstration/reconnect transcript is committed. Passing an ExUnit HTTP scenario
 alone is insufficient. Record limitations and any approved amendments explicitly.
 
-For this planning-only checkpoint, verify task/graph/link/dependency/order agreement,
-acyclicity, complete A01–A14 mapping, resolved contracts, snapshot preservation, and
-regenerated recovery rules; run `mix check`, then commit snapshot, plan/tasks, recovery
-rule, and generated `AGENTS.md` together. Leave runtime source and `scripts/codex.sh`
-untouched and stop. Runtime features are a subsequent assignment.
+The original planning checkpoint verified graph/task/link/dependency/order
+agreement, acyclicity, A01–A14 mapping, resolved contracts, preserved assignment
+and regenerated recovery rules. Implementation then completed the ten independently
+checked checkpoints above. Final evidence includes a constrained production release,
+actual Codex-created counter/aggregator evolution, two-client continuity, complete
+HTTP/fault coverage and the full `mix check` gate. See
+[verification.md](verification.md) and the
+[recorded-demo verifier](../../../scripts/verify-phase01-demo.py).
+
+All Phase 1 work is complete; Phase 2 persistence/recovery and an autonomous
+controller remain outside this assignment. Unrelated `scripts/codex.sh` remains
+untouched.

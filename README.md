@@ -40,11 +40,35 @@ Codex leaves the BEAM running; Ctrl+C twice in the runtime terminal stops it.
 The endpoint is an independently running service. Override its port with
 `ELIXIR_MIXIR_PORT=4101 mix run --no-halt` and use the same port in client commands.
 
-Generated-code experiments must use a trusted, disposable environment without
-credentials or valuable infrastructure. Generated Elixir runs with the
-BEAM's privileges; loopback binding and callback limits are not a code sandbox.
-The isolated release/container setup and actual Codex demonstration belong to the
-final Phase 1 task and remain pending.
+For generated-code experiments, use the disposable Linux release container instead
+of running generated code on a valuable host:
+
+```sh
+docker build -t elixir-mixir:phase01 .
+docker run -d --name elixir-mixir-phase01 --network host --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges --memory 512m --cpus 1 --pids-limit 128 elixir-mixir:phase01
+curl --fail http://127.0.0.1:4100/health
+```
+
+The image pins official Elixir 1.18.3/OTP 27, builds dependencies and an OTP release
+before startup, runs as UID/GID 1000 and disables distribution. Its release uses
+/tmp and bounded VM threads/ports, with no runtime Mix/dependency downloads.
+No host credentials, source directories or Docker socket are mounted. Linux host
+networking makes the loopback listener reachable; it permits network access and
+is not a network sandbox. Use a disposable Linux VM for stronger isolation or
+non-Linux hosts. Generated Elixir has BEAM privileges; callback limits are not a
+hostile-code sandbox.
+
+Follow the [two-session Codex demonstration](examples/phase_1_demo.md) to create and
+evolve the counter/aggregator exclusively through MCP, then reconnect to the same
+living application. Kernel source contains no seeded domain workers. Stop/remove
+only the disposable demo container when finished:
+
+```sh
+docker rm -f elixir-mixir-phase01
+```
+
+Client disconnect leaves runtime state alive. A BEAM/container restart loses all
+Phase 1 artifacts, workers, state, effects, history and request outcomes.
 
 See the [runtime API](docs/runtime-api.md), [automated evidence](docs/sdlc/phase01/verification.md),
-and [architecture](docs/adr/001-architecture.md). Run `mix check` before committing.
+and [architecture entry point](ARCHITECTURE.md). Run `mix check` before committing.

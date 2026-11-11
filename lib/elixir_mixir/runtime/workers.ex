@@ -22,6 +22,7 @@ defmodule ElixirMixir.Runtime.Workers do
          true <- Values.valid_id?(args["worker_id"]) and is_binary(args["artifact_id"]),
          :ok <- Values.validate(args["config"], :config, limits),
          :ok <- available(args["worker_id"], workers, limits),
+         :ok <- retained_definition(args, Map.get(workers, args["worker_id"])),
          {:ok, artifact} <- ArtifactRegistry.fetch(args["artifact_id"]) do
       start_host(args, workers, artifact, limits, generation, dispatcher)
     else
@@ -321,6 +322,21 @@ defmodule ElixirMixir.Runtime.Workers do
         :ok
     end
   end
+
+  defp retained_definition(args, %{status: "failed"} = worker) do
+    if args["artifact_id"] == worker.artifact.id and args["config"] === worker.config do
+      :ok
+    else
+      error =
+        Map.put(Error.new("INVALID_ARGUMENT"), "details", %{
+          "hint" => "Stop the worker before changing its artifact or config."
+        })
+
+      {:error, error}
+    end
+  end
+
+  defp retained_definition(_args, _worker), do: :ok
 
   defp public(worker) do
     %{

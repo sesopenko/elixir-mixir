@@ -2,6 +2,14 @@
 
 ## Startup and context recovery
 
+Implementation: [assignment](../../../prompts/phase01-implementation.md),
+[unattended continuation](../../../prompts/phase01-implementation-amendment-04.md).
+Corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md),
+[05](../../../prompts/phase01-transport-amendment-05.md).
+Actual client prompts: [session 1](../../../prompts/phase01-demo-session01.md),
+[fresh session 2](../../../prompts/phase01-demo-session02.md).
+
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -94,12 +102,61 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Verified prerequisite `baabfe9`, reread governing instructions and preserved
+  unrelated `scripts/codex.sh`. All domain behavior was created through actual
+  Codex MCP calls; the image contains only trusted kernel/release inputs.
+- Docker 26.1.5, official Elixir 1.18.3/OTP 27 image manifest digest
+  `sha256:fc227cb4b0c568a1f7cf6a8e40269185248cd29204c0d4e95cdefe31f5d1a873`;
+  actual runtime OTP 27.3.4/ERTS 15.2.7, app 0.1.0, Linux/amd64.
+- `docker build -t elixir-mixir:phase01 .`: passed. Builder installs CA trust for
+  verified dependency downloads; production release excludes test fixtures/tooling.
+  A reproduced base-VM OOM showed Docker's 1,073,741,816-FD limit causing a
+  134,217,727-port table and ~2 GiB system allocation. Release/build flags now cap
+  ports at 65,536; the required 512 MiB/128-PID limits remain unchanged.
+- Exact documented constrained docker run and curl /health passed. Inspect/actual
+  process checks proved UID/GID 1000, read-only root, tmpfs only, dropped caps,
+  no-new-privileges, 512 MiB/one CPU/128 PIDs, no host mounts/socket/test fixtures,
+  distribution disabled and IPv4 loopback only. A separate same-image container
+  started with --network none and returned health 200 ready without downloads.
+- `codex mcp add elixir-mixir --url http://127.0.0.1:4100/mcp` and filtered list
+  verification passed. Two actual Codex CLI 0.167.1 exec processes exited 0, with
+  distinct thread IDs: 51 creation/evolution calls, then 8 fresh read-only calls.
+  All seven tools used; original counter/aggregate PIDs, artifact versions/state/
+  revisions and generation 23 survived client exit/reconnect. Counter migrated
+  to nested schema-2 value 7; aggregate ended events=3,total=12. Rejected amounts,
+  source, migration and stale revision preserved active fields; probe log/delay
+  delivered once then probe stopped. See sanitized [evidence](../evidence/codex-sessions.json).
+- `python3 scripts/verify-phase01-demo.py`: passed; independently recomputes source
+  hashes and verifies actual calls/arithmetic/failures/reconnect/isolation/cleanup.
+  Original text content was checked equal to structured data before omission;
+  no auth, cookies, unrelated settings or agent narration are committed.
+- Before/after Docker identity stayed container 6be756fce623, host PID 232827,
+  StartedAt 2026-11-11T08:51:26.544177969Z, restart count zero. Actual demo, offline
+  startup and version-probe containers were removed and absence verified.
+- `mix test test/integration/phase01_runtime_test.exs --warnings-as-errors`:
+  28 tests, zero failures, separate from actual Codex evidence.
+- Final contract audit reproduced a failed-definition startup mismatch: start could
+  change retained artifact/config without the explicit stop required by the plan.
+  A focused recovery regression failed before the fix. Startup now rejects those
+  changes (including integer/float type differences) with INVALID_ARGUMENT/stop-first hint; same-definition recovery still
+  works, and explicit stop permits new artifact/config. Unit and real-HTTP tests
+  prove failed-state/revision preservation and successful changed start after stop.
+  The release and both actual Codex sessions were rerun against this final code.
+- `mix check`: passed; 2 doctests and 151 tests, zero failures, strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors.
+- Shell syntax, local Markdown links, JSON examples/template syntax, evidence JSON,
+  credential-pattern scan and `git diff --check` pass; `.githooks` stays enabled.
+  The commit containing this completed checklist is the final checked checkpoint.
+- A01–A14 evidence is complete in verification.md. Phase 1 remains in-memory,
+  generated code retains BEAM privileges, and host networking is not a network
+  sandbox; these are documented scope limits, not missing Phase 1 deliverables.

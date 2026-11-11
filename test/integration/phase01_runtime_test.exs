@@ -330,6 +330,20 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
     events = RuntimeFixture.control(ctx.fixture, %{"op" => "events"})["events"]
     assert Enum.count(events, &(&1["type"] == "worker_restart_attempt")) == 3
     RuntimeFixture.control(ctx.fixture, %{"op" => "recovery_failure", "enabled" => false})
+
+    rejected =
+      tool(ctx.client, "runtime_start", %{
+        start
+        | "config" => %{"value" => 2},
+          "request_id" => "change-failed-without-stop"
+      })
+
+    assert rejected["code"] == "INVALID_ARGUMENT"
+    assert rejected["details"]["hint"] =~ "Stop the worker"
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"}) ==
+             failed
+
     restarted = tool(ctx.client, "runtime_start", %{start | "request_id" => "manual-recovery"})
     assert restarted["restart_count"] == 0
     assert restarted["worker_revision"] > failed["worker_revision"]
@@ -351,6 +365,14 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
     refute RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"})[
              "registered"
            ]
+
+    assert tool(ctx.client, "runtime_start", %{
+             start
+             | "config" => %{"value" => 2},
+               "request_id" => "change-after-stop"
+           })["status"] == "running"
+
+    assert worker_state(ctx.client, "counter") == %{"value" => 2}
   end
 
   test "the full config depth limit survives HTTP and worker inspection", ctx do

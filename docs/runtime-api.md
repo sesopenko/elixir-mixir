@@ -21,7 +21,7 @@ Host must be `127.0.0.1:<port>` or `localhost:<port>`; a supplied Origin must be
 Unexpected or repeated Host/Origin headers are rejected.
 
 JSON-RPC IDs are strings or integers with at most 128 encoded bytes and are echoed
-on valid requests, including zero. They are separate from future mutation
+on valid requests, including zero. They are separate from mutation
 `request_id` values. Incoming bodies and complete encoded tool responses default
 to 64 KiB. Invalid protocol data uses bounded JSON-RPC errors and appropriate 4xx
 status; runtime failures use an HTTP 200 tool result with `isError: true`.
@@ -188,8 +188,10 @@ Stop takes worker_id and request_id and returns stopped status, definition_retai
 and worker_revision. It terminates the host and retains config/artifact identity for
 explicit reinitialization. A first stop advances worker revision and generation;
 a repeated stop of the retained stopped definition succeeds without advancing either.
-Unknown IDs return WORKER_NOT_FOUND. A new start of a stopped/failed ID may supply
-new config/artifact, reinitializes state, and advances worker and state revisions.
+Unknown IDs return WORKER_NOT_FOUND. Explicit start of a failed ID must use its
+retained artifact/config; changing either first requires runtime_stop, otherwise
+INVALID_ARGUMENT includes a stop-first hint. A stopped ID may supply a new
+config/artifact. Successful reinitialization advances worker and state revisions.
 Worker capacity includes stopped and failed definitions (default 32).
 
 For example, after defining the counter artifact, call runtime_start with:
@@ -204,7 +206,7 @@ host-owned committed state, never a generated callback. Summary reads omit state
 stopped/failed/unavailable hosts include explicit state omission metadata. Client
 close/reinitialize preserves running worker PID and state.
 
-Unexpected host death currently marks the retained definition failed, removes its
+Unexpected host death removes its
 live PID, advances worker revision/generation and records a correlated crash event.
 Peers, Manager and HTTP remain alive. Manager marks the worker `restarting` and
 schedules a bounded init attempt after 100 ms using its retained active artifact and

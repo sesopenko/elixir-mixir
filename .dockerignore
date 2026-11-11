@@ -1,0 +1,10 @@
+# Send only trusted runtime build inputs; exclude credentials, Git and experiments.
+**
+!mix.exs
+!mix.lock
+!config/
+!config/**
+!lib/
+!lib/**
+!rel/
+!rel/**

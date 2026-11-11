@@ -109,6 +109,68 @@ defmodule ElixirMixir.Runtime.WorkerRecoveryTest do
     assert snapshot(ctx)["restart_count"] == 1
   end
 
+  test "a failed definition requires explicit stop before artifact or config changes", ctx do
+    {:ok, candidate} =
+      Manager.define(
+        %{
+          "source" => Fixtures.worker_source(),
+          "logical_name" => unique(),
+          "expected_behavior" => "elixir_mixir.behavior.v1",
+          "request_id" => unique()
+        },
+        ctx.manager
+      )
+
+    start(ctx)
+    kill(ctx)
+    Application.put_env(:elixir_mixir, :test_recovery_failure, true)
+
+    for attempt <- 1..3 do
+      assert_receive {:scheduled, message}
+      send(ctx.manager, message)
+      assert snapshot(ctx)["restart_count"] == attempt
+    end
+
+    Application.delete_env(:elixir_mixir, :test_recovery_failure)
+    before = snapshot(ctx)
+    assert before["status"] == "failed"
+
+    base = %{
+      "worker_id" => ctx.worker,
+      "artifact_id" => ctx.artifact,
+      "config" => %{"value" => 7},
+      "request_id" => unique()
+    }
+
+    for altered <- [
+          %{base | "config" => %{"value" => 8}},
+          %{base | "config" => %{"value" => 7.0}},
+          %{base | "artifact_id" => candidate["artifact_id"]}
+        ] do
+      assert {:error, %{"code" => "INVALID_ARGUMENT"}} =
+               Manager.start_worker(Map.put(altered, "request_id", unique()), ctx.manager)
+
+      assert snapshot(ctx) == before
+    end
+
+    {:ok, _} =
+      Manager.stop_worker(%{"worker_id" => ctx.worker, "request_id" => unique()}, ctx.manager)
+
+    assert {:ok, result} =
+             Manager.start_worker(
+               %{
+                 base
+                 | "artifact_id" => candidate["artifact_id"],
+                   "config" => %{"value" => 8},
+                   "request_id" => unique()
+               },
+               ctx.manager
+             )
+
+    assert result["restart_count"] == 0
+    assert snapshot(ctx)["state"] == %{"value" => 8}
+  end
+
   test "successful restarts share a rolling budget and peers have independent budgets", ctx do
     start(ctx)
     peer = %{ctx | worker: unique()}

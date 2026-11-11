@@ -213,3 +213,46 @@ After changing any rule, run:
 
 Include the regenerated `AGENTS.md` with the rule changes. Do not edit it
 directly.
+
+## Production release and disposable demonstration
+
+The [Dockerfile](Dockerfile) uses a digest-pinned official Elixir 1.18.3/OTP 27
+image, installs the builder CA store, fetches only production dependencies and
+builds an OTP release. Its build context is a whitelist of mix.exs/mix.lock,
+config/, lib/ and rel/; Git, tests, credentials and local experiments are excluded.
+No build credentials or host files are copied into the runtime stage.
+
+The [release environment](rel/env.sh.eex) disables distribution and directs release
+temporary/crash files to /tmp. Fixed thread counts fit the 128-PID cap. A 65,536
+port ceiling avoids OTP 27 allocating a multi-gigabyte port table when Docker
+supplies a billion-file-descriptor limit. This is a VM startup resource setting,
+not a change to the runtime's worker/event API limits.
+
+Use the exact build/run/cleanup commands in [README](README.md) and follow the
+[actual Codex demonstration](examples/phase_1_demo.md). Keep runtime and Codex
+processes separate. Do not mount client auth, source directories or Docker sockets
+inside the generated-code container. Linux host networking exposes only the
+configured loopback listener but permits outbound/network access; a disposable
+Linux VM is the stronger isolation and non-Linux alternative.
+
+## MCP connection troubleshooting
+
+- Start the runtime first and wait for GET /health. If port 4100 is occupied, use
+  ELIXIR_MIXIR_PORT=4101 for Mix, or add --env ELIXIR_MIXIR_PORT=4101 to docker run;
+  register the matching http://127.0.0.1:4101/mcp URL. Runtime code rejects non-loopback
+  bind settings. Do not solve container reachability by binding 0.0.0.0.
+- Use /mcp, not a legacy /sse URL. MCP POST needs application/json Content-Type and
+  Accept application/json, text/event-stream. Codex negotiates this automatically.
+- Host and optional Origin must match localhost/127.0.0.1 and the configured port.
+  Browsers/proxies adding a different Origin or duplicate headers are rejected.
+- Initialize a new session and retain its mcp-session-id. Do not reuse a previous
+  BEAM's session header after restart. Closing a client/session does not stop workers.
+- Allow at least the seven-second operation wait in client tool timeouts; compilation
+  may consume its five-second deadline. Reuse the identical mutation request_id after
+  an uncertain response so an accepted operation replays instead of running twice.
+- isError true is a tool/runtime failure with a stable code, distinct from transport
+  JSON-RPC errors. Inspect actual state and read runtime_events rather than assuming
+  an accepted effect was delivered or a failed mutation changed state.
+- Phase 1 stores everything in memory. Host crash recovery reruns init and loses
+  that worker's volatile state; BEAM/container restart loses the complete application.
+  Client reconnect alone preserves it.

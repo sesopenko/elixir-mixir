@@ -1,0 +1,29 @@
+[
+  {
+    "session": 1,
+    "thread_id": "01a1c9ce-37c8-7640-acca-1d50ea74d480",
+    "mcp_calls": 51,
+    "tools": [
+      "runtime_define",
+      "runtime_events",
+      "runtime_inspect",
+      "runtime_invoke",
+      "runtime_replace",
+      "runtime_start",
+      "runtime_stop"
+    ],
+    "exit_code": 0,
+    "prompt": "../../../prompts/phase01-demo-session01.md"
+  },
+  {
+    "session": 2,
+    "thread_id": "01a1c9d1-0f45-7700-ad60-3d52b994d2c0",
+    "mcp_calls": 8,
+    "tools": [
+      "runtime_events",
+      "runtime_inspect"
+    ],
+    "exit_code": 0,
+    "prompt": "../../../prompts/phase01-demo-session02.md"
+  }
+]

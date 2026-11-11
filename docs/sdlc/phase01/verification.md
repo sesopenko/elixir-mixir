@@ -251,25 +251,133 @@ The automated runtime substrate is complete. The actual Codex connection/evoluti
 reconnect demonstration and isolated release deployment remain unverified until
 codex-demo; automated HTTP tests are not substitutes for that transcript.
 
+## codex-demo
+
+Verified 2026-11-11. The commit containing the checked final task is the tenth
+checkpoint. Evidence is distinct from automated HTTP tests:
+
+- [Session metadata](evidence/codex-sessions.json),
+  [session 1 actual MCP calls](evidence/codex-session01.jsonl),
+  [session 2 fresh-client MCP calls](evidence/codex-session02.jsonl).
+- [First checkpoint](evidence/codex-session01-final.json),
+  [fresh checkpoint](evidence/codex-session02-final.json), and
+  [runtime/container manifest](evidence/runtime-manifest.json).
+- [Exact experiment/prompts](../../../examples/phase_1_demo.md) and
+  [independent observation verifier](../../../scripts/verify-phase01-demo.py).
+
+Runtime/client versions: Codex CLI 0.167.1; Elixir 1.18.3; OTP 27.3.4/ERTS 15.2.7;
+application 0.1.0; Docker 26.1.5+dfsg1; Linux/amd64. The official base image is pinned
+at multi-platform digest
+`sha256:fc227cb4b0c568a1f7cf6a8e40269185248cd29204c0d4e95cdefe31f5d1a873`.
+Built release image:
+`sha256:8cfeb62aa2885ea16b7e76d7e429b75978511948e92ce9b2bfa33782fcdebf6c`.
+
+Docker build and the exact documented constrained startup passed. Actual inspect
+and process checks proved nonroot UID/GID 1000, read-only root, /tmp tmpfs, no bind
+mounts or Docker socket, all capabilities dropped, no-new-privileges, memory
+536870912, NanoCpus 1000000000, PidsLimit 128, distribution disabled and only
+127.0.0.1:4100 listening. A separate identical constrained container with network
+none returned GET /health HTTP 200 ready, proving startup needs no dependency
+network downloads. Both smoke-test containers and the actual demo container were
+removed; no unrelated containers were touched.
+
+Two packaging failures were investigated at their cause. The slim builder lacked
+a CA trust bundle; installing ca-certificates permits verified dependency downloads.
+A bare VM under 512 MiB was OOM-killed: Docker supplied a 1,073,741,816-FD limit,
+OTP selected 134,217,727 ports and allocated about 2 GiB of system memory. A +Q 65536
+release/build setting fixes startup without raising the required memory/PID limits.
+Thread caps keep VM startup inside 128 PIDs. Release startup invokes no Mix, writes
+temporary files under /tmp and includes only production kernel/runtime code.
+
+The final contract audit also found that failed definitions could change retained
+artifact/config through start without an explicit stop. A failing recovery test
+proved the mismatch against the plan. The startup guard now returns INVALID_ARGUMENT
+with a stop-first hint, preserving failed status/revisions/budget; same-definition
+recovery remains available, and stop then start allows changed identity/config.
+Focused unit and real-HTTP regressions pass. The final release and actual Codex
+sessions below include this correction.
+
+Actual Codex session 1 used all seven tools in 51 calls. Initial inspection showed
+generation zero and no workers. Codex created and evolved the application solely
+through runtime_define/start/invoke/replace; no shell/file/direct-HTTP domain
+construction occurred. Intentional runtime errors appear as failed CLI tool items
+with valid bounded structured results, not transport failures.
+
+| Observed stage | Counter | Aggregate events | Aggregate total |
+| --- | --- | --- | --- |
+| v1 increment | 1 | — | — |
+| v2 same-schema replacement and two increments | 3 | 2 | 5 |
+| v3 positive amount 4 | 7 | 3 | 12 |
+| Rejected amount 0 and -1 | 7 | 3 | 12 |
+| v4 explicit schema-2 migration | nested value 7 | 3 | 12 |
+| Failed define/migration/stale revision | nested value 7 | 3 | 12 |
+| Fresh Codex session 2 | same nested value 7 | 3 | 12 |
+
+Counter PID stayed `#PID<0.1559.0>`; aggregate PID stayed `#PID<0.1581.0>`.
+Counter ended artifact revision 4, worker_revision 4, state_revision 6, schema 2;
+aggregate stayed artifact/worker revision 1, state_revision 4. A separate probe
+emitted a structured log and delayed self-event, observed seen=1, then stopped.
+Final generation was 23 with pending/reserved/timers all zero. Failed operations
+were two CALLBACK_FAILED invalid amounts, COMPILE_FAILED source, MIGRATION_FAILED
+candidate and REVISION_CONFLICT stale revision; actual snapshots after each retained
+active PID/artifact/state/worker and state revisions.
+
+Session 1 process exited 0. A completely new Codex process/thread made 8 read-only
+MCP calls and exited 0, observing exact counter/aggregate snapshots and generation
+23. Container ID 6be756fce623, host BEAM PID 232827 and StartedAt
+2026-11-11T08:51:26.544177969Z remained unchanged, restart count zero, throughout both
+clients. The manifest records complete identity before/after, followed by explicit
+cleanup. Reconnect used no mutation or replayed fixture construction.
+
+Artifact SHA-256 values were independently recomputed from actual MCP source
+arguments and matched runtime returns. Full artifact IDs and original source/metadata
+references are in the sanitized transcript and checkpoints:
+
+| Role | Slot | Logical revision | Schema | Source SHA-256 |
+| --- | --- | --- | --- | --- |
+| counter v1 | 1 | 1 | 1 | 20a93958e80435860007e7e669ab66fef3aeb3fbc8ce2ff26967f9ea03cc81ad |
+| aggregate | 2 | 1 | 1 | c9846906c6f33152023a404a4b539591e498affc99b0efc54380a4c33761fae6 |
+| counter v2 | 3 | 2 | 1 | 987d0e6c88d3f69d3f1d1b620fe56e2a0bcd43ed4b1a7a84be420b945b356353 |
+| counter v3 | 4 | 3 | 1 | 5ce5d231a5be0f6936624e456aa36c3549265b2f9fc63c301831c673ea117be3 |
+| counter v4 | 5 | 4 | 2 | d71bb2c7c170a3e923301384e4aa53e611b1c928224b10192f35a959953d5783 |
+| rejected migration candidate | 7 | 5 | 3 | 5bd8850af024f34b88bd4bc73c917e8705b8a348911ca2f33025523e77110873 |
+| probe | 8 | 1 | 1 | 21227456cebaf383ea71072ab6773a3b3340bf7126667bfe754a0c12968f6007 |
+
+Slot 6 was consumed by deliberate invalid source and never reused. Sanitization
+retains all actual MCP arguments and structured results; duplicate text was checked
+equal then omitted. Auth/cookies, unrelated settings, agent narration and stderr
+are excluded. Credential-pattern and JSON checks pass.
+
+Final commands: `python3 scripts/verify-phase01-demo.py` passes all recorded-call,
+arithmetic, failure, source-hash, continuity and isolation/cleanup assertions.
+`mix test test/integration/phase01_runtime_test.exs --warnings-as-errors` passes
+28 tests; `mix check` passes 2 doctests and 151 tests, strict Credo, Doctor 100%
+documentation/typespec coverage and Dialyzer. Local Markdown links, JSON examples,
+Generated syntax, shell syntax and `git diff --check` pass; `.githooks` remains
+active for the final checkpoint. The local elixir-mixir MCP registration was added
+and listed successfully; its runtime container is intentionally cleaned up.
+
 ## Acceptance status
 
-| Criteria | Current evidence | Remaining |
+| Criterion | Authoritative evidence | Status |
 | --- | --- | --- |
-| A01 | Real HTTP initialize, seven-tool discovery and independent BEAM | Actual Codex connection transcript |
-| A02 | Bounded immutable definition through HTTP | Actual Codex creation transcript |
-| A03 | Loaded exports/BEAM/hash, immutable registry and actual HTTP define | Verified automated substrate |
-| A04 | Registry, DynamicSupervisor and HTTP define/start/inspect/stop | Verified automated substrate |
-| A05 | HTTP invocation, bounded state/history, revisions and failure preservation | Actual Codex observations |
-| A06 | Two-worker arithmetic and observed/pending paginated topology, including evolution | Actual Codex creation/connection transcript |
-| A07 | HTTP active artifact changes and different behavior after replacement | Actual Codex replacement transcript |
-| A08 | Equal HTTP PIDs and unit monitor with no DOWN across normal replacement | Actual Codex PID observation |
-| A09 | Exact compatible state; explicit schema and reverse migration | Actual Codex state observation |
-| A10 | Rejected definitions preserve active artifact/state; old callback still works | Verified automated substrate |
-| A11 | Ten migration failure modes preserve PID/artifact/state/revisions | Verified automated substrate |
-| A12 | Actual kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
-| A13 | Physical HTTP disconnect/replay preserves one invoke/effect/replacement; same BEAM | Actual fresh Codex reconnect transcript |
-| A14 | Loopback binding/config/header checks and local independent runtime | Isolated deployment and actual local demonstration |
+| A01 | Actual initial Codex MCP inspection, then a second fresh CLI process | Verified |
+| A02 | Seven successful actual Codex defines; original source and recomputed hashes | Verified |
+| A03 | Actual compile outcomes plus loaded-export/BEAM/immutable-registry tests | Verified |
+| A04 | Actual starts and logical IDs/PIDs; Registry/DynamicSupervisor unit/HTTP checks | Verified |
+| A05 | Actual counter invocation/state observations, backed by bounded inspection tests | Verified |
+| A06 | Actual counter/aggregate creation, emitted arithmetic and observed topology | Verified |
+| A07 | Three actual replacements with changed callback behavior/active artifacts | Verified |
+| A08 | Same actual counter PID across replacements; unit monitor observes no DOWN | Verified |
+| A09 | Actual same-schema retention and explicit v4 schema migration; reverse-migration tests | Verified |
+| A10 | Actual rejected source followed by unchanged active snapshot and compiler/HTTP tests | Verified |
+| A11 | Actual deliberate migration failure preserves all active fields; ten automated modes | Verified |
+| A12 | Automated actual host kills, peer/MCP survival and bounded recovery; demo callback rejection isolation | Verified |
+| A13 | Actual client exit/new thread with exact live state/PID/artifact/generation equality; HTTP accepted-work replay tests | Verified |
+| A14 | Local constrained container, loopback listener, actual local MCP endpoint and no host mounts | Verified |
 
-Isolated container/release setup and the actual Codex transcript remain pending.
-No worker/domain behavior is seeded in production kernel source. Phase 1 is not
-complete until the final task proves its separate demonstration requirements.
+Phase 1 is complete. State/artifacts/history/effects remain in memory, host crashes
+rerun init, and kernel/BEAM restart loses the application. Generated code retains
+BEAM privileges; host networking permits network access. Strong hostile-code
+isolation, durable recovery/outbox, remote deployment and an autonomous controller
+remain outside Phase 1.

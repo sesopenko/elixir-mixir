@@ -1,0 +1,216 @@
+{
+  "runtime_summary": {
+    "api_version": "1",
+    "generation": 23,
+    "health": "ok",
+    "worker_count": 3,
+    "edge_count": 2,
+    "effects": {
+      "pending": 0,
+      "reserved": 0,
+      "timers": 0
+    },
+    "topology": [
+      {
+        "from": "counter",
+        "to": "aggregate",
+        "count": 3,
+        "pending": 0
+      },
+      {
+        "from": "probe",
+        "to": "probe",
+        "count": 1,
+        "pending": 0
+      }
+    ],
+    "next_cursor": null,
+    "truncated": false
+  },
+  "counter": {
+    "api_version": "1",
+    "worker_id": "counter",
+    "status": "running",
+    "pid": "#PID<0.1559.0>",
+    "generation": 23,
+    "artifact_id": "artifact_5_d71bb2c7c170a3e923301384e4aa53e611b1c928224b10192f35a959953d5783",
+    "artifact": {
+      "contract_version": "elixir_mixir.behavior.v1",
+      "id": "artifact_5_d71bb2c7c170a3e923301384e4aa53e611b1c928224b10192f35a959953d5783",
+      "logical_name": "counter",
+      "revision": 4,
+      "source_hash": "d71bb2c7c170a3e923301384e4aa53e611b1c928224b10192f35a959953d5783",
+      "state_schema": 2
+    },
+    "implementation_version": 4,
+    "worker_revision": 4,
+    "state_revision": 6,
+    "state": {
+      "schema": 2,
+      "counter": {
+        "count": 7,
+        "target": "aggregate"
+      }
+    },
+    "restart_count": 0,
+    "restart_limit": 3,
+    "restart_window_ms": 10000
+  },
+  "aggregate": {
+    "api_version": "1",
+    "worker_id": "aggregate",
+    "status": "running",
+    "pid": "#PID<0.1581.0>",
+    "generation": 23,
+    "artifact_id": "artifact_2_c9846906c6f33152023a404a4b539591e498affc99b0efc54380a4c33761fae6",
+    "artifact": {
+      "contract_version": "elixir_mixir.behavior.v1",
+      "id": "artifact_2_c9846906c6f33152023a404a4b539591e498affc99b0efc54380a4c33761fae6",
+      "logical_name": "aggregate",
+      "revision": 1,
+      "source_hash": "c9846906c6f33152023a404a4b539591e498affc99b0efc54380a4c33761fae6",
+      "state_schema": 1
+    },
+    "implementation_version": 1,
+    "worker_revision": 1,
+    "state_revision": 4,
+    "state": {
+      "events": 3,
+      "total": 12
+    },
+    "restart_count": 0,
+    "restart_limit": 3,
+    "restart_window_ms": 10000
+  },
+  "probe": {
+    "status": "stopped",
+    "pid": null,
+    "generation": 23,
+    "artifact_id": "artifact_8_21227456cebaf383ea71072ab6773a3b3340bf7126667bfe754a0c12968f6007",
+    "definition_retained": true,
+    "worker_revision": 2,
+    "state_revision": 3,
+    "state_omitted": true
+  },
+  "history_checks": {
+    "source": "Fresh runtime_events observations, including unfiltered compilation history",
+    "generation": 23,
+    "oldest_sequence": 1,
+    "last_sequence": 56,
+    "records": 56,
+    "gap": false,
+    "dropped": 0,
+    "truncated": 0,
+    "successful_replacements": [
+      {
+        "sequence": 10,
+        "request_id": "demo-replace-v2",
+        "revision": 2,
+        "migration_result": "preserved"
+      },
+      {
+        "sequence": 26,
+        "request_id": "demo-replace-v3",
+        "revision": 3,
+        "migration_result": "preserved"
+      },
+      {
+        "sequence": 39,
+        "request_id": "demo-replace-v4",
+        "revision": 4,
+        "migration_result": "migrated"
+      }
+    ],
+    "failures": [
+      {
+        "sequence": 35,
+        "request_id": "demo-reject-zero",
+        "code": "CALLBACK_FAILED"
+      },
+      {
+        "sequence": 37,
+        "request_id": "demo-reject-negative",
+        "code": "CALLBACK_FAILED"
+      },
+      {
+        "sequence": 40,
+        "request_id": "demo-invalid-source",
+        "code": "COMPILE_FAILED"
+      },
+      {
+        "sequence": 42,
+        "request_id": "demo-failed-migration",
+        "code": "MIGRATION_FAILED",
+        "cause": "CALLBACK_FAILED",
+        "reason": "deliberate migration failure"
+      },
+      {
+        "sequence": 43,
+        "request_id": "demo-stale-revision",
+        "code": "REVISION_CONFLICT"
+      }
+    ],
+    "counter_to_aggregate_correlated_deliveries": {
+      "confirmed": true,
+      "delivery_sequences": [
+        17,
+        24,
+        33
+      ],
+      "aggregate_state_revision_sequences": [
+        16,
+        23,
+        32
+      ]
+    },
+    "probe": {
+      "request_id": "demo-trigger-probe",
+      "log": {
+        "sequence": 49,
+        "effect_id": "a6e56e7c45ba7c050cdd76123a1c7c707786c36918f2bfeb9eb6ff20552e08f9",
+        "level": "info",
+        "message": "phase1-probe",
+        "metadata": {
+          "kind": "demo"
+        }
+      },
+      "scheduled_delivery": {
+        "schedule_sequence": 51,
+        "effect_id": "a98eaf0b1b931716eff9623751722bcdf6cc0134af0a47377465589761df9dc8",
+        "delay_ms": 25,
+        "to": "probe",
+        "accepted_sequence": 53,
+        "state_revision_3_sequence": 54,
+        "delivery_sequence": 55,
+        "code": "ok"
+      },
+      "log_and_schedule_have_distinct_effect_ids": true,
+      "stopped": {
+        "sequence": 56,
+        "request_id": "demo-stop-probe",
+        "outcome": "stopped"
+      },
+      "seen_before_stop_directly_readable": false,
+      "note": "Stopped state is omitted; history confirms one scheduled self-delivery but does not expose the historical seen value."
+    }
+  },
+  "continuity_assertions": {
+    "counter_original_pid": true,
+    "counter_artifact_and_revisions": true,
+    "counter_explicit_schema_2_count_7": true,
+    "aggregate_original_pid": true,
+    "aggregate_artifact_and_revisions": true,
+    "aggregate_events_3_total_12": true,
+    "both_workers_running": true,
+    "probe_stopped_definition_retained": true,
+    "no_pending_effects_reserved_effects_or_timers": true,
+    "topology_matches_checkpoint": true,
+    "history_matches_checkpoint": true,
+    "all_observed_generations_equal_checkpoint_23": true,
+    "final_summary_equals_initial_summary": true,
+    "all_requested_identity_state_revision_generation_continuity_assertions_pass": true
+  },
+  "mismatches": [],
+  "runtime_left_running": true,
+  "mutations_performed": false
+}

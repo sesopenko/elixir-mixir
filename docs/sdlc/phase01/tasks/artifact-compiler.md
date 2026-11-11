@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -23,9 +24,9 @@ Valid template source becomes a uniquely addressed inactive immutable artifact w
 
 ## Prerequisites and required outputs
 
-Prerequisite IDs: kernel-api
+Prerequisite IDs: mcp-bootstrap
 
-- [kernel-api](kernel-api.md): bounded values/errors, request ledger, Manager sequencing/status.
+- [mcp-bootstrap](mcp-bootstrap.md): Manager foundation, common MCP schemas/envelopes, independent BEAM fixture and reusable HTTP client.
 
 A prerequisite is complete only after its focused verification, full `mix check`,
 and working commit through the installed hook. Read the plan's resolved contracts;
@@ -36,6 +37,9 @@ this task refines those contracts and does not authorize architectural alternati
 Create `ElixirMixir.Behavior` and runtime Compiler/ArtifactRegistry. Implement all four callback signatures from the plan, including mandatory migrate and state_schema, with executable examples and documented JSON constraints. Start compiler Task.Supervisor and registry before Manager.
 Add Manager.define/1 with request-ledger semantics. Reserve a non-reusable lifetime slot before parsing; preallocate the 128 fixed generated module names. Validate one outer Generated template, rewrite its alias, reject nested/dynamic module construction, compile quoted AST in an unlinked monitored task with a synthetic filename and Code.with_diagnostics. Bound source, attempts, duration, diagnostics, and compiler-task heap (64 MiB compiler, 8 MiB callback; convert bytes to VM words for max_heap_size before user work). Validate exactly one output module, exported callbacks, and bounded positive schema callback.
 Registry is append-only: store source/hash/BEAM/module/logical name/revision/contract/schema and diagnostics only on success. Consume failed slots and never reuse or purge artifacts in Phase 1. Compilation failure must neither activate code nor advance generation. Do not add dynamic dependency resolution or write generated source into lib/. Record compile events through a minimal bounded EventLog introduced here, reused in runtime-inspection.
+
+Add MCP.Tools.RuntimeDefine in this same checkpoint, delegating only to Manager.define/1 with the plan's exact schema, request ID and stable error envelope. Extend tools/list to exactly inspect/define and add tests in test/mcp/tools_test.exs using the shared validation/response helpers. Extend server instructions and docs with the currently supported contract; no downstream worker tool stubs.
+Start test/integration/phase01_runtime_test.exs with the first generated-source journey through real HTTP: valid define, invalid source, absent callbacks, warning/timeout/bounds failures, same request replay and different-payload conflict, artifact/revision/hash identity, and bounded text/structured errors. Confirm a new HTTP session sees the same artifact registry/generation and replays define without a second compile. Inspect immutable registry state through test controls where no artifact-specific public query exists; do not add a testing tool.
 
 ## Interfaces, inputs, outputs and errors
 
@@ -61,12 +65,13 @@ Run from the repository root after implementing this task:
 
 ```sh
 mix test test/runtime/artifact_compiler_test.exs --warnings-as-errors
+mix test test/mcp test/integration --warnings-as-errors
 mix check
 git diff --check
 git config --get core.hooksPath
 ```
 
-Valid artifacts load once and remain immutable/inactive; every invalid definition leaves prior artifacts intact; attempts, module slots, deadline and diagnostics remain bounded.
+Exactly two tools work over HTTP, including real define/replay/error cases. Valid artifacts load once and remain immutable/inactive; every invalid definition leaves prior artifacts intact; attempts, module slots, deadline and diagnostics remain bounded.
 
 The hook path must be `.githooks`; if absent, run
 `./scripts/install-git-hooks.sh` before committing. All tests and the full quality
@@ -75,7 +80,7 @@ commands/results below when executing; do not mark this planned task complete no
 
 ## Documentation and intended commit scope
 
-Document template source, callback behavior, source rewriting, failure slot consumption, and in-VM isolation limitations in `docs/runtime-api.md`. Commit contract/compiler/registry/minimal EventLog and tests as `feat(runtime): bound generated code and retain immutable artifacts`.
+Document template source, callback behavior, source rewriting, failure slot consumption, and in-VM isolation limitations in `docs/runtime-api.md`. Update README/tool examples and docs/sdlc/phase01/verification.md with this task's HTTP results. Commit contract/compiler/registry/minimal EventLog, define adapter and unit/HTTP tests as `feat(runtime): bound generated code and retain immutable artifacts`.
 
 Use a Conventional Commit header, blank line, and nonempty explanatory body stating
 why this capability was needed and why the approach fits. Stage only this task's
@@ -86,7 +91,7 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 - [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
 - [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
 - [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
 - [ ] Review diff and stage only the intended task changes, tests and documentation.
 - [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.

@@ -4,12 +4,16 @@ This records verification of the planning documents, not implementation of Phase
 The governing [assignment](../../prompts/phase01-planning.md) is preserved verbatim;
 its SHA-256 is `10a4c96a842b7201f6298541ebc9fc486a5a17e202384f242d666fddc23c3b68`.
 The [plan](plan.md) and ten task documents remain pending implementation.
+Approved [amendment 01](../../prompts/phase01-planning-amendment-01.md) splits workers
+into three tasks and requires real-HTTP checks within each feature checkpoint.
+The original snapshot and its checksum are unchanged.
 
 ## Structural verification
 
 Run this from the repository root. It checks exact task/node/edge sets, prerequisite
 agreement, acyclicity, execution order, task recovery/gate sections, local links,
-all fourteen ADR acceptance rows, and inclusion of the generated recovery rule.
+all fourteen ADR acceptance rows, inclusion of the generated recovery rule, amendment
+links, feature ownership of all seven tools, and continuous HTTP verification gates.
 
 ```sh
 python3 - <<'PY'
@@ -65,18 +69,47 @@ assert rule in Path('AGENTS.md').read_text()
 snapshot=Path('docs/prompts/phase01-planning.md').read_bytes()
 assert snapshot.startswith(b'# Phase 1 planning assignment for the build agent\n')
 assert snapshot.endswith(b'Stop after delivering the committed plan; runtime implementation is a subsequent assignment.\n')
-print(f'PASS: {len(order)} tasks; {len(nodes)} unique graph nodes; {len(edges)} matching edges; acyclic; deterministic order valid; {checked} relative links; 14/14 acceptance rows; recovery rule generated.')
+assert order==['kernel-api','mcp-bootstrap','artifact-compiler','worker-start',
+ 'worker-invoke','worker-recovery','event-effects','runtime-inspection',
+ 'live-replacement','codex-demo']
+assert not ({'worker-hosts','mcp-tools','runtime-integration'} & set(order))
+amendment=Path('docs/prompts/phase01-planning-amendment-01.md')
+assert amendment.exists()
+for id in order:
+ text=(base/'tasks'/f'{id}.md').read_text()
+ assert 'phase01-planning-amendment-01.md' in text
+ if id not in ['kernel-api','mcp-bootstrap','codex-demo']:
+  assert 'mix test test/mcp test/integration --warnings-as-errors' in text,id
+ if id!='kernel-api':
+  assert 'HTTP' in text and 'growing real-HTTP integration suite' in text,id
+owners={'mcp-bootstrap':['runtime_inspect'], 'artifact-compiler':['runtime_define'],
+ 'worker-start':['runtime_start','runtime_stop'], 'worker-invoke':['runtime_invoke'],
+ 'runtime-inspection':['runtime_events'], 'live-replacement':['runtime_replace']}
+assert sum(len(names) for names in owners.values())==7
+for id,names in owners.items():
+ text=(base/'tasks'/f'{id}.md').read_text()
+ assert all(name in text for name in names),(id,names)
+assert hashlib.sha256(snapshot).hexdigest()=='10a4c96a842b7201f6298541ebc9fc486a5a17e202384f242d666fddc23c3b68'
+print(f'PASS: {len(order)} tasks; {len(nodes)} unique graph nodes; {len(edges)} matching edges; acyclic; deterministic order valid; {checked} relative links; 14/14 acceptance rows; recovery rule generated; amendment linked in all tasks; 7 tools owned by feature tasks; continuous HTTP gates present.')
 print('Snapshot SHA-256:',hashlib.sha256(snapshot).hexdigest())
 PY
 ```
 
-Result on 2026-11-10: PASS — 10 task documents, 10 unique graph nodes, 10 matching
-dependency edges, acyclic graph, valid deterministic order, 43 relative links,
-14/14 acceptance rows, and recovery rule present in generated AGENTS.md.
+Result on 2026-11-10: PASS — 10 task documents, 10 unique graph nodes, 9 matching
+dependency edges, acyclic graph, valid deterministic order, 53 relative links,
+14/14 acceptance rows, and recovery rule present in generated AGENTS.md. All task
+documents link the approved amendment, all seven MCP tools have an owning feature
+task, and all HTTP-capable feature gates run their growing integration suite.
 
 ## Review and quality verification
 
-- Reread AGENTS.md, CONTRIBUTING.md, ADR-001, assignment snapshot, plan and task drafts.
+- Reread AGENTS.md, CONTRIBUTING.md, ADR-001, assignment snapshot, approved amendment,
+  plan and task drafts.
+- Replaced worker-hosts with worker-start, worker-invoke and worker-recovery;
+  reassigned all former mcp-tools/runtime-integration work to feature checkpoints.
+  Reviewed early discovery counts, shared fixture ownership, callback failures,
+  crash isolation, restart budgets, resource limits and reconnect/replay scenarios.
+  Updated acceptance mappings and prerequisite graph; no runtime code changed.
 - Reviewed all fourteen acceptance mappings against ADR section 9.4 and all seven
   tool contracts against section 7. Reviewed callback/timeout/restart/resource/revision
   and effect contracts for tasks that can pass using completed prerequisites alone.
@@ -93,7 +126,8 @@ dependency edges, acyclic graph, valid deterministic order, 43 relative links,
 - The normal pre-commit hook must rerun the complete gate for the planning commit.
   Its successful completion is evidenced by the resulting commit.
 
-Only snapshot, planning documents, recovery rule and regenerated AGENTS.md belong to
-this checkpoint. No runtime feature or domain application is implemented. Untracked
+The original checkpoint added the snapshot, planning documents, recovery rule and
+regenerated AGENTS.md. This amendment checkpoint changes only planning documents
+and adds the separately preserved amendment; the original snapshot/rules are unchanged. No runtime feature or domain application is implemented. Untracked
 scripts/codex.sh is unrelated and remains untouched. Automated runtime integration and
 the actual Codex demonstration are future tasks, not claimed evidence here.

@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -23,9 +24,9 @@ A fresh Codex session constructs and evolves the local counter/aggregator exclus
 
 ## Prerequisites and required outputs
 
-Prerequisite IDs: runtime-integration
+Prerequisite IDs: live-replacement
 
-- [runtime-integration](runtime-integration.md): passing real HTTP fault/reconnect suite and coverage record.
+- [live-replacement](live-replacement.md): all seven MCP tools with the incrementally passing HTTP lifecycle/fault/reconnect suite and coverage record.
 
 A prerequisite is complete only after its focused verification, full `mix check`,
 and working commit through the installed hook. Read the plan's resolved contracts;
@@ -49,7 +50,7 @@ struct types; do not lower Doctor/Credo/Dialyzer thresholds.
 
 ## Focused tests, integration checks and failure scenarios
 
-No unrelated code tests for documentation. Re-run the automated HTTP suite as a regression check. Verify image builds, runs unprivileged/read-only with only loopback listener, /health responds, and cleanup removes the disposable container. Inspect image/container config for mounts/capabilities/resource settings; record the commands and outcomes. Validate Markdown links and executable command examples. In the actual Codex transcript, verify all A01–A14 claims, exact aggregate arithmetic, migration failures preserving state, and reconnect identity. Document demonstration evidence separately from ExUnit evidence.
+No unrelated code tests for documentation. Reuse the incrementally built automated HTTP suite as a regression check; no scenario required by an earlier feature may be deferred to this task. Verify image builds, runs unprivileged/read-only with only loopback listener, /health responds, and cleanup removes the disposable container. Inspect image/container config for mounts/capabilities/resource settings; record the commands and outcomes. Validate Markdown links and executable command examples. In the actual Codex transcript, verify all A01–A14 claims, exact aggregate arithmetic, migration failures preserving state, and reconnect identity. Document demonstration evidence separately from ExUnit evidence.
 
 Tests added here must pass with completed prerequisites alone. Do not reference
 unfinished downstream modules or add intentionally failing tests. For unexpected
@@ -95,7 +96,7 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 - [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
 - [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
 - [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
 - [ ] Review diff and stage only the intended task changes, tests and documentation.
 - [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.

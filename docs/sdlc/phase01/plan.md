@@ -3,7 +3,9 @@
 Status: planned; runtime implementation has not begun. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Assignment: [complete immutable snapshot](../../prompts/phase01-planning.md).
-This planning checkpoint contains no runtime features.
+Approved amendment: [smaller worker tasks and continuous HTTP integration](../../prompts/phase01-planning-amendment-01.md).
+This planning checkpoint contains no runtime features. Read the amendment alongside
+the original snapshot; it changes task boundaries and verification timing.
 
 ## Starting and recovering work
 
@@ -55,39 +57,79 @@ matching prerequisite list.
 | Order | Task ID and document | Outcome | Prerequisites | Milestone |
 | --- | --- | --- | --- | --- |
 | 1 | [kernel-api](tasks/kernel-api.md) | Bounded values, errors, request ledger, manager status | none | 1 |
-| 2 | [mcp-bootstrap](tasks/mcp-bootstrap.md) | Independent localhost HTTP MCP status endpoint | kernel-api | 1 |
-| 3 | [artifact-compiler](tasks/artifact-compiler.md) | Contract, immutable revisions, bounded compiler | kernel-api | 2 |
-| 4 | [worker-hosts](tasks/worker-hosts.md) | Supervised logical workers, invocation, lifecycle | artifact-compiler | 2 |
-| 5 | [event-effects](tasks/event-effects.md) | Emit, delayed delivery, structured logs | worker-hosts | 3 |
-| 6 | [runtime-inspection](tasks/runtime-inspection.md) | Topology, bounded history, health diagnostics | event-effects | 3 |
-| 7 | [live-replacement](tasks/live-replacement.md) | Atomic host migration and revision protection | runtime-inspection | 4 |
-| 8 | [mcp-tools](tasks/mcp-tools.md) | All seven tools over the existing HTTP endpoint | mcp-bootstrap, live-replacement | 4 |
-| 9 | [runtime-integration](tasks/runtime-integration.md) | Real HTTP lifecycle, fault, and reconnect suite | mcp-tools | 4 |
-| 10 | [codex-demo](tasks/codex-demo.md) | Isolated local setup and actual Codex evidence | runtime-integration | 4 |
+| 2 | [mcp-bootstrap](tasks/mcp-bootstrap.md) | Localhost HTTP MCP status and reusable integration fixtures | kernel-api | 1 |
+| 3 | [artifact-compiler](tasks/artifact-compiler.md) | Contract, immutable artifacts, define tool and HTTP tests | mcp-bootstrap | 2 |
+| 4 | [worker-start](tasks/worker-start.md) | Supervised logical worker startup, inspection and stop over HTTP | artifact-compiler | 2 |
+| 5 | [worker-invoke](tasks/worker-invoke.md) | Bounded event transitions, invoke tool and HTTP tests | worker-start | 2 |
+| 6 | [worker-recovery](tasks/worker-recovery.md) | Crash isolation, restart budgets and HTTP continuity | worker-invoke | 2 |
+| 7 | [event-effects](tasks/event-effects.md) | Emit, delayed delivery and logs tested through HTTP | worker-recovery | 3 |
+| 8 | [runtime-inspection](tasks/runtime-inspection.md) | Topology, bounded history and events tool over HTTP | event-effects | 3 |
+| 9 | [live-replacement](tasks/live-replacement.md) | Atomic migration, replace tool and HTTP failure/reconnect tests | runtime-inspection | 4 |
+| 10 | [codex-demo](tasks/codex-demo.md) | Isolated local setup and actual Codex evidence | live-replacement | 4 |
 
 ```mermaid
 flowchart TD
     kernel-api["kernel-api"]
     mcp-bootstrap["mcp-bootstrap"]
     artifact-compiler["artifact-compiler"]
-    worker-hosts["worker-hosts"]
+    worker-start["worker-start"]
+    worker-invoke["worker-invoke"]
+    worker-recovery["worker-recovery"]
     event-effects["event-effects"]
     runtime-inspection["runtime-inspection"]
     live-replacement["live-replacement"]
-    mcp-tools["mcp-tools"]
-    runtime-integration["runtime-integration"]
     codex-demo["codex-demo"]
     kernel-api --> mcp-bootstrap
-    kernel-api --> artifact-compiler
-    artifact-compiler --> worker-hosts
-    worker-hosts --> event-effects
+    mcp-bootstrap --> artifact-compiler
+    artifact-compiler --> worker-start
+    worker-start --> worker-invoke
+    worker-invoke --> worker-recovery
+    worker-recovery --> event-effects
     event-effects --> runtime-inspection
     runtime-inspection --> live-replacement
-    mcp-bootstrap --> mcp-tools
-    live-replacement --> mcp-tools
-    mcp-tools --> runtime-integration
-    runtime-integration --> codex-demo
+    live-replacement --> codex-demo
 ```
+
+### Continuous HTTP integration
+
+The former worker-hosts task is replaced by worker-start, worker-invoke and
+worker-recovery. The former mcp-tools and runtime-integration tasks are absorbed
+into the feature tasks; no adapter or automated integration work is deferred to
+an end-of-phase checkpoint. There are still ten tasks overall.
+
+mcp-bootstrap creates the reusable real-TCP MCP client and independent BEAM fixture.
+From artifact-compiler onward, every runtime feature includes its thin MCP adapter
+when applicable, focused unit tests, and new real-HTTP scenarios in
+`test/integration/phase01_runtime_test.exs`. Extend the same counter/aggregator journey
+incrementally. Only use APIs available at the current checkpoint. Update tools/list
+expectations as tools arrive; never advertise stubs for unfinished operations.
+
+| Owning task | Newly exposed tool or behavior | Required HTTP increment |
+| --- | --- | --- |
+| mcp-bootstrap | runtime_inspect, shared framing/errors | Initialize/list/inspect, ingress limits, client disconnect/reconnect against independent BEAM |
+| artifact-compiler | runtime_define | Valid/invalid source, missing callbacks, immutable artifact, replay/conflict and bounded errors |
+| worker-start | runtime_start, runtime_stop; worker inspect | Define/start/inspect/stop, duplicate ID/init errors, state retained across client reconnect |
+| worker-invoke | runtime_invoke | Increment/inspect, malformed/timeout transition, retry after disconnect commits one increment |
+| worker-recovery | Existing start/stop/invoke/inspect strengthened | Real host kill, healthy peer and endpoint survive, bounded restart, stop/restart races |
+| event-effects | Existing invoke gains effects | Two workers, exact aggregate result, timers/logs, replay after disconnect gives one delivery, loop/capacity limits |
+| runtime-inspection | runtime_events; full inspect | Correlated history, topology, pagination/gaps, state omission and maximum wire-size bounds |
+| live-replacement | runtime_replace; all seven now complete | Same PID/state, explicit migration, invalid candidate/failed migration/conflict, replacement reconnect/replay |
+| codex-demo | Actual Codex evidence | Reuse passing automated suite; run the separate real Codex demonstration |
+
+Common response/schema validation, versioning, `isError` envelopes, unknown-key
+rejection, and wire-size accounting begin in mcp-bootstrap and are extended with
+each tool. Each feature commit updates `docs/runtime-api.md`, the advertised tool
+list, and `docs/sdlc/phase01/verification.md` with its automated evidence, keeping
+actual Codex evidence pending until codex-demo. Run the growing HTTP suite in every
+feature's task gate and in `mix check`. Test fixtures own cleanup on failure and
+need no Docker, Codex credentials, or external service. Generated fixture code stays
+under test/support, never lib/.
+
+The worker-start checkpoint treats an unexpected host death as a retained failed
+definition and permits explicit start; it does not claim automatic crash recovery.
+worker-invoke adds bounded event callbacks with no effects. worker-recovery then
+adds the final per-worker automatic restart budget. Each intermediate checkpoint
+has complete tests for its supported behavior and remains usable over HTTP.
 
 ## Resolved implementation contracts
 
@@ -302,8 +344,8 @@ commit so an oversized reply never becomes a reported success that cannot be enc
 ### MCP surface
 
 Seven tool names exactly as ADR section 7; no eighth status tool. Initially expose
-only `runtime_inspect` in mcp-bootstrap. Add the other six together in mcp-tools after
-all corresponding Manager operations exist. Use explicit component names and schemas,
+only `runtime_inspect` in mcp-bootstrap. Add each other tool in its owning feature
+task as listed in Continuous HTTP integration; all seven exist after live-replacement. Use explicit component names and schemas,
 reject unknown argument keys; do not rely solely on permissive Peri coercion.
 
 | Tool | Required inputs | Optional inputs | Successful result fields beyond common envelope |
@@ -333,7 +375,8 @@ Their Elixir requirements are respectively `~> 1.18`, `~> 1.10`, `~> 1.13`,
 therefore explicitly enable it), Finch `~> 0.19`, Peri `~> 0.4`, Telemetry `~> 1.2`;
 Bandit also requires Plug `~> 1.18` and allows Telemetry 1.x. Jason's Decimal
 integration is optional and compatible with existing Decimal. Resolve transitive
-versions and commit `mix.lock` in mcp-bootstrap; dependency compilation and full
+versions and commit `mix.lock` in the owning task: Jason/:crypto in kernel-api
+before its JSON/hash helpers, and Hermes/Plug/Bandit in mcp-bootstrap; dependency compilation and full
 `mix check` on OTP 27 prove executable compatibility. No claim that resolution has
 already run in this documentation checkpoint. Do not add Phoenix or a new HTTP test
 client: OTP `:httpc`/`:inets` in test support suffice. Do not change pins silently;
@@ -417,27 +460,30 @@ only the actual demonstration establishes the claims specifically about Codex.
 
 | # | Acceptance criterion | Implementation tasks | Verification evidence |
 | --- | --- | --- | --- |
-| A01 | Codex connects to running runtime through MCP | mcp-bootstrap, mcp-tools, codex-demo | HTTP initialize/tools/list test; actual Codex tool call transcript |
-| A02 | Codex creates valid module using MCP | artifact-compiler, mcp-tools, codex-demo | define HTTP test; Codex define transcript |
-| A03 | Runtime compiles and loads module | artifact-compiler, runtime-integration | exports/hash/registry assertions and HTTP define |
-| A04 | Supervised worker starts with logical ID | worker-hosts, mcp-tools, runtime-integration | DynamicSupervisor membership + Registry lookup + returned ID |
-| A05 | Codex invokes and inspects state | worker-hosts, runtime-inspection, codex-demo | invoke/inspect HTTP assertions and Codex observations |
-| A06 | Codex creates second worker and connects both | event-effects, runtime-integration, codex-demo | aggregator state and topology edge after emit; Codex two-worker transcript |
-| A07 | Running implementation replaced | live-replacement, mcp-tools, codex-demo | active artifact and changed reply asserted after replacement |
-| A08 | Target retains PID on normal replacement | live-replacement, runtime-integration, codex-demo | monitor/PID equality before and after, no DOWN |
-| A09 | State preserved or explicitly migrated | live-replacement, runtime-integration, codex-demo | same-schema equality plus different-schema migration assertions |
-| A10 | Failed compilation does not alter active implementation | artifact-compiler, runtime-integration | invalid source/missing callback then old worker still responds unchanged |
-| A11 | Failed migration does not corrupt worker | live-replacement, runtime-integration | exception/error/invalid/timeout migration retains PID/artifact/state/revisions |
-| A12 | Crashing worker does not terminate MCP | worker-hosts, runtime-integration | kill host, healthy peer responds, HTTP MCP remains available, bounded restart |
-| A13 | Codex disconnect/reconnect while runtime alive | runtime-integration, codex-demo | independent HTTP clients and actual fresh Codex session see same runtime/PIDs/state |
-| A14 | Entire demonstration local | mcp-bootstrap, codex-demo | loopback socket/config tests; local isolated demo transcript and startup evidence |
+| A01 | Codex connects to running runtime through MCP | mcp-bootstrap, codex-demo | Early HTTP initialize/tools/list/inspect test; actual Codex transcript |
+| A02 | Codex creates valid module using MCP | artifact-compiler, codex-demo | Define HTTP test in compiler checkpoint; Codex define transcript |
+| A03 | Runtime compiles and loads module | artifact-compiler | Exports/hash/registry assertions plus real HTTP define |
+| A04 | Supervised worker starts with logical ID | worker-start | Supervisor membership, Registry lookup and define/start/inspect HTTP journey |
+| A05 | Codex invokes and inspects state | worker-invoke, runtime-inspection, codex-demo | Early increment/inspect HTTP assertions; full snapshot checks and Codex observations |
+| A06 | Codex creates second worker and connects both | event-effects, runtime-inspection, codex-demo | HTTP counter/aggregator arithmetic, then topology checks in inspection checkpoint; Codex transcript |
+| A07 | Running implementation replaced | live-replacement, codex-demo | Same-task HTTP replacement confirms active artifact and changed reply |
+| A08 | Target retains PID on normal replacement | live-replacement, codex-demo | HTTP before/after PID equality plus kernel monitor with no DOWN |
+| A09 | State preserved or explicitly migrated | live-replacement, codex-demo | Same-task HTTP same-schema equality and different-schema migration |
+| A10 | Failed compilation does not alter active implementation | artifact-compiler, worker-invoke, live-replacement | Compiler HTTP rejection/immutable registry; invocation checkpoint checks invalid define leaves live worker unchanged |
+| A11 | Failed migration does not corrupt worker | live-replacement | Same-task HTTP error/invalid/exception/timeout migration retains PID/artifact/state/revisions |
+| A12 | Crashing worker does not terminate MCP | worker-start, worker-recovery | Early host death leaves HTTP alive; recovery checkpoint proves peer isolation and restart bound |
+| A13 | Codex disconnect/reconnect while runtime alive | mcp-bootstrap, worker-start, worker-invoke, event-effects, live-replacement, codex-demo | Successively verify BEAM, worker state, one increment/effect/replacement across HTTP sessions; actual fresh Codex session |
+| A14 | Entire demonstration local | mcp-bootstrap, codex-demo | Loopback socket/config tests; isolated local startup and actual demo evidence |
 
-Additional required checks: missing callbacks/invalid source (artifact-compiler),
-revision conflicts and queued event ordering (live-replacement), timeouts/restart
-budgets (worker-hosts), timer saturation/hop limits (event-effects), bounded state,
-request IDs, responses and history (kernel-api, runtime-inspection, mcp-tools),
-real disconnect during mutation (runtime-integration). Tests inspect actual state
-and lifecycle as well as response codes. No tests may depend on unfinished tasks.
+Additional required checks are owned when their behavior arrives: missing callbacks
+and invalid source (artifact-compiler), state/config/worker bounds (worker-start),
+event/reply limits and timeouts (worker-invoke), actual host kill and restart exhaustion
+(worker-recovery), timer/effect/loop capacity and one-delivery replay (event-effects),
+bounded history/topology/response pagination (runtime-inspection), and revision races,
+queued event ordering and replacement reconnect (live-replacement). Request IDs,
+response limits, protocol framing and schema validation are exercised with every new
+tool, starting in mcp-bootstrap. Unit and HTTP tests inspect actual state/lifecycle
+as well as response codes and pass with only committed prerequisites.
 
 ## Mandatory completion gate
 
@@ -447,7 +493,9 @@ must follow this sequence:
 
 1. Complete code changes and focused unit tests, including relevant failure paths.
    For documentation-only tasks verify documents; do not invent unrelated code tests.
-2. Pass focused tests and all task-specific verification.
+2. Pass focused tests and all task-specific verification, including the growing
+   real-HTTP integration suite from mcp-bootstrap onward. Every new capability
+   includes its HTTP scenarios in the same commit; no deferred integration task.
 3. Pass the complete `mix check` gate and resolve every finding.
 4. Commit only the verified task, tests, and relevant documentation using a Conventional
    Commit header, blank line, and nonempty explanatory body, with installed pre-commit
@@ -464,7 +512,7 @@ the user for direction. Do not lower quality thresholds or suppress warnings.
 ## Completion and delivery
 
 Phase 1 is complete only when all ten task checkpoints exist, full `mix check` passes,
-all A01–A14 evidence is present, all seven tools work over real HTTP, and the actual
+all A01–A14 evidence is present, all seven tools have passing incremental real-HTTP coverage, and the actual
 Codex demonstration/reconnect transcript is committed. Passing an ExUnit HTTP scenario
 alone is insufficient. Record limitations and any approved amendments explicitly.
 

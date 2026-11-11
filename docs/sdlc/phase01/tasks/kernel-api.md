@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -33,7 +34,7 @@ this task refines those contracts and does not authorize architectural alternati
 
 ## Concrete implementation steps and components
 
-Create `Runtime.Values`, `Runtime.Limits`, `Runtime.Error`, `Runtime.RequestLedger`, and `Runtime.Manager` under `lib/elixir_mixir/runtime/`. Add focused structs/types only where useful; document every public API and struct. Start Manager under the existing supervisor without removing the greeting API.
+Add the already-selected Jason 1.4.4 runtime dependency and :crypto application here, before using JSON byte validation or canonical SHA-256 hashing; resolve and commit mix.lock without moving development tooling into runtime dependencies. Create `Runtime.Values`, `Runtime.Limits`, `Runtime.Error`, `Runtime.RequestLedger`, and `Runtime.Manager` under `lib/elixir_mixir/runtime/`. Add focused structs/types only where useful; document every public API and struct. Start Manager under the existing supervisor without removing the greeting API.
 Implement the JSON/depth/byte checks and ID validation in the plan. Canonicalize request hashes without atomizing client data. Implement ledger admission, same-operation replay, ID conflict, expiration, and saturation with an injectable monotonic clock. Implement the mutation wrapper and test it with a kernel-owned test operation; do not expose fabricated runtime tools or successful placeholders for future features.
 Implement only `inspect_runtime/1` for empty status now. Manager provides internal sequencing/context helpers consumed by later operations; future public functions are introduced with their implementation. Configure defaults through application config and test overrides. Validate configurations at boot. Keep runtime generation changes explicit and testable.
 
@@ -75,7 +76,7 @@ commands/results below when executing; do not mark this planned task complete no
 
 ## Documentation and intended commit scope
 
-Update `CONTRIBUTING.md` for in-memory Manager status and limit configuration. Commit kernel helpers, manager startup, config, tests, and documentation as `feat(runtime): give mutations bounded and repeatable outcomes`.
+Update `CONTRIBUTING.md` for in-memory Manager status and limit configuration. Commit dependency/lockfile changes, kernel helpers, manager startup, config, tests, and documentation as `feat(runtime): give mutations bounded and repeatable outcomes`.
 
 Use a Conventional Commit header, blank line, and nonempty explanatory body stating
 why this capability was needed and why the approach fits. Stage only this task's

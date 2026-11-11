@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -33,9 +34,12 @@ this task refines those contracts and does not authorize architectural alternati
 
 ## Concrete implementation steps and components
 
-Add exactly pinned Hermes, Plug, Bandit, Jason dependencies from the plan, enable `:crypto`, fetch and lock compatible transitive dependencies. Check `mix deps.tree` and compiled APIs against the official published source references; do not adopt conflicting unversioned README examples. Keep quality dependencies development-only.
+Add exactly pinned Hermes, Plug and Bandit dependencies from the plan; retain Jason and :crypto from kernel-api. Fetch and lock compatible transitive dependencies. Check `mix deps.tree` and compiled APIs against the official published source references; do not adopt conflicting unversioned README examples. Keep quality dependencies development-only.
 Create `MCP.Server`, `MCP.Router`, a bounded ingress/Origin/Host wrapper, and `MCP.Tools.RuntimeInspect`. Register only the implemented tool. Start Hermes registry/server before Bandit as specified in the plan; initialize the forwarding plug after registry startup. Use runtime port config, loopback-only address, and no listener in ordinary unit tests; explicitly start ephemeral-port HTTP fixtures in integration tests.
 Implement GET /health returning readiness/API version, exact /mcp routing, input validation, bounded JSON errors/results, and empty 202 notification normalization if the package needs it. Reject unexpected Host/Origin, overlarge bodies, malformed JSON, and non-loopback normal configuration. Disable verbose Hermes request/source logging. Document independent `mix run --no-halt` startup and connection commands. Do not add downstream tool stubs.
+
+Build the shared MCP test client now under test/support using OTP :httpc/:inets (test only), with required Accept headers, JSON/SSE framing, session propagation, finite deadlines and explicit close/reinitialize. Build a reusable independent BEAM fixture now: launch via an OS port with ephemeral configured loopback listener, wait for readiness, keep runtime lifetime independent of client sessions, and always clean up OS processes/sockets on failure. A test-only controller loaded in the fixture BEAM may signal barriers or kill hosts through the harness; it must never become a production HTTP tool or be included in production startup. Later feature tasks extend this fixture and existing HTTP suite, rather than building a new harness at the end.
+Establish common adapter validation and response helpers now: unknown-key/type rejection, API/protocol versioning, stable bounded isError envelopes, JSON text plus structured content as supported, and full wire-size preflight including duplicated/escaped content. Add read-only server instructions that describe the currently available tool; feature tasks extend them with request/revision/effect contracts. Keep helper APIs documented/typed and quality tooling unchanged.
 
 ## Interfaces, inputs, outputs and errors
 
@@ -48,7 +52,7 @@ struct types; do not lower Doctor/Credo/Dialyzer thresholds.
 
 ## Focused tests, integration checks and failure scenarios
 
-Create `test/mcp/bootstrap_test.exs` for schemas, serialization, ingress bounds, header validation, readiness, invalid paths/methods/config, and runtime_inspect errors. Create `test/integration/mcp_bootstrap_test.exs` with real TCP on an ephemeral loopback port: initialize, initialized notification, tools/list, inspect, close client, new client inspect. Capture the runtime OS/process identity and assert it survives reconnect. Test JSON and SSE decoding, session header propagation, and notification framing. Use :httpc with bounded timeouts, no external MCP client dependency.
+Create `test/mcp/bootstrap_test.exs` for schemas, serialization, ingress bounds, header validation, readiness, invalid paths/methods/config, and runtime_inspect errors. Create `test/integration/mcp_bootstrap_test.exs` using the shared independent BEAM fixture and real TCP on an ephemeral loopback port: initialize, initialized notification, tools/list, inspect, close client, new client inspect. Capture the runtime OS/process identity and assert it survives reconnect. Test JSON and SSE decoding, session header propagation, and notification framing. Use :httpc with bounded timeouts, no external MCP client dependency.
 
 Tests added here must pass with completed prerequisites alone. Do not reference
 unfinished downstream modules or add intentionally failing tests. For unexpected
@@ -67,7 +71,7 @@ git diff --check
 git config --get core.hooksPath
 ```
 
-Dependency resolution/compilation succeeds on Elixir 1.18.3 / OTP 27; real HTTP handshake and inspect pass; advertised tool count is one; listener is loopback-only and independent of client.
+Dependency resolution/compilation succeeds on Elixir 1.18.3 / OTP 27; real HTTP handshake and inspect pass; advertised tool count is one at this checkpoint (update exact discovery assertions with each later feature); listener is loopback-only and independent of client.
 
 The hook path must be `.githooks`; if absent, run
 `./scripts/install-git-hooks.sh` before committing. All tests and the full quality
@@ -76,7 +80,7 @@ commands/results below when executing; do not mark this planned task complete no
 
 ## Documentation and intended commit scope
 
-Update README and CONTRIBUTING with current endpoint, startup, readiness, independent client lifetime, and trusted disposable execution requirement. Commit mix.exs/mix.lock, config, transport, inspect adapter, tests, and docs as `feat(mcp): expose the independent runtime over localhost HTTP`.
+Update README and CONTRIBUTING with current endpoint, startup, readiness, independent client lifetime, and trusted disposable execution requirement. Create docs/sdlc/phase01/verification.md now with actual automated evidence and clearly pending Codex evidence; update it in each feature task. Commit mix.exs/mix.lock, config, transport, shared adapter/test helpers, inspect adapter, tests, and docs as `feat(mcp): expose the independent runtime over localhost HTTP`.
 
 Use a Conventional Commit header, blank line, and nonempty explanatory body stating
 why this capability was needed and why the approach fits. Stage only this task's
@@ -87,7 +91,7 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 - [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
 - [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
 - [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
 - [ ] Review diff and stage only the intended task changes, tests and documentation.
 - [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.

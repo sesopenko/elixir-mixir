@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -35,7 +36,9 @@ this task refines those contracts and does not authorize architectural alternati
 
 Finish Runtime.Inspector and EventLog query APIs; expose Manager.events/1 and complete inspect_runtime/1. Add every Phase 1 lifecycle event enumerated in the plan using a single EventLog append contract. Preserve existing ring/cursor implementation and add gap handling and filters. Do not fabricate Phase 2 recovery events.
 Read kernel-owned host snapshots with finite timeout; report unavailable/failed/stopped honestly. Supply sorted paginated workers and edges, state detail, active artifact metadata, generations/revisions, counts, restart budgets, and dispatcher/ledger/limit status. Bound all aggregation and diagnostic data; omit source/BEAM from default inspection. Cursor must encode position and runtime generation; reject stale cursor with INVALID_ARGUMENT and a restart-pagination hint.
-Implement response-size preflight/encoding with allowance for MCP text plus structured duplication. Page-shrink and field-omission metadata must make loss visible; do not truncate mutation input or state. Wire MCP runtime_inspect to the now-complete existing Manager interface without adding tools prematurely.
+Implement response-size preflight/encoding with allowance for MCP text plus structured duplication. Page-shrink and field-omission metadata must make loss visible; do not truncate mutation input or state. Extend runtime_inspect and add runtime_events now that Manager.events/1 is complete. Advertise exactly six tools and validate schemas/unknown fields through shared helpers. Update server instructions and tool discovery tests in this same checkpoint.
+
+Extend test/integration/phase01_runtime_test.exs through real HTTP for topology after counter/aggregator delivery, pending timers, correlated lifecycle/effect failures and restart counts, stopped/failed state, filtered event cursors, eviction gaps and stale pagination cursor rejection. Drive every now-available tool with handshake/session headers; verify diagnostics and state against actual test-controlled host/registry state. Exercise maximum-size data and escaped Unicode so the complete JSON-RPC/content encoding stays <=65536 bytes; explicit omissions/gap metadata must be visible. New client sessions can continue event queries without changing runtime generation. No replacement test may depend on the not-yet-introduced replace tool.
 
 ## Interfaces, inputs, outputs and errors
 
@@ -61,7 +64,7 @@ Run from the repository root after implementing this task:
 
 ```sh
 mix test test/runtime/inspection_test.exs --warnings-as-errors
-mix test test/mcp/bootstrap_test.exs test/integration/mcp_bootstrap_test.exs --warnings-as-errors
+mix test test/mcp test/integration --warnings-as-errors
 mix check
 git diff --check
 git config --get core.hooksPath
@@ -76,7 +79,7 @@ commands/results below when executing; do not mark this planned task complete no
 
 ## Documentation and intended commit scope
 
-Document inspect fields, omissions, pagination/cursor errors, bounded history and diagnostics in docs/runtime-api.md. Commit Inspector/EventLog queries/instrumentation and tests as `feat(runtime): make live state and failures inspectable within bounds`.
+Document inspect fields, omissions, pagination/cursor errors, bounded history and diagnostics in docs/runtime-api.md. Update README tool list/examples and docs/sdlc/phase01/verification.md with real-HTTP history/topology/bounds evidence. Commit Inspector/EventLog queries/instrumentation, events adapter and unit/HTTP tests as `feat(runtime): make live state and failures inspectable within bounds`.
 
 Use a Conventional Commit header, blank line, and nonempty explanatory body stating
 why this capability was needed and why the approach fits. Stage only this task's
@@ -87,7 +90,7 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 - [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
 - [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
 - [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
 - [ ] Review diff and stage only the intended task changes, tests and documentation.
 - [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.

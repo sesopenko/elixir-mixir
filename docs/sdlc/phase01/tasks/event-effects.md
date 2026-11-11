@@ -3,6 +3,7 @@
 ## Startup and context recovery
 
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
 Before starting this subtask and after every compaction, both planning and
 implementation agents must reread the complete snapshot, governing plan, this task,
@@ -23,9 +24,9 @@ Two generated workers exchange events using logical IDs; delayed events and stru
 
 ## Prerequisites and required outputs
 
-Prerequisite IDs: worker-hosts
+Prerequisite IDs: worker-recovery
 
-- [worker-hosts](worker-hosts.md): supervised Host, logical routing, invocation/lifecycle and timeout/restart policy.
+- [worker-recovery](worker-recovery.md): supervised Host, logical routing, bounded invocation and verified per-worker restart policy over HTTP.
 
 A prerequisite is complete only after its focused verification, full `mix check`,
 and working commit through the installed hook. Read the plan's resolved contracts;
@@ -36,6 +37,9 @@ this task refines those contracts and does not authorize architectural alternati
 Add EffectDispatcher and replace the temporary empty-effects restriction with complete effect validation/reservation. Validate an entire result and reserve batch capacity before committing host state. Token expiry/host DOWN/validation failure releases reservations. Host returns committed batch to Manager; Manager confirms state and then publishes batch. Dispatcher queues deliveries through asynchronous messages to Manager, never calls Manager synchronously while Manager awaits dispatcher or host.
 Implement emit/schedule/log shapes, deterministic effect IDs derived from request ID and index/path, inherited correlation, hop budget, timer cancellation on source stop, destination resolution on delivery, queue/timer capacity, and finite dispatch deadlines. Generate a fresh internal delivery operation ID per effect while retaining original correlation; preserve deduplication for retried source requests. Increment inherited hop use across emitted chains rather than resetting it at each invoke.
 Record accepted, scheduled, delivered, failed and log events with bounded metadata; missing/stopped destinations and exhausted hops fail observably after source acceptance. No retry loops or external I/O effects. Bound structured Logger metadata/message before logging. Aggregate relationship counts in bounded per-worker maps for the next inspector task.
+
+Replace earlier nonempty-effect rejection fixtures with unsupported/malformed-effect rejection checks now that valid effects are implemented; retain atomic-state assertions. Extend the existing runtime_invoke adapter/response examples for accepted effect IDs without introducing a new tool (discovery remains five tools). In the same task extend test/integration/phase01_runtime_test.exs: define/start counter and aggregator through MCP, invoke counter and inspect exact aggregator count/total through HTTP; exercise delayed events/logs, missing/stopped target, queue/timer/hop bounds and stop cancellation. The test harness can read internal EventLog to confirm correlation until runtime_events arrives; do not depend on the unfinished events tool.
+Close the HTTP client during an accepted source invoke, reconnect and retry its request ID; assert exactly one source increment and one aggregator delivery. Include target crash/restart routing using the completed recovery feature. Confirm a rejected state/effect batch produces no downstream event; bounded eventual polling is sufficient, not a fixed arbitrary sleep. Update this feature's automated coverage record and examples immediately.
 
 ## Interfaces, inputs, outputs and errors
 
@@ -60,6 +64,7 @@ Run from the repository root after implementing this task:
 
 ```sh
 mix test test/runtime/event_effects_test.exs --warnings-as-errors
+mix test test/mcp test/integration --warnings-as-errors
 mix check
 git diff --check
 git config --get core.hooksPath
@@ -74,7 +79,7 @@ commands/results below when executing; do not mark this planned task complete no
 
 ## Documentation and intended commit scope
 
-Update docs/runtime-api.md for effects, acknowledgements vs delivery, timer lifecycle and Phase 1 crash gap. Commit dispatcher/host staging/routing/events and tests as `feat(runtime): route bounded effects between logical workers`.
+Update docs/runtime-api.md for effects, acknowledgements vs delivery, timer lifecycle and Phase 1 crash gap. Update docs/sdlc/phase01/verification.md with two-worker HTTP/replay evidence. Commit dispatcher/host staging/routing/events, adjusted adapter and unit/HTTP tests as `feat(runtime): route bounded effects between logical workers`.
 
 Use a Conventional Commit header, blank line, and nonempty explanatory body stating
 why this capability was needed and why the approach fits. Stage only this task's
@@ -85,7 +90,7 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 - [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
 - [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
 - [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
 - [ ] Review diff and stage only the intended task changes, tests and documentation.
 - [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.

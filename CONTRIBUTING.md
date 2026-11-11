@@ -23,6 +23,7 @@ From the repository root, install Hex and fetch the locked dependencies:
 ```sh
 mix local.hex --force
 mix deps.get
+./scripts/install-git-hooks.sh
 ```
 
 Credo, Dialyxir, and Doctor are development/test tools and do not run as production
@@ -110,6 +111,26 @@ typespecs, and focused behavior tests. See the
 [code-quality rules](rules/30-code-quality.md). For unexpected results, follow the
 [root-cause rule](rules/00-root-cause.md): prove the cause with a test before
 fixing the system, and stop and ask the user after three unsuccessful attempts.
+
+## Git hooks
+
+Install the project hooks once per clone with `./scripts/install-git-hooks.sh`.
+The installer sets the repository-local `core.hooksPath` to `.githooks`, so the
+tracked hook stays up to date as you pull changes. Reinstalling is safe; the
+installer refuses to replace a different configured hook directory.
+
+The pre-commit hook runs the complete `mix check` gate in the test environment.
+A failed check prevents the commit. It checks the current working tree, so stage
+the intended, verified changes before committing. Dependencies and system
+prerequisites must be installed first; the hook does not install them for you.
+
+To uninstall this hook configuration, run this from the repository root:
+
+```sh
+git config --local --unset core.hooksPath
+```
+
+Any globally configured hooks then apply again.
 
 ## Agent instructions
 

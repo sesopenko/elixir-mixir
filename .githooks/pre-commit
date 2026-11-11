@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd -- "$repo_root"
+
+printf 'Running all project quality gates with mix check...\n'
+export MIX_ENV=test
+exec mix check

@@ -3,7 +3,8 @@
 Status: implementation in progress. kernel-api is committed at `14f8d10`;
 mcp-bootstrap is complete in the commit containing its checked task document.
 artifact-compiler is complete in the commit containing its checked task document.
-worker-start is next. Governing architecture:
+worker-start is complete in the commit containing its checked task document.
+worker-invoke is next. Governing architecture:
 [ADR-001](../../adr/001-architecture.md), milestones 1–4 and section 9.
 Unattended continuation: [amendment 04](../../prompts/phase01-implementation-amendment-04.md).
 Transport/lifetime refinement: [amendment 05](../../prompts/phase01-transport-amendment-05.md).
@@ -190,7 +191,9 @@ All external maps have string keys. JSON values are null, booleans, finite numbe
 UTF-8 strings, lists, or maps with string keys; reject structs, atoms except
 `nil/true/false`, PIDs, refs, ports, functions, and non-finite floats. Config, event,
 and state roots are maps. Validate bounded depth (16) and encoded bytes with Jason;
-reject rather than silently truncate mutable input/state/reply/effects. Inspect and
+reject rather than silently truncate mutable input/state/reply/effects. The depth
+limit applies to application values; Manager allows one argument-envelope level and
+HTTP/response validation allows four protocol-envelope levels in addition. Inspect and
 history pages may omit large fields with explicit `truncated` metadata. Internal
 constant atoms are allowed; never atomize client IDs or map keys.
 

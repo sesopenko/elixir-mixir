@@ -30,6 +30,8 @@ defmodule ElixirMixir.Application do
         Supervisor.child_spec({Task.Supervisor, name: ElixirMixir.CallbackTasks},
           id: ElixirMixir.CallbackTasks
         ),
+        {Registry, keys: :unique, name: ElixirMixir.Runtime.ProcessRegistry},
+        {DynamicSupervisor, strategy: :one_for_one, name: ElixirMixir.Runtime.WorkerSupervisor},
         Supervisor.child_spec(Manager, restart: :temporary, significant: true)
       ] ++ mcp
 

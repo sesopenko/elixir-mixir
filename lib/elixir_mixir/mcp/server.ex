@@ -6,13 +6,18 @@ defmodule ElixirMixir.MCP.Server do
   component(ElixirMixir.MCP.Tools.RuntimeDefine, name: "runtime_define")
   component(ElixirMixir.MCP.Tools.RuntimeInspect, name: "runtime_inspect")
 
-  @doc "Returns read-only connection instructions included in initialization responses."
+  component(ElixirMixir.MCP.Tools.RuntimeStart, name: "runtime_start")
+  component(ElixirMixir.MCP.Tools.RuntimeStop, name: "runtime_stop")
+
+  @doc "Returns connection instructions included in initialization responses."
   @spec instructions() :: String.t()
   def instructions do
     "Use runtime_inspect for health and runtime_define to compile an inactive Generated template. " <>
       "The runtime lives independently of this connection. API version 1; in-memory metadata only. " <>
       "Define requires logical_name, source, expected_behavior elixir_mixir.behavior.v1 and request_id. " <>
       "Reuse request_id only for identical retries. All four callbacks are mandatory. " <>
-      "Compilation does not start workers. Generated code requires a trusted disposable environment."
+      "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
+      "Inspect worker state with worker_id and detail state. Host failure currently requires explicit start. " <>
+      "Invocation is not available yet. Generated code requires a trusted disposable environment."
   end
 end

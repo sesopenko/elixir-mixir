@@ -3,6 +3,8 @@ defmodule ElixirMixir.MCP.ToolsTest do
 
   alias ElixirMixir.MCP.Result
   alias ElixirMixir.MCP.Tools.RuntimeDefine
+  alias ElixirMixir.MCP.Tools.RuntimeStart
+  alias ElixirMixir.MCP.Tools.RuntimeStop
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.ResponseBudget
 
@@ -11,6 +13,16 @@ defmodule ElixirMixir.MCP.ToolsTest do
     assert Enum.sort(schema["required"]) == ~w(expected_behavior logical_name request_id source)
     assert schema["additionalProperties"] == false
     assert Enum.all?(schema["properties"], fn {_key, value} -> value["type"] == "string" end)
+  end
+
+  test "start and stop advertise required IDs/config and strict object schemas" do
+    start = RuntimeStart.input_schema()
+    assert Enum.sort(start["required"]) == ~w(artifact_id config request_id worker_id)
+    assert start["properties"]["config"]["type"] == "object"
+    assert start["additionalProperties"] == false
+    stop = RuntimeStop.input_schema()
+    assert Enum.sort(stop["required"]) == ~w(request_id worker_id)
+    assert stop["additionalProperties"] == false
   end
 
   test "kernel preflight covers the exact full MCP encoding with the largest protocol ID" do

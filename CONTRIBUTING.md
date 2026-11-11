@@ -56,14 +56,14 @@ in [the architecture](docs/adr/001-architecture.md).
 
 Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
 terminal using the commands in [README](README.md). Client disconnects do not stop
-the BEAM. `runtime_inspect` and `runtime_define` exist at this checkpoint; see the
+the BEAM. `runtime_inspect`, `runtime_define`, `runtime_start` and `runtime_stop` exist at this checkpoint; see the
 [runtime API](docs/runtime-api.md) for headers, schemas and size limits.
 
 The default configuration enables MCP outside tests. `ELIXIR_MIXIR_PORT=4101 mix
 run --no-halt` changes the runtime port; use the same port for health and clients.
 Only IPv4 loopback is accepted. A bind failure prevents MCP startup. Host and
 optional Origin must name the configured loopback port. Hermes payload logging is
-disabled. For future generated-code experiments use a disposable, trusted Linux VM
+disabled. For generated-code experiments use a disposable, trusted Linux VM
 without credentials or valuable infrastructure; the runtime is not an Elixir sandbox.
 
 Ordinary unit-test startup has no HTTP listener. The integration suite launches
@@ -84,8 +84,10 @@ Inspect the current runtime in IEx:
 ElixirMixir.Runtime.Manager.inspect_runtime(%{})
 ```
 
-The result includes API version `"1"`, generation zero on startup (advancing on successful definitions), health, empty
-worker/topology lists, and resource/ledger retention limits. Generated artifacts can be defined but no worker tools exist yet. Definitions and request outcomes will
+The result includes API version `"1"`, generation zero on startup (advancing on committed mutations/lifecycle changes),
+health, worker summaries and resource/ledger retention limits. Use worker_id and
+detail state for committed state. Artifacts can be defined and workers started/stopped;
+invocation, effects and automatic recovery are pending. Definitions and request outcomes will
 remain in memory only; stopping the BEAM loses them.
 
 Configure downward resource overrides before starting the application, for example

@@ -147,6 +147,191 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
     assert RuntimeFixture.alive?(ctx.fixture)
   end
 
+  test "define/start/inspect/stop is supervised and worker identity survives client reconnect",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.worker_source()))
+
+    start = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => %{"count" => 7},
+      "request_id" => "start-counter"
+    }
+
+    first = tool(ctx.client, "runtime_start", start)
+    assert first["worker_revision"] == 1
+    assert first["state_revision"] == 1
+    assert first["generation"] == 2
+
+    assert RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"}) ==
+             %{"registered" => true, "supervised" => true, "pid" => first["pid"]}
+
+    assert tool(ctx.client, "runtime_start", start) == first
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})[
+             "state"
+           ] == %{"count" => 7}
+
+    Client.close(ctx.client)
+    client = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{client | session: nil}) end)
+    {_init, _notification, client} = Client.initialize(client)
+    snapshot = tool(client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+    assert snapshot["pid"] == first["pid"]
+    assert snapshot["state"] == %{"count" => 7}
+
+    stopped =
+      tool(client, "runtime_stop", %{"worker_id" => "counter", "request_id" => "stop-counter"})
+
+    assert stopped["definition_retained"]
+    assert stopped["worker_revision"] == 2
+
+    repeated =
+      tool(client, "runtime_stop", %{"worker_id" => "counter", "request_id" => "stop-again"})
+
+    assert repeated["generation"] == stopped["generation"]
+    assert tool(client, "runtime_inspect", %{"worker_id" => "counter"})["status"] == "stopped"
+
+    restarted =
+      tool(client, "runtime_start", %{
+        start
+        | "request_id" => "restart-counter",
+          "config" => %{"count" => 9}
+      })
+
+    assert restarted["worker_revision"] == 3
+    assert restarted["state_revision"] == 2
+    refute restarted["pid"] == first["pid"]
+
+    assert tool(client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})[
+             "state"
+           ] == %{"count" => 9}
+  end
+
+  test "init failure, timeout and schema errors leave no live half-created worker", ctx do
+    artifact = define(ctx.client, args(Fixtures.worker_source()))
+
+    base = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => %{},
+      "request_id" => "start"
+    }
+
+    for {mode, code} <- [
+          {"error", "CALLBACK_FAILED"},
+          {"timeout", "CALLBACK_TIMEOUT"},
+          {"non_json", "INVALID_TRANSITION"}
+        ] do
+      result =
+        tool(ctx.client, "runtime_start", %{
+          base
+          | "config" => %{"mode" => mode},
+            "request_id" => mode
+        })
+
+      assert result["code"] == code
+      assert result["generation"] == 1
+
+      assert RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"}) ==
+               %{"registered" => false, "supervised" => false}
+    end
+
+    assert tool(ctx.client, "runtime_start", Map.put(base, "unknown", true))["code"] ==
+             "INVALID_ARGUMENT"
+
+    {response, _client} = Client.call(ctx.client, "runtime_start", Map.delete(base, "request_id"))
+    assert response.status == 200
+    assert response.data["error"]["code"] == -32_602
+
+    assert tool(ctx.client, "runtime_stop", %{
+             "worker_id" => "missing",
+             "request_id" => "unknown-stop"
+           })["code"] == "WORKER_NOT_FOUND"
+  end
+
+  test "a test-controlled host kill preserves HTTP and peer state without automatic restart",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.worker_source()))
+
+    start = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => %{"value" => 1},
+      "request_id" => "start"
+    }
+
+    _first = tool(ctx.client, "runtime_start", start)
+
+    peer =
+      tool(ctx.client, "runtime_start", %{
+        start
+        | "worker_id" => "peer",
+          "request_id" => "peer-start"
+      })
+
+    assert RuntimeFixture.control(ctx.fixture, %{"op" => "kill_host", "id" => "counter"})[
+             "killed"
+           ]
+
+    failed = await_worker(ctx.client, "counter", "failed", 50)
+    assert failed["pid"] == nil
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "peer", "detail" => "state"})[
+             "state"
+           ] == %{"value" => 1}
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "peer"})["pid"] == peer["pid"]
+    assert Client.raw(ctx.client, :get, "/health").status == 200
+    restarted = tool(ctx.client, "runtime_start", %{start | "request_id" => "manual-recovery"})
+    assert restarted["worker_revision"] > failed["worker_revision"]
+  end
+
+  test "the full config depth limit survives HTTP and worker inspection", ctx do
+    artifact = define(ctx.client, args(Fixtures.worker_source()))
+    config = Enum.reduce(1..16, %{}, fn _, child -> %{"nested" => child} end)
+
+    start = %{
+      "worker_id" => "counter",
+      "artifact_id" => artifact["artifact_id"],
+      "config" => config,
+      "request_id" => "deep-start"
+    }
+
+    assert tool(ctx.client, "runtime_start", start)["status"] == "running"
+
+    assert tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})[
+             "state"
+           ] == config
+
+    assert tool(ctx.client, "runtime_start", %{
+             start
+             | "config" => %{"extra" => config},
+               "worker_id" => "too-deep",
+               "request_id" => "deep-reject"
+           })["code"] == "LIMIT_EXCEEDED"
+  end
+
+  defp await_worker(_client, _id, _status, 0), do: flunk("worker lifecycle did not settle")
+
+  defp await_worker(client, id, status, remaining) do
+    snapshot = tool(client, "runtime_inspect", %{"worker_id" => id})
+
+    if snapshot["status"] == status,
+      do: snapshot,
+      else:
+        (
+          Process.sleep(5)
+          await_worker(client, id, status, remaining - 1)
+        )
+  end
+
+  defp tool(client, name, args) do
+    {response, _} = Client.call(client, name, args)
+    assert response.status == 200
+    result(response)
+  end
+
   defp define(client, args) do
     {response, _} = Client.call(client, "runtime_define", args)
     assert response.status == 200

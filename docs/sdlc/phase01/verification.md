@@ -82,6 +82,40 @@ source rewriting, failed-slot consumption and compile-time side-effect limitatio
 are documented in the [API](../../runtime-api.md). Generated source remains under
 test/support or MCP submissions, never production lib/ domain modules.
 
+## worker-start
+
+Verified 2026-11-10 on Elixir 1.18.3 / OTP 27. The checked task document identifies
+the verified commit; its normal pre-commit hook reruns the entire gate.
+
+- `mix test test/runtime/worker_start_test.exs --warnings-as-errors`: 10 tests,
+  zero failures. Covers Registry/DynamicSupervisor membership, init state, identity,
+  duplicate IDs, missing references, error/raise/exit/timeout/heap/invalid-state paths,
+  retained-definition capacity, stop/no-op stop/reinitialization, monotonic revisions,
+  replay/conflicts, config/state byte and depth boundaries, actual host kill, healthy
+  peer/Manager continuity and cleanup when the callback owner dies.
+- `mix test test/mcp test/integration --warnings-as-errors`: 34 tests, zero failures.
+  Discovery exposes exactly define/inspect/start/stop. The incremental HTTP journey
+  verifies real define/start/inspect/stop/reinitialize, request replay, required
+  schemas/unknown fields, no child after failed init, bounded init timeout, preserved
+  worker PID/state after client close/reinitialize, actual Registry/supervisor
+  membership through test-only controls and real host kill while HTTP/peer survive.
+- `mix check`: passed; 2 doctests, 82 tests, zero failures; strict Credo clean,
+  Doctor documentation/typespec coverage 100%, Dialyzer zero errors.
+- `git diff --check`: passed; installed hook path `.githooks`.
+
+A failing depth-boundary regression established that transport wrappers were
+consuming the application depth allowance. Semantic config/state validators retain
+the 16-level limit; argument/protocol envelopes now receive separate bounded nesting
+allowance. Unit and actual HTTP tests accept the exact data depth and reject one over.
+Another regression killed the caller during generated execution and proved tasks
+could outlive it. The independent supervised kernel coordinator now owns deadline,
+caller monitoring, cancellation and helper joining. Killing the callback owner leaves
+no live generated callback/helper; client disconnect leaves its independent host alive.
+
+Recovery is explicitly manual here: a killed host becomes a retained failed
+definition, and only a fresh explicit start reinitializes it. No automatic restart
+timers, event invocation or effects are claimed at this intermediate checkpoint.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
@@ -92,8 +126,11 @@ test/support or MCP submissions, never production lib/ domain modules.
 | A02 | Automated define over HTTP | Actual Codex creation transcript |
 | A03 | Loaded exports/BEAM/hash and immutable registry, including HTTP define | Complete for compiler substrate |
 | A10 | Failed definitions preserve existing artifacts and generation | Live-worker assertion when workers exist |
-| A04–A09, A11–A12 | Foundations only | Owning worker/effect/replacement tasks |
+| A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
+| A05 | HTTP worker state inspection | Invocation and actual Codex observations |
+| A12 | Real host kill preserves HTTP, Manager and healthy peer | Automatic recovery bounds in worker-recovery |
+| A06–A09, A11 | Foundations only | Owning effect/replacement tasks |
 
-Workers, effects, full history/topology inspection, replacement, isolated container/release
+Invocation, automatic recovery, effects, full history/topology inspection, replacement, isolated container/release
 setup and the actual Codex transcript remain pending. No worker/domain behavior is
 seeded in the production kernel or claimed by this checkpoint.

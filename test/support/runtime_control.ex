@@ -44,6 +44,36 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
     end
   end
 
+  def request(%{"op" => "worker_membership", "id" => id}) do
+    case Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id) do
+      [{pid, _}] ->
+        supervised =
+          Enum.any?(DynamicSupervisor.which_children(ElixirMixir.Runtime.WorkerSupervisor), fn {_,
+                                                                                                child,
+                                                                                                _,
+                                                                                                _} ->
+            child == pid
+          end)
+
+        %{"registered" => Process.alive?(pid), "supervised" => supervised, "pid" => inspect(pid)}
+
+      [] ->
+        %{"registered" => false, "supervised" => false}
+    end
+  end
+
+  def request(%{"op" => "kill_host", "id" => id}) do
+    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    ref = Process.monitor(pid)
+    Process.exit(pid, :kill)
+
+    receive do
+      {:DOWN, ^ref, :process, ^pid, _reason} -> %{"killed" => true, "pid" => inspect(pid)}
+    after
+      1_000 -> %{"killed" => false}
+    end
+  end
+
   def request(%{"op" => "restart_application"}) do
     :ok = Application.stop(:elixir_mixir)
     {:ok, _} = Application.ensure_all_started(:elixir_mixir)

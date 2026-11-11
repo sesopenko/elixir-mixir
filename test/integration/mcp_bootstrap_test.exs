@@ -31,7 +31,9 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
 
     assert [
              %{"name" => "runtime_define"},
-             %{"name" => "runtime_inspect", "inputSchema" => schema}
+             %{"name" => "runtime_inspect", "inputSchema" => schema},
+             %{"name" => "runtime_start"},
+             %{"name" => "runtime_stop"}
            ] =
              list.data["result"]["tools"]
 
@@ -151,7 +153,12 @@ defmodule ElixirMixir.MCPBootstrapIntegrationTest do
     event = Client.receive_event(stream)
     assert event["id"] == "sse-id"
 
-    assert [%{"name" => "runtime_define"}, %{"name" => "runtime_inspect"}] =
+    assert [
+             %{"name" => "runtime_define"},
+             %{"name" => "runtime_inspect"},
+             %{"name" => "runtime_start"},
+             %{"name" => "runtime_stop"}
+           ] =
              event["result"]["tools"]
 
     :httpc.cancel_request(stream, client.profile)

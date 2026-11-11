@@ -13,7 +13,7 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
       @behaviour ElixirMixir.Behavior
       #{body}
       @impl true
-      def init(config), do: #{init}
+      def init(config), do: (#{init})
       @impl true
       def handle_event(event, state), do: {:ok, event, state, []}
       @impl true
@@ -22,6 +22,27 @@ defmodule ElixirMixir.TestSupport.GeneratedFixtures do
       def migrate(state, _metadata), do: {:ok, state}
     end
     """
+  end
+
+  @doc "Returns reusable startup behavior including deliberate failure paths selected by config."
+  @spec worker_source() :: String.t()
+  def worker_source do
+    source(
+      init: """
+      case config["mode"] do
+        "error" -> {:error, "initialization rejected"}
+        "raise" -> raise "initialization raised"
+        "exit" -> exit(:initialization_exit)
+        "timeout" -> Process.sleep(:infinity)
+        "non_json" -> {:ok, %{"pid" => self()}}
+        "invalid_root" -> {:ok, []}
+        "invalid_shape" -> :ok
+        "heap" -> {:ok, %{"large" => Enum.to_list(1..1_000_000)}}
+        "payload" -> {:ok, %{"v" => String.duplicate("x", config["bytes"])}}
+        _normal -> {:ok, config}
+      end
+      """
+    )
   end
 
   @doc "Expands an extra module to verify actual compiler output independently of AST checks."

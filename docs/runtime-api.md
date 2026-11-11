@@ -1,6 +1,7 @@
 # Runtime API version 1
 
-The currently implemented MCP surface contains `runtime_inspect` and `runtime_define`.
+The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`
+and `runtime_stop`.
 Runtime metadata is in memory; no generated application is seeded at startup.
 
 ## Connection
@@ -31,15 +32,15 @@ Arguments are optional; omission is equivalent to an empty object:
 
 | Argument | Contract |
 | --- | --- |
-| `worker_id` | ASCII identifier `[a-zA-Z0-9_-]{1,64}`; currently every valid worker ID returns `WORKER_NOT_FOUND` |
-| `detail` | `summary` (default) or `state`; both report the empty runtime at this checkpoint |
+| `worker_id` | ASCII identifier `[a-zA-Z0-9_-]{1,64}`; selects a retained worker, or `WORKER_NOT_FOUND` |
+| `detail` | `summary` (default) or `state`; state detail includes bounded committed state for a running worker |
 | `limit` | Integer from 1 through configured page maximum (default maximum 100) |
-| `cursor` | String schema reserved for inspection pagination; no cursor is valid in the empty runtime |
+| `cursor` | String schema reserved for inspection pagination; no cursor is valid until runtime-inspection adds pagination |
 
 Unknown keys, invalid IDs, explicit null values, unsupported detail and malformed
 cursors return `INVALID_ARGUMENT`. Schema type violations produce protocol errors.
 Inspection is read-only and never executes generated behavior. It reports
-`api_version: "1"`, current generation (zero on startup), health, empty workers/topology, configured
+`api_version: "1"`, current generation (zero on startup), health, sorted worker summaries, currently empty topology, configured
 limits and ledger capacity/retention. State inspection does not invent workers.
 
 The JSON envelope appears as text content and identical `structuredContent`,
@@ -51,7 +52,7 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Worker, event and replacement tools are pending their feature tasks.
+Invocation, event and replacement tools are pending their feature tasks.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -61,7 +62,7 @@ are described in
 
 ## runtime_define
 
-The currently implemented tools are `runtime_define` and `runtime_inspect`.
+Definition compiles source; inspection and explicit start/stop are separate tools.
 No workers start automatically. Definition takes four required string fields:
 
 | Argument | Contract |
@@ -139,3 +140,55 @@ memory/atom budget. Compile-time side effects cannot be rolled back. Run experim
 only in a trusted disposable environment without secrets or valuable infrastructure.
 Loss of Manager or artifact-registry authority shuts down the kernel; there is no
 Phase 1 recovery. Stopping the BEAM loses all artifact metadata.
+
+
+## runtime_start and runtime_stop
+
+Start takes required worker_id, artifact_id, config and request_id. Worker/request
+IDs use the same ASCII rules as define. Config is a JSON map limited to 16 KiB and
+16 nested levels. The same depth limit applies to committed state; protocol and
+result wrappers are accounted for separately and do not consume that allowance.
+Unknown keys and malformed values are rejected without starting a host.
+
+After artifact/capacity validation, a temporary DynamicSupervisor child runs init
+in an unlinked supervised callback task with a 200 ms deadline and 8 MiB task heap.
+Only a valid `{:ok, state}` publishes a running definition. Success reports worker_id,
+diagnostic pid, artifact_id/implementation_version, worker_revision, state_revision
+and running status. Both revisions start at one. Duplicate running IDs return
+WORKER_EXISTS; unknown artifacts return ARTIFACT_NOT_FOUND. Explicit callback errors,
+exceptions and invalid return shapes yield CALLBACK_FAILED, timeouts CALLBACK_TIMEOUT,
+non-JSON state INVALID_TRANSITION, and config/state/capacity excess LIMIT_EXCEEDED.
+Failed init leaves no live child/routing or half-created definition.
+
+Stop takes worker_id and request_id and returns stopped status, definition_retained
+and worker_revision. It terminates the host and retains config/artifact identity for
+explicit reinitialization. A first stop advances worker revision and generation;
+a repeated stop of the retained stopped definition succeeds without advancing either.
+Unknown IDs return WORKER_NOT_FOUND. A new start of a stopped/failed ID may supply
+new config/artifact, reinitializes state, and advances worker and state revisions.
+Worker capacity includes stopped and failed definitions (default 32).
+
+For example, after defining the counter artifact, call runtime_start with:
+
+```json
+{"worker_id":"counter","artifact_id":"<returned artifact_id>","config":{"initial":7},"request_id":"start-counter-1"}
+```
+
+Then inspect with `{"worker_id":"counter","detail":"state"}`, and stop with
+`{"worker_id":"counter","request_id":"stop-counter-1"}`. Inspection reads only
+host-owned committed state, never a generated callback. Summary reads omit state;
+stopped/failed/unavailable hosts include explicit state omission metadata. Client
+close/reinitialize preserves running worker PID and state.
+
+Unexpected host death currently marks the retained definition failed, removes its
+live PID, advances worker revision/generation and records a correlated crash event.
+Peers, Manager and HTTP remain alive. **Recovery is manual at this checkpoint**:
+call runtime_start with a fresh request_id to reinitialize the failed ID. Automatic
+restart budgets belong to worker-recovery. Phase 1 does not preserve state across
+crashes. No runtime_invoke tool or automatic recovery timer is advertised yet.
+
+Request replay returns the original outcome and generation without another host or
+stop, even if later operations have changed the worker. Inspect to obtain current
+status. Callbacks use an independent kernel coordinator so killing their owner also
+cancels and joins generated execution and tracked helpers; HTTP client disconnect
+does not kill the host or Manager and therefore does not cancel accepted work.

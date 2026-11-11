@@ -7,7 +7,7 @@ defmodule ElixirMixir.Runtime.ResponseBudget do
   @doc "Checks JSON terms and the full duplicate MCP encoding before any domain commit."
   @spec fits?(map(), Limits.t()) :: boolean()
   def fits?(data, limits) do
-    json_limits = %{limits | reply_bytes: limits.response_bytes}
+    json_limits = %{limits | reply_bytes: limits.response_bytes, depth: limits.depth + 4}
 
     case Values.validate(data, :reply, json_limits) do
       :ok ->

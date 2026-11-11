@@ -84,7 +84,12 @@ defmodule ElixirMixir.MCP.Router do
   end
 
   defp validate_message(conn, message, limits) do
-    with :ok <- Values.validate(message, :reply, %{limits | reply_bytes: limits.body_bytes}),
+    with :ok <-
+           Values.validate(message, :reply, %{
+             limits
+             | reply_bytes: limits.body_bytes,
+               depth: limits.depth + 4
+           }),
          true <- valid_rpc_id?(message),
          true <- valid_tool_arguments?(message),
          message <- default_tool_arguments(message),

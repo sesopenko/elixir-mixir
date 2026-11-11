@@ -2,7 +2,8 @@ defmodule ElixirMixir.Runtime.Execution do
   @moduledoc """
   Runs unlinked supervised work with an initial heap flag and a finite deadline.
 
-  Spawn tracing tracks temporary compiler descendants so timeout cleanup also kills
+  An independent supervised kernel coordinator monitors the caller and owns cleanup.
+  Spawn tracing tracks temporary descendants so deadlines or caller death also kill
   helper processes. Tasks and tracing are resource controls, not security isolation.
   """
 
@@ -12,6 +13,34 @@ defmodule ElixirMixir.Runtime.Execution do
   @doc "Runs work after installing heap/tracing controls, then joins its task and tracked helpers."
   @spec run(Supervisor.supervisor(), (-> term()), pos_integer(), pos_integer()) :: outcome()
   def run(supervisor, work, timeout, heap_words) do
+    owner = self()
+
+    coordinator =
+      Task.Supervisor.async_nolink(supervisor, fn ->
+        owner_ref = Process.monitor(owner)
+
+        try do
+          execute_group(supervisor, work, timeout, heap_words, owner_ref)
+        after
+          Process.demonitor(owner_ref, [:flush])
+        end
+      end)
+
+    case Task.yield(coordinator, timeout + 1_000) do
+      {:ok, result} ->
+        result
+
+      {:exit, _reason} ->
+        {:error, :failed, 0}
+
+      nil ->
+        # The independent kernel coordinator keeps its cleanup duty even if its owner leaves.
+        Process.demonitor(coordinator.ref, [:flush])
+        {:error, :timeout, 0}
+    end
+  end
+
+  defp execute_group(supervisor, work, timeout, heap_words, owner_ref) do
     task =
       Task.Supervisor.async_nolink(supervisor, fn ->
         Process.flag(:max_heap_size, %{size: heap_words, kill: true, error_logger: false})
@@ -31,10 +60,10 @@ defmodule ElixirMixir.Runtime.Execution do
     :erlang.trace(task.pid, true, [:procs, :set_on_spawn])
     send(task.pid, :execute)
     deadline = System.monotonic_time(:millisecond) + timeout
-    await(task, deadline, %{task.pid => true})
+    await(task, deadline, %{task.pid => true}, owner_ref)
   end
 
-  defp await(task, deadline, processes) do
+  defp await(task, deadline, processes, owner_ref) do
     remaining = max(0, deadline - System.monotonic_time(:millisecond))
 
     receive do
@@ -45,14 +74,17 @@ defmodule ElixirMixir.Runtime.Execution do
       {:DOWN, ref, :process, _pid, _reason} when ref == task.ref ->
         finish({:error, :failed}, task, processes)
 
+      {:DOWN, ^owner_ref, :process, _owner, _reason} ->
+        finish({:error, :failed}, task, processes)
+
       {:trace, parent, :spawn, child, _mfa} when is_map_key(processes, parent) ->
-        await(task, deadline, Map.put(processes, child, true))
+        await(task, deadline, Map.put(processes, child, true), owner_ref)
 
       {:trace, pid, :spawned, _parent, _mfa} when is_map_key(processes, pid) ->
-        await(task, deadline, processes)
+        await(task, deadline, processes, owner_ref)
 
       {:trace, pid, _event, _data} when is_map_key(processes, pid) ->
-        await(task, deadline, processes)
+        await(task, deadline, processes, owner_ref)
     after
       remaining -> finish({:error, :timeout}, task, processes)
     end

@@ -16,6 +16,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.Values
+  alias ElixirMixir.Runtime.Workers
 
   @type result :: {:ok, map()} | {:error, Error.t()}
 
@@ -31,10 +32,20 @@ defmodule ElixirMixir.Runtime.Manager do
     GenServer.call(server, {:define, args}, Limits.defaults().operation_timeout_ms)
   end
 
-  @doc "Returns the empty runtime status. Accepts optional worker_id, detail and page limit; no cursor exists yet."
+  @doc "Starts a logical worker using a defined artifact and bounded JSON configuration."
+  @spec start_worker(map(), GenServer.server()) :: result()
+  def start_worker(args, server \\ __MODULE__),
+    do: GenServer.call(server, {:worker, :start, args}, Limits.defaults().operation_timeout_ms)
+
+  @doc "Explicitly stops a worker while retaining its definition; repeat stops are idempotent."
+  @spec stop_worker(map(), GenServer.server()) :: result()
+  def stop_worker(args, server \\ __MODULE__),
+    do: GenServer.call(server, {:worker, :stop, args}, Limits.defaults().operation_timeout_ms)
+
+  @doc "Returns bounded runtime/worker snapshots using kernel-owned state; no cursor exists yet."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
-    GenServer.call(server, {:inspect, args})
+    GenServer.call(server, {:inspect, args}, Limits.defaults().operation_timeout_ms)
   end
 
   @doc """
@@ -65,6 +76,7 @@ defmodule ElixirMixir.Runtime.Manager do
        limits: limits,
        ledger: RequestLedger.new(limits),
        generation: 0,
+       workers: %{},
        clock: Keyword.get(opts, :clock, fn -> System.monotonic_time(:millisecond) end)
      }}
   end
@@ -72,24 +84,8 @@ defmodule ElixirMixir.Runtime.Manager do
   @impl true
   def handle_call({:inspect, args}, _from, state) do
     result =
-      with :ok <- Inspection.validate(args, state.limits),
-           false <- Map.has_key?(args, "worker_id") do
-        {:ok,
-         envelope(
-           %{
-             "health" => "ok",
-             "workers" => [],
-             "topology" => [],
-             "limits" => Map.new(state.limits, fn {k, v} -> {Atom.to_string(k), v} end),
-             "ledger" => %{
-               "capacity" => state.limits.ledger_entries,
-               "retention_ms" => state.limits.ledger_retention_ms
-             }
-           },
-           state.generation
-         )}
-      else
-        true -> {:error, envelope(Error.new("WORKER_NOT_FOUND"), state.generation)}
+      case Inspection.validate(args, state.limits) do
+        :ok -> inspect_workers(args, state)
         {:error, error} -> {:error, envelope(error, state.generation)}
       end
 
@@ -101,6 +97,24 @@ defmodule ElixirMixir.Runtime.Manager do
       :ok ->
         hash = Values.request_hash("define", args)
         callback = fn generation -> Definition.define(args, generation, state.limits) end
+        {result, state} = run(args["request_id"], hash, callback, state)
+        {:reply, result, state}
+
+      {:error, error} ->
+        id = if is_map(args) and Values.valid_id?(args["request_id"]), do: args["request_id"]
+        {:reply, failure(error, id, state), state}
+    end
+  end
+
+  def handle_call({:worker, operation, args}, _from, state) do
+    case mutation_arguments(args, state.limits) do
+      :ok ->
+        hash = Values.request_hash(Atom.to_string(operation), args)
+
+        callback = fn generation ->
+          worker_operation(operation, args, state, generation)
+        end
+
         {result, state} = run(args["request_id"], hash, callback, state)
         {:reply, result, state}
 
@@ -123,9 +137,19 @@ defmodule ElixirMixir.Runtime.Manager do
     end
   end
 
+  defp worker_operation(:start, args, state, generation),
+    do: Workers.start(args, state.workers, state.limits, generation)
+
+  defp worker_operation(:stop, args, state, generation),
+    do: Workers.stop(args, state.workers, state.limits, generation)
+
   defp mutation_arguments(args, limits) when is_map(args) do
     if Values.valid_id?(args["request_id"]) do
-      Values.validate(args, :reply, %{limits | reply_bytes: limits.body_bytes})
+      Values.validate(args, :reply, %{
+        limits
+        | reply_bytes: limits.body_bytes,
+          depth: limits.depth + 1
+      })
     else
       {:error, Error.new("INVALID_ARGUMENT")}
     end
@@ -141,18 +165,75 @@ defmodule ElixirMixir.Runtime.Manager do
     end
   end
 
+  @impl true
+  def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
+    {workers, changed} = Workers.down(state.workers, ref, reason)
+
+    {:noreply,
+     %{state | workers: workers, generation: state.generation + if(changed, do: 1, else: 0)}}
+  end
+
   defp execute(id, callback, state) do
-    result = callback.(state.generation + 1)
-    generation = if elem(result, 0) == :ok, do: state.generation + 1, else: state.generation
+    {result, next_state, changed} = staged(callback.(state.generation + 1), state)
+    generation = state.generation + if(changed, do: 1, else: 0)
     {status, data} = result
     result = bounded({status, data |> envelope(generation) |> Map.put("request_id", id)}, state)
     generation = if elem(result, 0) == :ok, do: generation, else: state.generation
+    next_state = if elem(result, 0) == :ok, do: next_state, else: state
     {:ok, ledger} = RequestLedger.complete(state.ledger, id, result, state.clock.())
-    {result, %{state | ledger: ledger, generation: generation}}
+    {result, %{next_state | ledger: ledger, generation: generation}}
+  end
+
+  defp staged({:commit, data, workers}, state),
+    do: {{:ok, data}, %{state | workers: workers}, true}
+
+  defp staged({:noop, data}, state), do: {{:ok, data}, state, false}
+  defp staged({:ok, _data} = result, state), do: {result, state, true}
+  defp staged({:error, _error} = result, state), do: {result, state, false}
+
+  defp inspect_workers(%{"worker_id" => id} = args, state) do
+    case Workers.find(state.workers, id) do
+      {:ok, worker} ->
+        {:ok,
+         worker
+         |> Workers.snapshot(Map.get(args, "detail", "summary"), state.limits)
+         |> envelope(state.generation)}
+
+      {:error, error} ->
+        {:error, envelope(error, state.generation)}
+    end
+  end
+
+  defp inspect_workers(args, state) do
+    limit = Map.get(args, "limit", state.limits.page_default)
+
+    workers =
+      state.workers
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.take(limit)
+      |> Enum.map(fn {_id, worker} -> Workers.snapshot(worker, "summary", state.limits) end)
+
+    data = %{
+      "health" => "ok",
+      "workers" => workers,
+      "topology" => [],
+      "limits" => Map.new(state.limits, fn {key, value} -> {Atom.to_string(key), value} end),
+      "ledger" => %{
+        "capacity" => state.limits.ledger_entries,
+        "retention_ms" => state.limits.ledger_retention_ms
+      }
+    }
+
+    data = if map_size(state.workers) > limit, do: Map.put(data, "truncated", true), else: data
+    {:ok, envelope(data, state.generation)}
   end
 
   defp bounded({status, data}, state) do
-    limits = %{state.limits | reply_bytes: state.limits.response_bytes}
+    limits = %{
+      state.limits
+      | reply_bytes: state.limits.response_bytes,
+        depth: state.limits.depth + 4
+    }
 
     case Values.validate(data, :reply, limits) do
       :ok ->

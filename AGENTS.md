@@ -14,7 +14,7 @@ If the coding agent cannot fix the problem after three attempts, stop work and a
 
 ## Project context
 
-- Read `docs/prompts/architecture.md` before making architectural changes to Living BEAM.
+- Read `docs/adr/001-architecture.md` before making architectural changes to elixir-mixir.
 - Keep the permanent Elixir/OTP kernel small and prefer standard OTP primitives.
 - Distinguish kernel development in the repository from experiments that create and evolve application behavior through MCP.
 
@@ -26,3 +26,27 @@ If the coding agent cannot fix the problem after three attempts, stop work and a
 - Keep separate topics in separate Markdown files. Files are combined in bytewise filename order; use numeric prefixes to control their order.
 - Run `./scripts/build-agent-rules.sh` after adding, changing, or removing a rule file.
 - Include the regenerated `AGENTS.md` alongside rule changes.
+
+<!-- Source: rules/30-code-quality.md -->
+
+## Code quality
+
+- Run `mix check` before considering a change complete. It requires formatter compliance, compilation without warnings, strict Credo checks, ExUnit tests without warnings, and Dialyzer analysis.
+- Format Elixir code with `mix format`; use the committed formatter and Credo configurations.
+- Use `ElixirMixir` module namespaces, `CamelCase` module names, and `snake_case` functions, variables, and filenames.
+- Keep modules focused, prefer pattern matching and small functions, and use standard Elixir/OTP primitives before adding dependencies.
+- Document public modules and functions with `@moduledoc` and `@doc`; add accurate `@spec` annotations to public functions. Internal modules may explicitly use `@moduledoc false`.
+- Write focused ExUnit tests for observable behavior, including failure paths when relevant. Use doctests for executable public API examples and `async: true` only when tests do not share mutable state.
+- Fix compiler, Credo, and Dialyzer findings at their cause. Do not blanket-disable checks or suppress warnings to make the quality gate pass.
+- Keep development tooling out of production runtime dependencies and commit `mix.lock` when dependencies change.
+- Follow `CONTRIBUTING.md` for setup and common development tasks.
+
+<!-- Source: rules/40-commit-messages.md -->
+
+## Commit messages
+
+- Follow the Conventional Commits standard: `<type>[optional scope][!]: <description>`. Use `feat` for features, `fix` for bug fixes, and other appropriate conventional types for other changes. Mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
+- Every commit message must contain a header line, a blank line, and a nonempty commit body.
+- Lead with why the software needed to change and why the chosen approach addresses that need. Convey the motivation in the header and explain the reasoning in the body.
+- Explain the problem, intent, and relevant tradeoffs instead of repeating what is already apparent from the diff.
+- Write for human readers, including future maintainers who do not have the conversation context. Use clear, plain language.

@@ -70,6 +70,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
         for({{:request, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "workers" => for({{:worker, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "states" => for({{:state, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "effects" => for({{:effect, id}, record} <- records, do: %{"id" => id, "record" => record}),
       "meta" => records[:meta]
     }
   end

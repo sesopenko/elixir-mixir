@@ -167,8 +167,8 @@ Durable mode retains source artifacts, running and stopped worker definitions,
 configuration, committed event state and request outcomes across abrupt BEAM
 termination.
 It reconstructs running workers without a client and keeps stopped workers stopped.
-Effect-free event invocation and implementation replacement are supported. Durable
-effects are still being implemented; use the default memory mode for the full
+Event invocation and implementation replacement are supported. Outgoing effects
+are retained with state, but delivery is currently paused; use memory mode for the full
 counter/aggregator experiments above.
 
 To try durable worker definitions from the repository root, use a local directory
@@ -200,14 +200,15 @@ If that prompt created the counter and confirmed count 10, try:
 > from current inspection. Invoke amount 2 and confirm count 14.
 
 `runtime_define`, `runtime_start`, `runtime_stop`, `runtime_replace` and accepted
-effect-free invocations survive restart using that same directory. Boot restores the committed state
+invocations survive restart using that same directory. Boot restores the committed state
 into fresh processes without rerunning generated init or migration callbacks.
 An explicit start after stop initializes from the supplied configuration again.
 Use a fresh MCP session after restart and wait for health before reconnecting.
 Live replacement retains its host PID; VM recovery creates a fresh host and restores
 the selected implementation and committed state without repeating migration.
-Events returning effects currently return `DURABILITY_UNAVAILABLE` without changing
-committed state. Successful invocation
+Accepted emit, schedule and log intents survive restart with their originating state.
+Delivery is currently paused, including logs. Explicit stop cancels pending work from
+that source; host crash and replacement preserve it. Successful invocation
 commits state and the exact result before acknowledging it. After an uncertain
 response, retry the identical request ID and arguments to replay that result.
 A pending mutation interrupted before commit replays `OPERATION_INTERRUPTED`;

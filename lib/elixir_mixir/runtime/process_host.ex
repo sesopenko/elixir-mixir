@@ -138,10 +138,10 @@ defmodule ElixirMixir.Runtime.ProcessHost do
   def handle_call(
         {:prepared_snapshot, ticket},
         {manager, _},
-        %{manager: manager, staged: %{ticket: ticket, next: next}} = state
+        %{manager: manager, staged: %{ticket: ticket, next: next, token: token}} = state
       ) do
     snapshot = Map.take(next, [:artifact, :data, :worker_revision, :state_revision, :worker_id])
-    {:reply, {:ok, snapshot}, state}
+    {:reply, {:ok, Map.put(snapshot, :effect_token, token)}, state}
   end
 
   def handle_call(

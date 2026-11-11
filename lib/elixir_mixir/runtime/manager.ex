@@ -14,6 +14,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.DurableDefinitions
   alias ElixirMixir.Runtime.DurableLifecycle
   alias ElixirMixir.Runtime.DurableOperations
+  alias ElixirMixir.Runtime.DurableOutbox
   alias ElixirMixir.Runtime.DurableRecovery
   alias ElixirMixir.Runtime.DurableReplacement
   alias ElixirMixir.Runtime.DurableRequests
@@ -178,7 +179,8 @@ defmodule ElixirMixir.Runtime.Manager do
 
     task =
       Task.Supervisor.async_nolink(ElixirMixir.CompilerTasks, fn ->
-        DurableArtifacts.recover(records, state.limits)
+        with :ok <- DurableOutbox.validate_capacity(records, state.limits),
+             do: DurableArtifacts.recover(records, state.limits)
       end)
 
     state = %{
@@ -362,6 +364,7 @@ defmodule ElixirMixir.Runtime.Manager do
             recovery["degraded"] or worker_recovery["workers_quarantined"] > 0
           )
 
+        :ok = DurableOutbox.sync(state)
         if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
         {:noreply, %{state | workers: workers, recovery: recovery, recovery_task: nil}}
 

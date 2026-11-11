@@ -27,6 +27,16 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   def hold_batch(_server, :none), do: :ok
   def hold_batch(server, token), do: GenServer.call(server, {:hold, token})
 
+  @doc "Reads a reservation only for its Manager, before durable serialization."
+  @spec reserved_items(GenServer.server(), reference() | :none) ::
+          {:ok, [map()]} | {:error, Error.t()}
+  def reserved_items(_server, :none), do: {:ok, []}
+  def reserved_items(server, token), do: GenServer.call(server, {:reserved_items, token})
+
+  @doc "Reconstructs this Manager's retained queue counts without dispatch or volatile reservations."
+  @spec retained_counts(GenServer.server(), map()) :: :ok
+  def retained_counts(server, counts), do: GenServer.call(server, {:retained_counts, counts})
+
   @doc "Publishes one reserved batch only for its Manager; repeated commit is rejected."
   @spec commit_batch(GenServer.server(), reference() | :none) :: :ok | {:error, Error.t()}
   def commit_batch(_server, :none), do: :ok
@@ -59,6 +69,8 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
     {:ok,
      %{
        reservations: %{},
+       retained: %{},
+       owners: %{},
        pending: %{},
        edges: %{},
        timer: Keyword.get(opts, :timer, &Process.send_after(self(), &1, &2)),
@@ -82,7 +94,8 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
           Map.merge(context, %{
             effect: effect,
             path: path,
-            id: Effects.identity(context.correlation_id, path),
+            id: Effects.identity(Map.get(context, :operation_id, context.correlation_id), path),
+            due_at: Map.get(context, :wall_now, 0) + Map.get(effect, "delay_ms", 0),
             limits: limits,
             active: false
           })
@@ -105,6 +118,22 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
       false -> {:reply, {:error, Error.new("LIMIT_EXCEEDED")}, state}
       error -> {:reply, error, state}
     end
+  end
+
+  def handle_call({:reserved_items, token}, {manager, _}, state) do
+    case state.reservations[token] do
+      %{manager: ^manager, items: items} -> {:reply, {:ok, items}, state}
+      _missing -> {:reply, {:error, Error.new("CALLBACK_FAILED")}, state}
+    end
+  end
+
+  def handle_call({:retained_counts, counts}, {manager, _}, state) do
+    owners =
+      if Map.has_key?(state.owners, manager),
+        do: state.owners,
+        else: Map.put(state.owners, manager, Process.monitor(manager))
+
+    {:reply, :ok, %{state | retained: Map.put(state.retained, manager, counts), owners: owners}}
   end
 
   def handle_call({:hold, token}, {host, _}, state) do
@@ -185,6 +214,7 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   end
 
   def handle_call({:snapshot, manager}, _from, state) do
+    retained = Map.get(state.retained, manager, %{"pending" => 0, "timers" => 0})
     pending = Enum.filter(Map.values(state.pending), &(&1.manager == manager))
     reservations = Enum.filter(Map.values(state.reservations), &(&1.manager == manager))
 
@@ -202,9 +232,11 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
 
     {:reply,
      %{
-       "pending" => length(pending),
+       "pending" => length(pending) + retained["pending"],
        "pending_edges" => pending_edges,
-       "timers" => Enum.count(pending, &(&1.effect["type"] == "schedule" and &1.waiting)),
+       "timers" =>
+         Enum.count(pending, &(&1.effect["type"] == "schedule" and &1.waiting)) +
+           retained["timers"],
        "reserved" => Enum.sum(Enum.map(reservations, &length(&1.items))),
        "topology" => Enum.sort_by(edges, &{&1["from"], &1["to"]})
      }, state}
@@ -220,7 +252,11 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
     tokens = for {token, batch} <- state.reservations, batch.monitor == ref, do: token
-    {:noreply, Enum.reduce(tokens, state, &discard_reservation(&2, &1))}
+    state = Enum.reduce(tokens, state, &discard_reservation(&2, &1))
+    owners = for {owner, monitor} <- state.owners, monitor == ref, do: owner
+
+    {:noreply,
+     %{state | owners: Map.drop(state.owners, owners), retained: Map.drop(state.retained, owners)}}
   end
 
   def handle_info({:fire, id, nonce}, state) do
@@ -316,6 +352,7 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   defp used(state),
     do:
       map_size(state.pending) +
+        Enum.sum(Enum.map(state.retained, fn {_owner, counts} -> counts["pending"] end)) +
         Enum.sum(Enum.map(state.reservations, fn {_token, batch} -> length(batch.items) end))
 
   defp discard_reservation(state, token) do

@@ -1,6 +1,7 @@
 defmodule ElixirMixir.Runtime.DurableOperations do
   @moduledoc "Serializes durable admission, bounded preparation, atomic outcomes and live publication."
 
+  alias ElixirMixir.Runtime.DurableOutbox
   alias ElixirMixir.Runtime.DurableRequests
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
@@ -108,6 +109,7 @@ defmodule ElixirMixir.Runtime.DurableOperations do
     state.durability_barrier.(:after_commit)
     state.durability_barrier.(:before_publish)
     next = prepared.publish.(state)
+    :ok = DurableOutbox.sync(next)
     state.durability_barrier.(:before_response)
 
     EventLog.append(%{

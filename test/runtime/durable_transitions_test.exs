@@ -111,7 +111,7 @@ defmodule ElixirMixir.Runtime.DurableTransitionsTest do
     assert {:ok, %{"reply" => 12}} = Manager.invoke(args(ctx, %{}), ctx.manager)
   end
 
-  test "nonempty effects never reserve, dispatch or mutate durable state", ctx do
+  test "nonempty effects commit with state and remain pending without dispatch", ctx do
     {:ok, artifact} =
       Manager.define(
         %{
@@ -137,7 +137,6 @@ defmodule ElixirMixir.Runtime.DurableTransitionsTest do
       )
 
     ctx = %{ctx | worker: worker}
-    before = Store.snapshot(ctx.store)[{:state, worker}]
 
     for effect <- [
           %{"type" => "emit", "to" => "peer", "event" => %{}},
@@ -151,15 +150,12 @@ defmodule ElixirMixir.Runtime.DurableTransitionsTest do
         ] do
       args = args(ctx, %{"effects" => [effect]})
 
-      assert {:error, %{"code" => "DURABILITY_UNAVAILABLE"} = failure} =
-               Manager.invoke(args, ctx.manager)
-
-      assert {:error, ^failure} = Manager.invoke(args, ctx.manager)
-      assert Store.snapshot(ctx.store)[{:state, worker}] == before
+      assert {:ok, result} = Manager.invoke(args, ctx.manager)
+      assert {:ok, ^result} = Manager.invoke(args, ctx.manager)
     end
 
     stats = EffectDispatcher.snapshot(EffectDispatcher, ctx.manager)
-    assert stats["pending"] == 0
+    assert stats["pending"] == 3
     assert stats["reserved"] == 0
     assert {:ok, _} = Manager.invoke(args(ctx, %{}), ctx.manager)
   end

@@ -1,8 +1,10 @@
 defmodule ElixirMixir.Runtime.DurableTransitions do
-  @moduledoc "Commits effect-free prepared worker state and exact request results before live publication."
+  @moduledoc "Commits prepared worker state and pending effects and exact request results before live publication."
 
   alias ElixirMixir.Runtime.DurableOperations
+  alias ElixirMixir.Runtime.DurableOutbox
   alias ElixirMixir.Runtime.DurableWorkers
+  alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.ProcessHost
@@ -40,7 +42,7 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
       manager: self(),
       path: [],
       remaining_hops: state.limits.effect_hops,
-      effect_mode: :reject
+      wall_now: state.wall_clock.()
     }
 
     with {:ok, data, ticket} <-
@@ -60,7 +62,14 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
   def prepared_change(args, worker, entry, data, ticket, state) do
     case ProcessHost.prepared_snapshot(worker.pid, ticket) do
       {:ok, snapshot} ->
-        candidate(args, worker, entry, data, ticket, snapshot, state)
+        case DurableOutbox.batch(worker.dispatcher, snapshot.effect_token) do
+          {:ok, effects} ->
+            candidate(args, worker, entry, data, ticket, snapshot, state, effects)
+
+          error ->
+            ProcessHost.abort(worker.pid, ticket)
+            error
+        end
 
       {:error, _error} = error ->
         ProcessHost.abort(worker.pid, ticket)
@@ -68,7 +77,7 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
     end
   end
 
-  defp candidate(args, worker, entry, data, ticket, snapshot, state) do
+  defp candidate(args, worker, entry, data, ticket, snapshot, state, effects) do
     next = %{
       worker
       | artifact: snapshot.artifact,
@@ -87,12 +96,13 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
     {:ok,
      %{
        data: data,
-       puts: puts,
+       puts: Map.merge(puts, effects),
        deletes: [],
        changed: true,
        abort: fn -> ProcessHost.abort(worker.pid, ticket) end,
        publish: fn state ->
-         {:ok, ^data, :none} = ProcessHost.publish(worker.pid, ticket)
+         {:ok, ^data, token} = ProcessHost.publish(worker.pid, ticket)
+         :ok = EffectDispatcher.release(worker.dispatcher, token)
          %{state | workers: Map.put(state.workers, next.worker_id, next)}
        end
      }}

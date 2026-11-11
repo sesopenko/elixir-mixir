@@ -115,7 +115,7 @@ defmodule ElixirMixir.Integration.Phase02TransitionsTest do
     assert after_boot["requests"] == before["requests"]
   end
 
-  test "HTTP failures and unsupported effects preserve committed state and peer health" do
+  test "HTTP failures and paused durable effects preserve peer health" do
     dir = directory()
     {fixture, client} = runtime(dir, :first)
     artifact = setup_counter(client)
@@ -158,13 +158,13 @@ defmodule ElixirMixir.Integration.Phase02TransitionsTest do
              "worker_id" => "sender",
              "event" => %{},
              "request_id" => "blocked-effect"
-           })["code"] == "DURABILITY_UNAVAILABLE"
+           })["reply"] == 1
 
     assert tool(client, "runtime_inspect", %{"worker_id" => "peer", "detail" => "state"})["state"][
              "count"
            ] == 0
 
-    assert RuntimeFixture.control(fixture, %{"op" => "dispatcher_status"})["pending"] == 0
+    assert RuntimeFixture.control(fixture, %{"op" => "dispatcher_status"})["pending"] == 1
     assert tool(client, "runtime_invoke", args("healthy", 3))["reply"] == 3
     RuntimeFixture.control(fixture, %{"op" => "kill_host", "id" => "counter"})
 

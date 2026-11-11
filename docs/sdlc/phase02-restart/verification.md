@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through durable-replacement verified; remaining checkpoints and application recovery
+Status: store-foundation through durable-outbox verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -290,7 +290,46 @@ effects remain disabled until the outbox/delivery tasks.
 
 ## durable-outbox
 
-Pending. Owning [task](tasks/durable-outbox.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `461350f` was committed and pushed.
+
+- `mix test test/runtime/durable_outbox_test.exs --warnings-as-errors`: 6 passed.
+- `mix test test/integration/phase02_outbox_test.exs --warnings-as-errors`: 6 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 96 passed.
+- Full `mix check`: 235 tests, 2 doctests; no warnings, strict Credo clean,
+  Doctor 100% documentation/typespec coverage, Dialyzer zero errors/skips.
+- Plan verifier, public-document local file links and diff checks pass. The
+  installed `.githooks` hook reruns the full gate for the checkpoint commit.
+
+An HTTP invocation emits one peer event, one schedule and one log intent. Actual
+SIGKILL at before-commit, after-commit and before-response barriers reopens the
+same owned temporary directory without a client. State and all three intents
+survive together or neither does. Exact effect records, IDs and absolute UTC
+deadlines remain unchanged after reopening. Retained replay never adds work;
+uncommitted requests replay `OPERATION_INTERRUPTED`. Peer state stays zero and
+no `effect_log` event appears before commit or after recovery. Reconstructed
+pending/timer counts match disk, reservations are zero, and public inspection
+reports paused dispatch. Three more SIGKILL cases surround source stop: retained
+running source plus three effects, or stopped source plus zero effects, never a
+partially canceled batch.
+
+Focused tests verify identity from the unique persisted operation ID plus path,
+separate caller correlation, exact replay, distinct identities after expired
+caller-key reuse, JSON-only records, fixed UTC deadlines, whole-batch invalid/full
+queue rejection, invalid-state and response-budget rollback with zero leaked
+reservations, host-crash/replacement preservation and atomic stop cancellation.
+A lowered boot capacity fails recovery before recompilation without rewriting any
+retained record. Existing staged-host owner/host-death cleanup and memory effect
+coverage remain green. One initial test used `expected_worker_revision` instead
+of the supported `expected_revision`; correcting the fixture made its preservation
+assertion exercise replacement successfully.
+
+The coordinator serializes the owner-bound reservation and commits its complete
+batch with origin state, revisions, exact outcome and audit. Publication releases
+the transient reservation and reconstructs retained queue accounting; boot does
+the same reconstruction before readiness. No durable effect dispatch occurs in
+this checkpoint. README, contributor and API guidance state that boundary and
+cover fixed deadlines, operation identities, capacity and stop semantics. Delivery
+and quarantine reconciliation remain the next tasks.
 
 ## durable-delivery
 

@@ -2,7 +2,6 @@ defmodule ElixirMixir.Runtime.Transition do
   @moduledoc "Stages complete event outcomes and preflights their wire encoding before host state changes."
 
   alias ElixirMixir.Runtime.EffectDispatcher
-  alias ElixirMixir.Runtime.Effects
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.ResponseBudget
@@ -14,7 +13,6 @@ defmodule ElixirMixir.Runtime.Transition do
   def stage({:ok, reply, data, effects}, host, context) do
     with :ok <- valid_reply(reply, host.limits),
          :ok <- ProcessHost.valid_state(data, host.limits),
-         :ok <- supported_effects(effects, context, host.limits),
          {:ok, token, accepted} <-
            EffectDispatcher.reserve_batch(host.dispatcher, effects, context, host.limits) do
       outcome = %{
@@ -41,15 +39,6 @@ defmodule ElixirMixir.Runtime.Transition do
   end
 
   def stage(_invalid, _host, _context), do: {:error, Error.new("INVALID_TRANSITION")}
-
-  defp supported_effects([], _context, _limits), do: :ok
-
-  defp supported_effects(effects, %{effect_mode: :reject}, limits) do
-    with :ok <- Effects.validate(effects, limits),
-         do: {:error, Error.new("DURABILITY_UNAVAILABLE")}
-  end
-
-  defp supported_effects(_effects, _context, _limits), do: :ok
 
   defp valid_reply(reply, limits) do
     case Values.validate(reply, :reply, limits) do

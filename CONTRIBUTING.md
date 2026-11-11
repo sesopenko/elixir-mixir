@@ -304,9 +304,9 @@ environment variables. CubDB 2.0.2 is locked with synchronous writes and automat
 compaction enabled. Loss of the authoritative store shuts down the kernel.
 
 Durable source definitions, desired workers, initial state and request outcomes
-are integrated with the store, together with effect-free event transitions.
-Durable replacement is integrated. A nonempty kernel effect batch returns
-`DURABILITY_UNAVAILABLE` without committing state or dispatching effects. Inspection
+are integrated with the store, together with event transitions and implementation replacement. Complete outgoing
+effect batches commit atomically with state; durable delivery is currently paused,
+including logs. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for current running-application experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
@@ -337,7 +337,7 @@ mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
 ```
 
 Durable start/stop, event state recovery and replacement are integrated.
-Effect-free invoke is supported; durable effect delivery remains pending.
+Invoke accepts complete pending effect batches; durable delivery remains paused.
 Wait for `/health` before connecting. Recompilation can
 execute compile-time IO again, so the same trusted-code isolation requirements
 apply after restart. Definition response module strings can describe an old slot;
@@ -382,13 +382,13 @@ mix test test/runtime/durable_transitions_test.exs test/runtime/worker_recovery_
 mix test test/integration/phase02_transitions_test.exs --warnings-as-errors
 ```
 
-A successful effect-free invocation persists state, schema, state revision, request
+A successful invocation persists state, schema, state revision, pending effects, request
 outcome and audit atomically before host publication and acknowledgement. Retry
 identical arguments/request ID after an uncertain response. Retention still expires
 including downtime, and an expired ID can run again. Host recovery uses the latest
 committed event state without reinitializing or advancing its state revision.
-Nonempty emit/schedule/log batches remain disabled in durable mode; memory mode
-keeps its existing effects. Direct callback IO has VM privileges and cannot be
+Emit/schedule/log intents remain pending in durable mode; memory mode
+keeps its existing delivery behavior. Direct callback IO has VM privileges and cannot be
 rolled back or deduplicated by kernel state transactions.
 
 
@@ -407,5 +407,22 @@ Matching schemas preserve state revision; explicit schema-changing migration
 advances it. Live PID continuity applies within one uninterrupted VM, while boot
 creates fresh hosts. Invalid candidates, stale expected revisions, migration
 failures/deadlines and response-size errors leave the old selection/state intact.
-Kernel state transactions do not undo direct migration IO. Durable effects remain
-unavailable until the outbox/delivery checkpoints are integrated.
+Kernel state transactions do not undo direct migration IO. Durable effect intents are retained; delivery remains paused.
+
+
+Durable outbox tests verify complete batches, request expiry, capacity and preflight
+rollback, plus actual SIGKILL around invocation and stop commits:
+
+```sh
+mix test test/runtime/durable_outbox_test.exs --warnings-as-errors
+mix test test/integration/phase02_outbox_test.exs --warnings-as-errors
+```
+
+Effect identity combines the unique persisted operation ID and bounded path. Request
+correlation is separate, so reusing an expired caller key cannot overwrite old work.
+Schedules retain absolute UTC millisecond deadlines computed during preparation;
+reopening the store does not reset them. Pending records plus transient reservations
+share the capacity limit. Boot reconstructs counts with no stale reservations and
+fails readiness if a lowered limit cannot hold the retained queue. Stop cancels
+pending intents from that source atomically; host crashes and replacement preserve
+them. Summary inspection reports `effects.dispatch: "paused"` in durable mode.

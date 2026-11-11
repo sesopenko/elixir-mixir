@@ -53,7 +53,7 @@ defmodule ElixirMixir.Runtime.Inspector do
           "capacity" => state.limits.ledger_entries,
           "retention_ms" => state.limits.ledger_retention_ms
         },
-        "effects" => Map.take(stats, ["pending", "timers", "reserved"])
+        "effects" => effect_counts(stats, state)
       }
 
       paging = %{
@@ -75,6 +75,11 @@ defmodule ElixirMixir.Runtime.Inspector do
       page = EventLog.events(args, state.event_log)
       fit_events(page, state)
     end
+  end
+
+  defp effect_counts(stats, state) do
+    counts = Map.take(stats, ["pending", "timers", "reserved"])
+    if state.storage.mode == :durable, do: Map.put(counts, "dispatch", "paused"), else: counts
   end
 
   defp worker_snapshot(worker, detail, state) do

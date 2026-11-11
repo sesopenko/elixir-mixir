@@ -17,7 +17,7 @@ defmodule ElixirMixir.Runtime.Effects do
 
   def validate(_effects, _limits), do: invalid()
 
-  @doc "Returns a 64-character SHA-256 identity over the originating request and bounded effect path."
+  @doc "Returns a 64-character SHA-256 identity over the operation identity (legacy request identity in memory mode) and bounded path."
   @spec identity(String.t(), [pos_integer()]) :: String.t()
   def identity(origin, path),
     do:

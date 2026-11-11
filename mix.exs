@@ -24,7 +24,8 @@ defmodule ElixirMixir.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:doctor, "~> 0.23.0", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -34,6 +35,7 @@ defmodule ElixirMixir.MixProject do
         "format --check-formatted",
         "compile --warnings-as-errors",
         "credo --strict",
+        "doctor --raise",
         "test --warnings-as-errors",
         "dialyzer"
       ]

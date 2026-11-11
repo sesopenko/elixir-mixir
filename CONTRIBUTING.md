@@ -25,7 +25,7 @@ mix local.hex --force
 mix deps.get
 ```
 
-Credo and Dialyxir are development/test tools and do not run as production
+Credo, Dialyxir, and Doctor are development/test tools and do not run as production
 application dependencies. Commit `mix.lock` when changing dependencies. No
 database, container, credentials, or external services are needed for this
 bootstrap.
@@ -77,8 +77,8 @@ mix check
 ```
 
 The alias uses the test environment and stops on a failed check. It checks
-formatting, compiles with warnings treated as errors, runs strict Credo, runs
-ExUnit with warnings treated as errors, and runs Dialyzer.
+formatting, compiles with warnings treated as errors, runs strict Credo and
+Doctor, runs ExUnit with warnings treated as errors, and runs Dialyzer.
 
 Individual commands are available for faster feedback:
 
@@ -88,9 +88,15 @@ Individual commands are available for faster feedback:
 | Check formatting without edits | `mix format --check-formatted` |
 | Compile without warnings | `mix compile --warnings-as-errors` |
 | Check style and consistency | `mix credo --strict` |
+| Check documentation and typespec coverage | `mix doctor --raise` |
 | Run tests without warnings | `mix test --warnings-as-errors` |
 | Analyze types | `MIX_ENV=test mix dialyzer` |
 | Explain a Dialyzer warning | `mix dialyzer.explain WARNING_NAME` |
+
+[Doctor](https://doctor.hexdocs.pm/readme.html) enforces 100% module documentation,
+function documentation, and typespec coverage through `.doctor.exs`. Document
+exceptions and provide a `t()` typespec for structs. Do not lower thresholds or
+exclude modules to pass the gate.
 
 Dialyzer uses inferred types and `@spec` annotations to find type mismatches and
 impossible calls. It complements tests; a clean analysis does not prove every

@@ -195,6 +195,32 @@ Dispatch remains in-memory and best effort across a host-commit/publication cras
 gap; no durable outbox or exactly-once crash guarantee is claimed. Full public event
 history/topology/pagination belongs to runtime-inspection, immediately next.
 
+## runtime-inspection
+
+Verified 2026-11-11; the checked task's containing commit is the inspection checkpoint.
+
+- Focused inspection suite: 11 tests pass. Real host state/PID/revisions and cached
+  artifact metadata agree; instrumented generated callbacks prove neither read API
+  executes generated code. Running/stopped/unavailable/exhausted states, pending
+  timers and successful directed relationships are explicit. Independent sorted
+  worker/edge pagination has no duplication; stale runtime/generation/detail
+  cursors fail with a restart hint.
+- Maximum 32-worker escaped Unicode state pages fit duplicated MCP JSON-RPC encoding
+  with visible omissions. Large escaped event pages shrink safely while preserving
+  exclusive sequence progression. Ring eviction, metadata truncation, filtering,
+  UTC timestamps, monotonic sequences and every Phase 1 lifecycle append shape pass.
+- MCP/HTTP suite: 48 tests pass, exactly six tools. Public HTTP inspection/history
+  verifies relationships, timers, correlations/failure codes, Registry identity,
+  artifacts, stopped workers, history across fresh clients, eviction/filter cursors,
+  stale cursor rejection and maximum worker-state response size <=65,536 bytes.
+- Full `mix check`: 2 doctests and 135 tests pass; strict Credo clean, Doctor 100%
+  documentation/typespec coverage, Dialyzer zero errors. Local links, diff whitespace
+  and `.githooks` verified before the checkpoint commit.
+
+History stays in memory, and read omissions do not alter committed state or stored
+events. The minimum 1 KiB response ceiling can yield a bounded error when a minimal
+snapshot cannot fit. Replacement and the separate actual Codex demonstration remain.
+
 ## Acceptance status
 
 | Criteria | Current evidence | Remaining |
@@ -206,11 +232,11 @@ history/topology/pagination belongs to runtime-inspection, immediately next.
 | A03 | Loaded exports/BEAM/hash and immutable registry, including HTTP define | Complete for compiler substrate |
 | A10 | Failed definitions preserve active counter artifact/state; subsequent invoke works | Verified automated substrate |
 | A04 | Registry membership, DynamicSupervisor child and HTTP define/start/inspect/stop | Verified for startup substrate |
-| A05 | HTTP increment/inspect, revisions and failure preservation | Actual Codex observations |
+| A05 | HTTP increment/inspect, full bounded state/history and revision checks | Actual Codex observations |
 | A12 | Real host kill, peer/HTTP continuity, bounded retries and authoritative stop | Verified automated substrate |
-| A06 | Two-worker HTTP arithmetic, logical delivery and bounded relationship counters | Full topology and actual Codex transcript |
+| A06 | Two-worker HTTP arithmetic, observed/pending topology and bounded pages | Actual Codex transcript |
 | A07–A09, A11 | Foundations only | Owning replacement task |
 
-Full history/topology inspection, replacement, isolated container/release
+Replacement, isolated container/release
 setup and the actual Codex transcript remain pending. No worker/domain behavior is
 seeded in the production kernel or claimed by this checkpoint.

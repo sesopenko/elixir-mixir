@@ -2,6 +2,12 @@
 
 ## Startup and context recovery
 
+Implementation: [assignment](../../../prompts/phase01-implementation.md),
+[unattended continuation](../../../prompts/phase01-implementation-amendment-04.md).
+Corrections: [02](../../../prompts/phase01-dependency-amendment-02.md),
+[03](../../../prompts/phase01-dependency-amendment-03.md),
+[05](../../../prompts/phase01-transport-amendment-05.md).
+
 Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
 Approved amendment: [amendment 01](../../../prompts/phase01-planning-amendment-01.md).
 Governing plan: [plan.md](../plan.md). Current task: this document.
@@ -88,12 +94,37 @@ checkpoint; no self-referential commit hash is needed inside the commit.
 
 ## Mandatory completion checklist
 
-- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
-- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
-- [ ] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
-- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
-- [ ] Review diff and stage only the intended task changes, tests and documentation.
-- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+- [x] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [x] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [x] Pass focused tests and the growing real-HTTP integration suite for currently implemented capabilities; record commands, results and evidence here.
+- [x] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [x] Review diff and stage only the intended task changes, tests and documentation.
+- [x] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence (2026-11-11):
+
+- Verified prerequisite `bc68bd3`, reread governing instructions and preserved
+  unrelated `scripts/codex.sh`.
+- `mix test test/runtime/inspection_test.exs --warnings-as-errors`: 11 tests,
+  zero failures. Actual host/artifact agreement; instrumented generated callbacks
+  prove read APIs execute none; stopped/unavailable/exhausted snapshots; pending
+  and delivered graph counts; complete worker/edge pagination and stale cursor hints;
+  all 32 worker slots with large escaped Unicode state; bounded history pages,
+  exclusive/filter cursors, ring gaps/metadata omissions and all Phase 1 append shapes.
+- `mix test test/mcp test/integration --warnings-as-errors`: 48 tests, zero failures.
+  Exactly six tools and strict events schema. HTTP proves topology after delivery,
+  pending timers, correlated effect failures, current Registry/PID/artifact metadata,
+  history across fresh clients, eviction/filter progression, stale cursors and
+  full wire encoding bounds at maximum worker/state load.
+- Full `mix check`: 2 doctests and 135 tests pass; strict Credo clean, Doctor
+  100% documentation/typespec coverage, Dialyzer zero errors.
+- Encoded reads preflight duplicated escaped content with the largest JSON-RPC ID.
+  Optional read fields are visibly omitted before shrinking pages. A minimal ceiling
+  may return LIMIT_EXCEEDED when even a compact snapshot cannot fit; the earlier
+  effect wire-rejection test now uses 2 KiB so it still rejects all accepted IDs
+  while allowing its state assertion through expanded inspection.
+- `git diff --check` and local documentation links pass; hook path `.githooks`.
+  The commit containing this checked task is the full-quality-hook checkpoint.
+- Replacement/migration append shapes are covered as read contracts; their actual
+  producing operation remains the next task, `live-replacement`.

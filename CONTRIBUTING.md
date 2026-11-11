@@ -57,7 +57,7 @@ in [the architecture](docs/adr/001-architecture.md).
 Readiness: `curl --fail http://127.0.0.1:4100/health`. Connect from a separate
 terminal using the commands in [README](README.md). Client disconnects do not stop
 the BEAM. `runtime_inspect`, `runtime_define`, `runtime_start`, `runtime_stop` and
-`runtime_invoke` exist at this checkpoint; see the
+`runtime_invoke` and `runtime_events` exist at this checkpoint; see the
 [runtime API](docs/runtime-api.md) for headers, schemas and size limits.
 
 The default configuration enables MCP outside tests. `ELIXIR_MIXIR_PORT=4101 mix

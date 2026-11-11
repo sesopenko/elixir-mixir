@@ -1,7 +1,7 @@
 # Runtime API version 1
 
 The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`,
-`runtime_stop` and `runtime_invoke`.
+`runtime_stop`, `runtime_invoke` and `runtime_events`.
 Runtime metadata is in memory; no generated application is seeded at startup.
 
 ## Connection
@@ -35,13 +35,36 @@ Arguments are optional; omission is equivalent to an empty object:
 | `worker_id` | ASCII identifier `[a-zA-Z0-9_-]{1,64}`; selects a retained worker, or `WORKER_NOT_FOUND` |
 | `detail` | `summary` (default) or `state`; state detail includes bounded committed state for a running worker |
 | `limit` | Integer from 1 through configured page maximum (default maximum 100) |
-| `cursor` | String schema reserved for inspection pagination; no cursor is valid until runtime-inspection adds pagination |
+| `cursor` | Opaque string from a previous runtime page; bound to this runtime, generation and detail |
 
 Unknown keys, invalid IDs, explicit null values, unsupported detail and malformed
 cursors return `INVALID_ARGUMENT`. Schema type violations produce protocol errors.
 Inspection is read-only and never executes generated behavior. It reports
-`api_version: "1"`, current generation (zero on startup), health, sorted worker summaries, currently empty topology, configured
-limits and ledger capacity/retention. State inspection does not invent workers.
+`api_version: "1"`, current generation (zero on startup), health, worker_count,
+edge_count, sorted worker pages, topology, pending effects/timers/reservations,
+configured limits and ledger capacity/retention. Worker summaries include diagnostic
+PID, status, revisions, restart budgets and cached immutable artifact metadata
+(ID/logical name/revision/schema/source hash/contract), excluding source and BEAM.
+State detail reads the host's actual committed state with a finite timeout. Failed/
+stopped workers explicitly omit state; an unavailable host reports available false
+and state_omitted. State inspection never invents workers or reruns init/schema.
+
+Topology entries contain from/to logical IDs, successful delivery count and pending
+count. Unknown targets do not create unbounded graph nodes. Workers and directed
+edges each paginate in sorted order with independent positions inside next_cursor.
+Use the returned cursor with the same detail until next_cursor is null; limit may
+change. A mutation/lifecycle change invalidates earlier generation cursors; a cursor
+from another runtime or detail is also invalid. INVALID_ARGUMENT includes a hint to
+restart pagination without cursor. Worker-specific reads cannot take a cursor.
+Client reconnect alone does not invalidate cursors or advance generation.
+
+Large read payloads may omit limits, artifact metadata or state with explicit
+limits_omitted/artifact_omitted/state_omitted and truncated markers, then shrink the
+returned worker/edge page while retaining progress in next_cursor. Pagination also
+sets truncated when more items remain. Nested omission markers describe omitted
+worker fields. Stored state and mutation inputs are never truncated. If even a
+minimal snapshot cannot fit the configured ceiling, return bounded LIMIT_EXCEEDED;
+the minimum 1 KiB ceiling does not promise every snapshot will fit.
 
 The JSON envelope appears as text content and identical `structuredContent`,
 which Hermes can serialize for clients supporting structured tool results. Older
@@ -52,7 +75,7 @@ must allow at least 1,024 bytes for correlated fallback errors.
 
 ## Incremental implementation
 
-Full event inspection and replacement are pending their feature tasks.
+Replacement remains pending its feature task.
 No successful placeholders are advertised. Each feature must extend real-HTTP
 tests and this document in its own verified commit. Future mutations must preflight
 complete wire outcomes before applying staged changes; definition preflights its
@@ -298,11 +321,50 @@ counts aggregate successful deliveries only, bounded by retained worker IDs.
 
 Structured logs enter Logger with bounded mixir_metadata plus effect/request IDs,
 and a correlated effect_log history record. Lifecycle history also records effect
-acceptance, scheduling, delivery and failure. Full history/topology tools arrive in
-runtime-inspection; internal EventLog currently supplies automated verification.
+acceptance, scheduling, delivery and failure. Use runtime_events for history and runtime_inspect for bounded relationship pages.
 
 All admission, timers and delivery state are in memory. Dispatch is best effort
 once per committed batch, without an exactly-once crash guarantee. A crash between
 host state commit and batch publication can lose effects in Phase 1. Dispatcher
 loss is fatal to the kernel rather than restarting empty admission authority;
 BEAM/kernel recovery and durable outboxes remain later-phase work.
+
+## runtime_events
+
+All arguments are optional: after is an exclusive nonnegative sequence cursor
+(default 0), limit is 1 through the configured page maximum (default 25, maximum
+100), and worker_id filters a retained logical worker. Unknown worker IDs yield
+WORKER_NOT_FOUND; unknown keys, invalid IDs/cursors/page sizes yield INVALID_ARGUMENT
+(or a JSON-RPC schema error for type/range violations). Reads carry API version and
+current generation and do not change generation or call generated callbacks.
+
+Results contain events, next_cursor, oldest_sequence, gap, dropped and truncated.
+Each event has a monotonic sequence, UTC timestamp, type, worker/logical ID where
+applicable, artifact revision, request/correlation ID, outcome and bounded metadata.
+Effect records also include deterministic effect_id. The ring holds at most 1,000
+records with metadata at most 2 KiB/depth 16; oversized metadata is omitted with a
+record-level truncated flag. dropped counts evictions; page-level truncated counts
+metadata truncations in the ring's lifetime. gap is true if after precedes the
+oldest retained sequence. No Phase 2 recovery history is fabricated.
+
+Continue using next_cursor. Filtered empty pages advance to the scanned history
+head, so a client does not repeat old unmatched records. Sequence cursors work
+across client sessions in the same BEAM and are independent of inspection's opaque
+generation cursors. A BEAM restart loses history and resets sequence numbering.
+
+Whole-response preflight includes duplicated escaped text/structured content and
+maximum JSON-RPC correlation ID. Oversized event pages shrink to a safe prefix,
+set page_truncated true and return the last included sequence as next_cursor. A
+single oversized record may omit metadata explicitly; the event and cursor are
+retained. If even that record cannot fit, return bounded LIMIT_EXCEEDED instead of
+silently skipping it. History is read-only; response omissions do not edit records.
+
+Examples of tool arguments:
+
+```json
+{"after":0,"limit":25,"worker_id":"counter"}
+```
+
+Read the next page with the returned next_cursor as after. Inspecting the runtime
+or reading history from a fresh client leaves workers, revisions and generation
+unchanged.

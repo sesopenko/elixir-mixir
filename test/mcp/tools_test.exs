@@ -3,6 +3,7 @@ defmodule ElixirMixir.MCP.ToolsTest do
 
   alias ElixirMixir.MCP.Result
   alias ElixirMixir.MCP.Tools.RuntimeDefine
+  alias ElixirMixir.MCP.Tools.RuntimeEvents
   alias ElixirMixir.MCP.Tools.RuntimeInvoke
   alias ElixirMixir.MCP.Tools.RuntimeStart
   alias ElixirMixir.MCP.Tools.RuntimeStop
@@ -30,6 +31,14 @@ defmodule ElixirMixir.MCP.ToolsTest do
     schema = RuntimeInvoke.input_schema()
     assert Enum.sort(schema["required"]) == ~w(event request_id worker_id)
     assert schema["properties"]["event"]["type"] == "object"
+    assert schema["additionalProperties"] == false
+  end
+
+  test "events advertises optional bounded cursor/filter fields and rejects unknown keys" do
+    schema = RuntimeEvents.input_schema()
+    assert Map.get(schema, "required", []) == []
+    assert Enum.sort(Map.keys(schema["properties"])) == ~w(after limit worker_id)
+    assert schema["properties"]["after"]["minimum"] == 0
     assert schema["additionalProperties"] == false
   end
 

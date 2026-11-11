@@ -289,7 +289,7 @@ defmodule ElixirMixir.Runtime.EventEffectsTest do
     assert state(ctx, ctx.target)["count"] == 1
   end
 
-  @tag limits: %{response_bytes: 1_024}
+  @tag limits: %{response_bytes: 2_048}
   test "wire rejection releases the reservation and retains source state", ctx do
     start(ctx, ctx.source)
     start(ctx, ctx.target)

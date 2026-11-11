@@ -175,9 +175,17 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
           owner == manager,
           do: %{"from" => source, "to" => target, "count" => count}
 
+    pending_edges =
+      pending
+      |> Enum.frequencies_by(&{&1.source, &1.effect["to"]})
+      |> Enum.map(fn {{source, target}, count} ->
+        %{"from" => source, "to" => target, "pending" => count}
+      end)
+
     {:reply,
      %{
        "pending" => length(pending),
+       "pending_edges" => pending_edges,
        "timers" => Enum.count(pending, &(&1.effect["type"] == "schedule" and &1.waiting)),
        "reserved" => Enum.sum(Enum.map(reservations, &length(&1.items))),
        "topology" => Enum.sort_by(edges, &{&1["from"], &1["to"]})

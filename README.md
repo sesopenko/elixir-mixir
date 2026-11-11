@@ -27,8 +27,9 @@ codex mcp list
 codex
 ```
 
-The tools are `runtime_define`, `runtime_start`, `runtime_invoke`, `runtime_inspect`
-and `runtime_stop`.
+The tools are `runtime_define`, `runtime_start`, `runtime_invoke`, `runtime_inspect`,
+`runtime_events` and `runtime_stop`. Inspect reads state and paginated topology;
+events reads correlated lifecycle/effect history with sequence cursors and eviction gaps.
 Define compiles an inactive artifact; start runs its bounded init in a supervised
 logical worker; invoke commits bounded reply/state transitions and admits asynchronous
 emit, schedule and structured log effects.

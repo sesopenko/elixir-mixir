@@ -4,6 +4,7 @@ defmodule ElixirMixir.MCP.Server do
   use Hermes.Server, name: "elixir-mixir", version: "0.1.0", capabilities: [:tools]
 
   component(ElixirMixir.MCP.Tools.RuntimeDefine, name: "runtime_define")
+  component(ElixirMixir.MCP.Tools.RuntimeEvents, name: "runtime_events")
   component(ElixirMixir.MCP.Tools.RuntimeInspect, name: "runtime_inspect")
 
   component(ElixirMixir.MCP.Tools.RuntimeInvoke, name: "runtime_invoke")
@@ -18,7 +19,7 @@ defmodule ElixirMixir.MCP.Server do
       "Define requires logical_name, source, expected_behavior elixir_mixir.behavior.v1 and request_id. " <>
       "Reuse request_id only for identical retries. All four callbacks are mandatory. " <>
       "Use runtime_start with worker_id/artifact_id/config/request_id; runtime_stop retains the definition. " <>
-      "Inspect worker state with worker_id and detail state. Host crashes rerun init within three restart attempts per rolling ten seconds; stopped or exhausted workers require explicit start. " <>
+      "Inspect worker state with worker_id and detail state; runtime pages have generation-bound cursors. Use runtime_events after/limit/worker_id for correlated history. Host crashes rerun init within three restart attempts per rolling ten seconds; stopped or exhausted workers require explicit start. " <>
       "Use runtime_invoke with worker_id/event/request_id; repeat an identical ID to replay its outcome. " <>
       "Effects may emit, schedule or log; accepted effect IDs acknowledge admission, and delivery failures appear in history. Generated code requires a trusted disposable environment."
   end

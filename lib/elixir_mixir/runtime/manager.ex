@@ -12,7 +12,9 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.Definition
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
+  alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Inspection
+  alias ElixirMixir.Runtime.Inspector
   alias ElixirMixir.Runtime.Limits
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
@@ -49,11 +51,16 @@ defmodule ElixirMixir.Runtime.Manager do
   def invoke(args, server \\ __MODULE__),
     do: GenServer.call(server, {:worker, :invoke, args}, Limits.defaults().operation_timeout_ms)
 
-  @doc "Returns bounded runtime/worker snapshots using kernel-owned state; no cursor exists yet."
+  @doc "Returns bounded read-only worker and relationship pages tied to the current generation."
   @spec inspect_runtime(map(), GenServer.server()) :: result()
   def inspect_runtime(args, server \\ __MODULE__) do
     GenServer.call(server, {:inspect, args}, Limits.defaults().operation_timeout_ms)
   end
+
+  @doc "Returns bounded correlated event history after an exclusive sequence cursor."
+  @spec events(map(), GenServer.server()) :: result()
+  def events(args, server \\ __MODULE__),
+    do: GenServer.call(server, {:events, args}, Limits.defaults().operation_timeout_ms)
 
   @doc """
   Runs a trusted kernel operation once per request ID and validated argument hash.
@@ -84,6 +91,8 @@ defmodule ElixirMixir.Runtime.Manager do
        ledger: RequestLedger.new(limits),
        generation: 0,
        workers: %{},
+       event_log: Keyword.get(opts, :event_log, EventLog),
+       inspection_id: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false),
        dispatcher: GenServer.whereis(Keyword.get(opts, :dispatcher, EffectDispatcher)),
        restart_timer:
          Keyword.get(opts, :restart_timer, fn message ->
@@ -97,11 +106,16 @@ defmodule ElixirMixir.Runtime.Manager do
   def handle_call({:inspect, args}, _from, state) do
     result =
       case Inspection.validate(args, state.limits) do
-        :ok -> inspect_workers(args, state)
+        :ok -> read_result(Inspector.inspect_runtime(args, state), state)
         {:error, error} -> {:error, envelope(error, state.generation)}
       end
 
     {:reply, bounded(result, state), state}
+  end
+
+  def handle_call({:events, args}, _from, state) do
+    result = with :ok <- Inspection.events(args, state.limits), do: Inspector.events(args, state)
+    {:reply, bounded(read_result(result, state), state), state}
   end
 
   def handle_call({:define, args}, _from, state) do
@@ -243,42 +257,7 @@ defmodule ElixirMixir.Runtime.Manager do
   defp staged({:ok, _data} = result, state), do: {result, state, true}
   defp staged({:error, _error} = result, state), do: {result, state, false}
 
-  defp inspect_workers(%{"worker_id" => id} = args, state) do
-    case Workers.find(state.workers, id) do
-      {:ok, worker} ->
-        {:ok,
-         worker
-         |> Workers.snapshot(Map.get(args, "detail", "summary"), state.limits)
-         |> envelope(state.generation)}
-
-      {:error, error} ->
-        {:error, envelope(error, state.generation)}
-    end
-  end
-
-  defp inspect_workers(args, state) do
-    limit = Map.get(args, "limit", state.limits.page_default)
-
-    workers =
-      state.workers
-      |> Enum.sort_by(&elem(&1, 0))
-      |> Enum.take(limit)
-      |> Enum.map(fn {_id, worker} -> Workers.snapshot(worker, "summary", state.limits) end)
-
-    data = %{
-      "health" => "ok",
-      "workers" => workers,
-      "topology" => [],
-      "limits" => Map.new(state.limits, fn {key, value} -> {Atom.to_string(key), value} end),
-      "ledger" => %{
-        "capacity" => state.limits.ledger_entries,
-        "retention_ms" => state.limits.ledger_retention_ms
-      }
-    }
-
-    data = if map_size(state.workers) > limit, do: Map.put(data, "truncated", true), else: data
-    {:ok, envelope(data, state.generation)}
-  end
+  defp read_result({status, data}, state), do: {status, envelope(data, state.generation)}
 
   defp bounded({status, data}, state) do
     limits = %{

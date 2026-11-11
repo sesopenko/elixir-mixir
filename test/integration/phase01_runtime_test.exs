@@ -759,6 +759,176 @@ defmodule ElixirMixir.Phase01RuntimeIntegrationTest do
     assert worker_state(ctx.client, "aggregate")["count"] == 1
   end
 
+  test "public HTTP inspection explains relationships, pending timers and correlated history across clients",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    effect_start(ctx.client, artifact, "aggregate")
+    effect_start(ctx.client, artifact, "counter", %{"forward" => "aggregate"})
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "counter",
+      "event" => %{"amount" => 6},
+      "request_id" => "observed-delivery"
+    })
+
+    await_http(fn -> worker_state(ctx.client, "aggregate")["total"] == 6 end)
+    await_http(fn -> tool(ctx.client, "runtime_inspect", %{})["effects"]["pending"] == 0 end)
+    overview = tool(ctx.client, "runtime_inspect", %{})
+
+    assert overview["topology"] == [
+             %{"from" => "counter", "to" => "aggregate", "count" => 1, "pending" => 0}
+           ]
+
+    assert overview["worker_count"] == 2
+
+    counter =
+      tool(ctx.client, "runtime_inspect", %{"worker_id" => "counter", "detail" => "state"})
+
+    member =
+      RuntimeFixture.control(ctx.fixture, %{"op" => "worker_membership", "id" => "counter"})
+
+    assert counter["pid"] == member["pid"]
+    assert counter["artifact"]["source_hash"] == artifact["source_hash"]
+    effect_start(ctx.client, artifact, "emitter")
+
+    effects = [
+      %{"type" => "schedule", "to" => "aggregate", "delay_ms" => 60_000, "event" => %{}},
+      %{"type" => "emit", "to" => "missing", "event" => %{}}
+    ]
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "emitter",
+      "event" => %{"effects" => effects},
+      "request_id" => "observed-failure"
+    })
+
+    await_http(fn -> tool(ctx.client, "runtime_inspect", %{})["effects"]["pending"] == 1 end)
+    overview = tool(ctx.client, "runtime_inspect", %{})
+    assert overview["effects"]["timers"] == 1
+    assert Enum.any?(overview["topology"], &(&1["from"] == "emitter" and &1["pending"] == 1))
+    history = public_events(ctx.client, 0)
+
+    assert Enum.any?(
+             history,
+             &(&1["type"] == "effect_delivered" and &1["request_id"] == "observed-delivery")
+           )
+
+    assert Enum.any?(
+             history,
+             &(&1["type"] == "effect_failed" and &1["request_id"] == "observed-failure" and
+                 &1["metadata"]["code"] == "WORKER_NOT_FOUND")
+           )
+
+    filtered = tool(ctx.client, "runtime_events", %{"worker_id" => "counter", "limit" => 100})
+    assert Enum.all?(filtered["events"], &(&1["worker_id"] == "counter"))
+    assert filtered["generation"] == overview["generation"]
+    Client.disconnect(ctx.client)
+    fresh = Client.new(ctx.ready.port)
+    on_exit(fn -> Client.close(%{fresh | session: nil}) end)
+    {_init, _notification, fresh} = Client.initialize(fresh)
+    after_page = tool(fresh, "runtime_events", %{"after" => List.last(history)["sequence"]})
+    assert after_page["events"] == []
+    assert after_page["generation"] == overview["generation"]
+    tool(fresh, "runtime_stop", %{"worker_id" => "emitter", "request_id" => "inspection-stop"})
+
+    assert tool(fresh, "runtime_inspect", %{"worker_id" => "emitter", "detail" => "state"})[
+             "state_omitted"
+           ]
+
+    assert tool(fresh, "runtime_inspect", %{})["effects"]["pending"] == 0
+  end
+
+  @tag limits: %{history_records: 5, metadata_bytes: 32}
+  test "HTTP cursor generations, eviction gaps, history filters and strict read schemas", ctx do
+    artifact = define(ctx.client, args(Fixtures.effects_source()))
+    for id <- ["a", "b", "c"], do: effect_start(ctx.client, artifact, id)
+    first = tool(ctx.client, "runtime_inspect", %{"limit" => 1})
+    assert Enum.map(first["workers"], & &1["worker_id"]) == ["a"]
+
+    second =
+      tool(ctx.client, "runtime_inspect", %{"limit" => 1, "cursor" => first["next_cursor"]})
+
+    assert Enum.map(second["workers"], & &1["worker_id"]) == ["b"]
+
+    third =
+      tool(ctx.client, "runtime_inspect", %{"limit" => 1, "cursor" => second["next_cursor"]})
+
+    assert Enum.map(third["workers"], & &1["worker_id"]) == ["c"]
+    assert third["next_cursor"] == nil
+    assert third["generation"] == first["generation"]
+
+    tool(ctx.client, "runtime_invoke", %{
+      "worker_id" => "a",
+      "event" => %{},
+      "request_id" => "invalidate-cursor"
+    })
+
+    stale = tool(ctx.client, "runtime_inspect", %{"cursor" => first["next_cursor"]})
+    assert stale["code"] == "INVALID_ARGUMENT"
+    assert stale["details"]["hint"] =~ "Restart pagination"
+    history = tool(ctx.client, "runtime_events", %{"limit" => 100})
+    assert history["gap"]
+    assert history["dropped"] > 0
+    assert history["truncated"] > 0
+
+    assert Enum.map(history["events"], & &1["sequence"]) ==
+             Enum.sort(Enum.map(history["events"], & &1["sequence"]))
+
+    empty =
+      tool(ctx.client, "runtime_events", %{"worker_id" => "b", "after" => history["next_cursor"]})
+
+    assert empty["events"] == []
+    assert empty["next_cursor"] >= history["next_cursor"]
+
+    assert tool(ctx.client, "runtime_events", %{"worker_id" => "missing"})["code"] ==
+             "WORKER_NOT_FOUND"
+
+    assert tool(ctx.client, "runtime_events", %{"unknown" => true})["code"] == "INVALID_ARGUMENT"
+
+    for arguments <- [%{"after" => -1}, %{"after" => "0"}, %{"limit" => 101}] do
+      {response, _} = Client.call(ctx.client, "runtime_events", arguments)
+      assert response.data["error"]["code"] == -32_602 or response.data["result"]["isError"]
+    end
+  end
+
+  test "HTTP maximum worker states and escaped event history stay within full wire ceilings",
+       ctx do
+    artifact = define(ctx.client, args(Fixtures.worker_source()))
+    payload = String.duplicate("\"\\\n😺", 1_630)
+
+    for index <- 1..32 do
+      effect_start(
+        ctx.client,
+        artifact,
+        "worker-" <> String.pad_leading(to_string(index), 2, "0"),
+        %{"payload" => payload}
+      )
+    end
+
+    {response, _} =
+      Client.call(ctx.client, "runtime_inspect", %{"detail" => "state", "limit" => 100})
+
+    assert byte_size(response.body) <= 65_536
+    data = result(response)
+    assert length(data["workers"]) == 32
+    assert Enum.any?(data["workers"], & &1["state_omitted"])
+    assert Enum.any?(data["workers"], & &1["truncated"])
+    assert worker_state(ctx.client, "worker-01") == %{"payload" => payload}
+    records = public_events(ctx.client, 0)
+    assert Enum.count(records, &(&1["type"] == "worker_started")) == 32
+    for record <- records, do: assert({:ok, _, 0} = DateTime.from_iso8601(record["timestamp"]))
+  end
+
+  defp public_events(client, cursor) do
+    {response, _} = Client.call(client, "runtime_events", %{"after" => cursor, "limit" => 100})
+    assert byte_size(response.body) <= 65_536
+    page = result(response)
+
+    if page["events"] == [],
+      do: [],
+      else: page["events"] ++ public_events(client, page["next_cursor"])
+  end
+
   defp effect_start(client, artifact, id, config \\ %{}) do
     tool(client, "runtime_start", %{
       "worker_id" => id,

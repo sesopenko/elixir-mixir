@@ -1,5 +1,5 @@
 defmodule ElixirMixir.MCP.Tools.RuntimeInspect do
-  @moduledoc "Read runtime health, limits, and the current empty worker topology."
+  @moduledoc "Read bounded live worker state, artifact metadata, pending effects and paginated topology."
 
   use Hermes.Server.Component, type: :tool
 

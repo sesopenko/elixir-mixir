@@ -9,3 +9,5 @@
 - After a complete context clear or in a new session, determine progress from repository state and committed work before continuing.
 
 For Phase 1 planning or implementation, first read `docs/prompts/phase01-planning.md`, then `docs/sdlc/phase01/plan.md` if present, and the current task document. Inspect Git status and relevant commits before resuming. If the current task is unclear, use the plan’s execution order and verify completed prerequisites before selecting the next task.
+
+For Phase 2 restart planning or implementation, first read `docs/prompts/phase02-restart-planning.md`, then `docs/sdlc/phase02-restart/plan.md` if present, and the current task document. Reread these documents and separately recorded approved amendments before each subtask and after every compaction. If historical prompts have moved, locate their preserved snapshots rather than recreating or overwriting them. Inspect Git status, relevant commits, and verification evidence before resuming; use the plan's execution order and verify completed prerequisites when selecting the next task.

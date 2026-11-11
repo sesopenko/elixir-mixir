@@ -10,6 +10,9 @@ defmodule ElixirMixir.Runtime.Manager do
   use GenServer
 
   alias ElixirMixir.Runtime.Definition
+  alias ElixirMixir.Runtime.DurableArtifacts
+  alias ElixirMixir.Runtime.DurableDefinitions
+  alias ElixirMixir.Runtime.DurableRequests
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.Error
   alias ElixirMixir.Runtime.EventLog
@@ -19,6 +22,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.RequestLedger
   alias ElixirMixir.Runtime.ResponseBudget
   alias ElixirMixir.Runtime.StorageConfig
+  alias ElixirMixir.Runtime.Store
   alias ElixirMixir.Runtime.Values
   alias ElixirMixir.Runtime.WorkerRecovery
   alias ElixirMixir.Runtime.Workers
@@ -86,34 +90,85 @@ defmodule ElixirMixir.Runtime.Manager do
     )
   end
 
+  @doc "Checks default runtime readiness without waiting behind a generated callback."
+  @spec ready?() :: boolean()
+  def ready? do
+    :ets.lookup(ElixirMixir.Runtime.Readiness, :ready) == [{:ready, true}]
+  rescue
+    ArgumentError -> false
+  end
+
   @impl true
   def init(opts) do
     limits =
       Limits.new(Keyword.get(opts, :limits, Application.get_env(:elixir_mixir, :limits, %{})))
 
-    {:ok,
-     %{
-       storage:
-         StorageConfig.new(
-           Keyword.get(opts, :storage, Application.get_env(:elixir_mixir, :storage, []))
-         ),
-       limits: limits,
-       ledger: RequestLedger.new(limits),
-       generation: 0,
-       workers: %{},
-       before_publish: Keyword.get(opts, :before_publish, fn -> :ok end),
-       event_log: Keyword.get(opts, :event_log, EventLog),
-       inspection_id: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false),
-       dispatcher: GenServer.whereis(Keyword.get(opts, :dispatcher, EffectDispatcher)),
-       restart_timer:
-         Keyword.get(opts, :restart_timer, fn message ->
-           Process.send_after(self(), message, 100)
-         end),
-       clock: Keyword.get(opts, :clock, fn -> System.monotonic_time(:millisecond) end)
-     }}
+    storage =
+      StorageConfig.new(
+        Keyword.get(opts, :storage, Application.get_env(:elixir_mixir, :storage, []))
+      )
+
+    readiness =
+      if Process.whereis(__MODULE__) == self(),
+        do: :ets.new(ElixirMixir.Runtime.Readiness, [:named_table, :protected]),
+        else: nil
+
+    if readiness, do: :ets.insert(readiness, {:ready, storage.mode == :memory})
+
+    state = %{
+      readiness: readiness,
+      recovery:
+        if(storage.mode == :memory, do: %{"status" => "ready"}, else: %{"status" => "recovering"}),
+      store: Keyword.get(opts, :store, Store),
+      wall_clock: Keyword.get(opts, :wall_clock, fn -> System.system_time(:millisecond) end),
+      durability_barrier: Keyword.get(opts, :durability_barrier, fn _phase -> :ok end),
+      boot_id: Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
+      lineage_id: nil,
+      recovery_task: nil,
+      storage: storage,
+      limits: limits,
+      ledger: RequestLedger.new(limits),
+      generation: 0,
+      workers: %{},
+      before_publish: Keyword.get(opts, :before_publish, fn -> :ok end),
+      event_log: Keyword.get(opts, :event_log, EventLog),
+      inspection_id: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false),
+      dispatcher: GenServer.whereis(Keyword.get(opts, :dispatcher, EffectDispatcher)),
+      restart_timer:
+        Keyword.get(opts, :restart_timer, fn message ->
+          Process.send_after(self(), message, 100)
+        end),
+      clock: Keyword.get(opts, :clock, fn -> System.monotonic_time(:millisecond) end)
+    }
+
+    if storage.mode == :durable, do: {:ok, state, {:continue, :recover}}, else: {:ok, state}
   end
 
   @impl true
+  def handle_continue(:recover, state) do
+    records = Store.snapshot(state.store)
+
+    task =
+      Task.Supervisor.async_nolink(ElixirMixir.CompilerTasks, fn ->
+        DurableArtifacts.recover(records, state.limits)
+      end)
+
+    state = %{
+      state
+      | generation: records[:meta]["generation"],
+        lineage_id: records[:meta]["lineage_id"],
+        recovery_task: task
+    }
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call(message, _from, %{recovery: %{"status" => "recovering"}} = state)
+      when elem(message, 0) in [:inspect, :events, :define, :worker, :mutate] do
+    {:reply, failure(Error.new("RUNTIME_RECOVERING"), nil, state), state}
+  end
+
   def handle_call({:inspect, args}, _from, state) do
     result =
       case Inspection.validate(args, state.limits) do
@@ -130,8 +185,18 @@ defmodule ElixirMixir.Runtime.Manager do
   end
 
   def handle_call(message, _from, %{storage: %{mode: :durable}} = state)
-      when elem(message, 0) in [:define, :worker, :mutate] do
+      when elem(message, 0) in [:worker, :mutate] do
     {:reply, failure(Error.new("DURABILITY_UNAVAILABLE"), nil, state), state}
+  end
+
+  def handle_call({:define, args}, _from, %{storage: %{mode: :durable}} = state) do
+    with :ok <- mutation_arguments(args, state.limits),
+         :ok <- Definition.validate(args, state.limits) do
+      {result, next} = DurableDefinitions.execute(args, state)
+      {:reply, result, next}
+    else
+      {:error, error} -> {:reply, failure(error, nil, state), state}
+    end
   end
 
   def handle_call({:define, args}, _from, state) do
@@ -220,6 +285,21 @@ defmodule ElixirMixir.Runtime.Manager do
   end
 
   @impl true
+  def handle_info({ref, {:ok, recovery}}, %{recovery_task: %{ref: ref}} = state) do
+    Process.demonitor(ref, [:flush])
+    records = Store.snapshot(state.store)
+    puts = DurableRequests.interrupted(records, state.generation, state.wall_clock.())
+    if map_size(puts) > 0, do: DurableDefinitions.commit!(state, puts, [], false, "recovery", %{})
+    if state.readiness, do: :ets.insert(state.readiness, {:ready, true})
+    {:noreply, %{state | recovery: Map.put(recovery, "status", "ready"), recovery_task: nil}}
+  end
+
+  def handle_info({ref, {:error, _error}}, %{recovery_task: %{ref: ref}} = state),
+    do: {:stop, :recovery_failed, state}
+
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, %{recovery_task: %{ref: ref}} = state),
+    do: {:stop, :recovery_failed, state}
+
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     {workers, changed} = WorkerRecovery.down(state.workers, ref, reason, recovery_policy(state))
 

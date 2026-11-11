@@ -2,7 +2,8 @@
 
 The implemented MCP tools are `runtime_inspect`, `runtime_define`, `runtime_start`,
 `runtime_stop`, `runtime_invoke`, `runtime_events` and `runtime_replace`.
-Runtime metadata is in memory; no generated application is seeded at startup.
+Default runtime metadata is in memory; no generated application is seeded at startup.
+Optional durable source definition recovery is described below.
 
 ## Connection
 
@@ -484,10 +485,10 @@ across BEAM lifetimes and never share it between running VMs.
 
 Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 `storage.format_version` (null in memory, currently 1 in durable mode). Absolute
-host paths are omitted. The store foundation does not yet persist generated
-application behavior. All durable-mode mutations currently fail with
-`DURABILITY_UNAVAILABLE` before compilation or callbacks; memory tools keep their
-existing behavior. This intermediate boundary will be extended by the
+host paths are omitted. Durable mode supports source definitions and retained
+outcomes as described below. Worker mutations still fail with
+`DURABILITY_UNAVAILABLE` before callbacks; memory tools keep their existing
+behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
 
 ### Preparing worker changes
@@ -506,4 +507,46 @@ the Registry value after init and response preflight, and removes that route on
 stop or host death. The Registry registrant is the Manager, so kernel lookups must
 use the explicit value. Owner death terminates candidates and releases reserved
 capacity. This protocol adds no application restart guarantee yet; durable-mode
-mutations retain the storage-foundation restriction above.
+worker mutations retain the storage-foundation restriction above.
+
+### Durable source definitions and request replay
+
+Durable mode now supports `runtime_define`. It first persists a request admission
+with a unique operation ID, compiles without publishing the registry entry, then
+atomically stores the source, hash, logical revision, exact response and bounded
+audit record. Registry publication follows that commit. Source artifacts and
+completed definition errors survive abrupt BEAM termination. Start, stop, invoke
+and replacement remain disabled in durable mode until worker recovery is integrated.
+
+Boot validates retained hashes/contracts and recompiles valid definitions in
+artifact-ID order using fresh slots from the fixed module pool. Artifact IDs are
+opaque random strings; clients must not infer a slot or revision from them.
+Logical revision high-water marks survive even an invalid retained definition.
+Source/hash/contract/schema failures retain their evidence and appear as bounded
+artifact diagnostics under `recovery` in summary inspection; other valid artifacts
+recover independently. Retained capacity beyond configured or remaining lifetime
+slots fails readiness rather than silently recovering a subset.
+
+`GET /health` returns 503 until recovery finishes, then 200. During recovery, tools
+return `RUNTIME_RECOVERING` before admitting mutations. Summary inspection includes
+`recovery.status`, artifact counts, `degraded`, bounded diagnostics, `boot_id` and `lineage_id`.
+The lineage stays with the store; each Manager boot gets a new boot ID. Absolute
+storage paths and source text remain omitted from public inspection. This checkpoint
+restores inactive definitions; it does not yet restore a running application.
+
+An admitted definition with no committed outcome becomes a retained
+`OPERATION_INTERRUPTED` error on restart without changing generation. A new request
+ID may retry it. A completed request replays its exact historical response, even
+if the original response or registry publication was interrupted. Changing its
+arguments returns `REQUEST_ID_CONFLICT`. Module/PID strings in historical responses
+are diagnostics from that operation; they are not current handles. Current
+inspection is authoritative, and a new VM may reuse a printed PID or module slot.
+
+Completed results expire on admission after the configured retention interval
+(default 10 minutes, maximum 1,024 retained requests), including downtime. A
+backward wall-clock change delays expiry. An expired request ID may execute again
+and create a new artifact/revision; this is bounded replay, not indefinite
+idempotency. A full retained ledger returns `BUSY` without evicting outcomes.
+An uncertain store write or failed publication closes availability; restart reads
+the actual committed result. Direct compile-time IO by trusted generated code is
+outside this transaction boundary and may repeat on recompilation.

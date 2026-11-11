@@ -220,7 +220,10 @@ defmodule ElixirMixir.Runtime.ArtifactCompilerTest do
     before = ArtifactRegistry.status()
 
     assert {:error, %{"code" => "LIMIT_EXCEEDED", "generation" => 0}} =
-             Manager.define(args(Fixtures.source()), manager)
+             Manager.define(
+               Map.put(args(Fixtures.source()), "request_id", String.duplicate("r", 64)),
+               manager
+             )
 
     assert ArtifactRegistry.status()["artifacts"] == before["artifacts"]
   end

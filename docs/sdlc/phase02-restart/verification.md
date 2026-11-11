@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation and staged-hosts verified; remaining checkpoints and application recovery
+Status: store-foundation, staged-hosts and durable-artifacts verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -82,7 +82,57 @@ restart recovery is claimed at this checkpoint.
 
 ## durable-artifacts
 
-Pending. Owning [task](tasks/durable-artifacts.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `fa5b364` was committed and pushed.
+
+- `mix test test/runtime/durable_artifacts_test.exs test/runtime/durable_requests_test.exs --warnings-as-errors`: 8 passed.
+- `mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors`: 6 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 64 passed.
+- Full `mix check`: 182 tests, 2 doctests; no warnings, strict Credo clean,
+  Doctor 100% module/function/spec coverage, Dialyzer zero errors/skips.
+- Plan verifier and diff checks passed; `.githooks` remains installed and the
+  checkpoint commit reruns the full gate.
+
+Actual independent BEAM SIGKILL tests retain one unique temporary directory per
+scenario. Two HTTP definitions recover source/hash/ID/revisions without a client;
+boot identity changes, lineage/generation and stored records stay equal, the next
+logical revision is 3, and restored artifact capacity rejects a fourth definition.
+A restored-module unit assertion executes init successfully. A random original
+module diagnostic stays a binary and is absent from the atom table after recovery.
+
+Named test-only controls pause `after_admission`, `after_prepare` and `after_commit`.
+The first two leave zero durable/registered artifacts and replay
+`OPERATION_INTERRUPTED` after SIGKILL. The last retains one artifact and the exact
+completed result despite zero registry entries at the interruption. Its historical
+module string differs from the current recompiled slot, proving replay does not
+pretend to return a current handle. Retained compile failures and request conflicts
+also replay across restart without rerunning compilation.
+
+A controlled boot compilation shows health 503 and `RUNTIME_RECOVERING` reads and
+mutations before admission. After release, the valid artifact recovers and a
+separately corrupted inactive hash remains on disk with a bounded degraded-recovery
+diagnostic. Parseable revision high-water survives quarantine. Retained or remaining
+BEAM-lifetime capacity fails readiness before partial reconstruction. The initial
+readiness fixture was rejected for a compile-time warning; asserting definition
+acceptance exposed that cause, and the warning-free compile-time fixture now
+exercises the intended recovery boundary.
+
+UTC request-record tests cover serialized exact outcomes, capacity, distinct random
+operation IDs on expired reuse, pending non-expiry and conservative backward-clock
+retention. An actual SIGKILL/downtime case expires the retained request and creates
+a distinct artifact at revision 2. Source definition and replacement wire-preflight
+tests now use maximum valid request/worker identifiers: shorter opaque artifact
+IDs legitimately reduced their old boundary payload sizes.
+
+A pre-push response-budget regression reproduced an oversized retained compilation
+error with a 1,024-byte wire limit. Error outcomes now pass the full response
+preflight before their durable commit; the stored/replayed result becomes the
+bounded `LIMIT_EXCEEDED` error without advancing generation. The final full gate
+includes this regression.
+
+README, contributor and API guidance describe durable opt-in, exclusive volumes,
+source-only recovery, readiness, bounded replay, historical diagnostics and repeated
+compile-time IO. Worker mutations remain `DURABILITY_UNAVAILABLE`; lifecycle,
+committed worker state, effects and the actual client demo are still pending.
 
 ## durable-lifecycle
 
@@ -122,7 +172,8 @@ Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
 
 ## Acceptance and milestone evidence
 
-All A01–A14 and milestone 5–7 results are pending. Add an evidence table mapping
+Source recovery evidence for A01 and definition-boundary evidence for A09/A14 are
+recorded above. Full acceptance reconciliation and milestone 5–7 results remain pending. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.
 The final evidence-review reconciles these existing records; it does not create
 missing runtime coverage.

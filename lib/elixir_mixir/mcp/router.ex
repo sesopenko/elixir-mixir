@@ -155,7 +155,8 @@ defmodule ElixirMixir.MCP.Router do
   end
 
   defp ready? do
-    is_pid(Process.whereis(Manager)) and is_pid(Process.whereis(Hermes.Server.Registry)) and
+    Manager.ready?() and is_pid(Process.whereis(Manager)) and
+      is_pid(Process.whereis(Hermes.Server.Registry)) and
       is_pid(Hermes.Server.Registry.whereis_server(Server))
   end
 

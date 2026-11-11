@@ -37,6 +37,11 @@ defmodule ElixirMixir.Runtime.Inspector do
 
       base = %{
         "health" => "ok",
+        "recovery" =>
+          Map.merge(state.recovery, %{
+            "boot_id" => state.boot_id,
+            "lineage_id" => state.lineage_id
+          }),
         "storage" => %{
           "mode" => Atom.to_string(state.storage.mode),
           "format_version" => if(state.storage.mode == :durable, do: 1, else: nil)

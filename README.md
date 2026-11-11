@@ -142,10 +142,11 @@ It includes the recorded results from two actual Codex sessions.
 ## What to expect today
 
 Live replacement and reconnecting from a fresh Codex session are implemented and
-tested. Everything lives in memory. Closing Codex leaves the
-application running, but restarting the runtime or container loses its workers,
-code, state and history. A crashed worker can restart under supervision, but it
-starts from its initial state. There is no persistence or autonomous controller yet.
+tested. The default memory mode keeps the application running when Codex closes,
+but restarting the runtime or container loses its workers, code, state and history.
+A crashed worker can restart under supervision, starting from its initial state.
+Optional durable source definitions are described below; running application
+recovery is still being implemented. There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -160,8 +161,35 @@ docker rm -f elixir-mixir-phase01
 - [Verification](docs/sdlc/phase01/verification.md): automated checks and actual Codex demonstration evidence.
 - [Contributing](CONTRIBUTING.md): development setup, troubleshooting and the required `mix check` quality gate.
 
-Phase 2 restart recovery is being implemented. Its first checkpoint supplies an
-opt-in durable kernel store, but generated application recovery is still pending.
-Keep using the default memory mode for experiments; durable mode currently rejects
-mutations. See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress)
+## Try durable source definitions (in progress)
+
+Phase 2 restart recovery is being implemented. Durable mode can now retain source
+artifacts and definition outcomes across abrupt BEAM termination, then recompile
+them without a client. Running worker and effect recovery are still pending; use
+the default memory mode for the application experiments above.
+
+To try durable source definitions from the repository root, use a local directory
+owned exclusively by this runtime:
+
+```sh
+ELIXIR_MIXIR_DATA_DIR=/absolute/path/to/data mix run --no-halt
+```
+
+In another terminal, wait for readiness before using the existing Codex or Claude
+Code connection commands:
+
+```sh
+curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:4100/health
+```
+
+Definitions accepted through `runtime_define` survive restart using that same
+directory. Durable worker mutations currently return `DURABILITY_UNAVAILABLE`.
+A pending definition interrupted before commit replays `OPERATION_INTERRUPTED`;
+retry it with a new request ID. Completed responses replay for a bounded interval
+(default 10 minutes, including downtime); an expired ID may execute again. Module
+and PID strings in historical responses describe that operation, so use current
+inspection for live information. Generated compile-time IO may repeat during boot.
+
+See [storage development guidance](CONTRIBUTING.md#durable-storage-foundation-phase-2-in-progress),
+the [runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay)
 and the [restart plan](docs/sdlc/phase02-restart/plan.md) for the current boundary.

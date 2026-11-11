@@ -86,6 +86,8 @@ defmodule ElixirMixir.Runtime.Store do
       tx = Enum.reduce(change.deletes, tx, &CubDB.Tx.delete(&2, &1))
       tx = Enum.reduce(change.puts, tx, fn {key, value}, tx -> CubDB.Tx.put(tx, key, value) end)
       meta = Map.update!(records[:meta], "generation", &(&1 + increment(change.advance)))
+      sequences = for {{:audit, sequence}, _record} <- change.puts, do: sequence + 1
+      meta = Map.update!(meta, "next_audit_sequence", &Enum.max([&1 | sequences]))
       tx = CubDB.Tx.put(tx, :meta, meta)
       {:commit, tx, {:ok, change.outcome}}
     else

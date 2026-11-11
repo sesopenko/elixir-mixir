@@ -26,14 +26,24 @@ defmodule ElixirMixir.Runtime.Definition do
   @spec define(map(), non_neg_integer(), Limits.t()) :: {:ok, map()} | {:error, Error.t()}
   def define(args, generation, limits) do
     outcome =
-      with :ok <- validate(args, limits),
-           {:ok, reservation} <- ArtifactRegistry.reserve(limits.artifact_slots),
-           {:ok, compiled} <- Compiler.compile(args["source"], reservation, limits) do
-        stage(args, generation, reservation, compiled, limits)
+      with {:ok, data, reservation, artifact} <- prepare(args, generation, limits),
+           :ok <- ArtifactRegistry.register(reservation, artifact) do
+        {:ok, data}
       end
 
     record(args, outcome)
     outcome
+  end
+
+  @doc "Compiles and preflights an inactive artifact without publishing registry metadata."
+  @spec prepare(map(), non_neg_integer(), Limits.t()) ::
+          {:ok, map(), ArtifactRegistry.reservation(), map()} | {:error, Error.t()}
+  def prepare(args, generation, limits) do
+    with :ok <- validate(args, limits),
+         {:ok, reservation} <- ArtifactRegistry.reserve(limits.artifact_slots),
+         {:ok, compiled} <- Compiler.compile(args["source"], reservation, limits) do
+      stage(args, generation, reservation, compiled, limits)
+    end
   end
 
   defp stage(args, generation, reservation, compiled, limits) do
@@ -41,7 +51,7 @@ defmodule ElixirMixir.Runtime.Definition do
 
     artifact =
       Map.merge(compiled, %{
-        id: "artifact_#{reservation.slot}_#{hash}",
+        id: "artifact_" <> Base.encode16(:crypto.strong_rand_bytes(16), case: :lower),
         source: args["source"],
         source_hash: hash,
         logical_name: args["logical_name"],
@@ -68,8 +78,7 @@ defmodule ElixirMixir.Runtime.Definition do
       })
 
     if ResponseBudget.fits?(envelope, limits) do
-      :ok = ArtifactRegistry.register(reservation, artifact)
-      {:ok, data}
+      {:ok, data, reservation, artifact}
     else
       {:error, Error.new("LIMIT_EXCEEDED")}
     end

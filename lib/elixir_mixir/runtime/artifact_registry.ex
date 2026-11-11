@@ -38,6 +38,15 @@ defmodule ElixirMixir.Runtime.ArtifactRegistry do
   def register(reservation, artifact),
     do: GenServer.call(__MODULE__, {:register, reservation, artifact})
 
+  @doc "Restores retained identity into a newly compiled reserved slot, independently of ID sort order."
+  @spec restore(reservation(), artifact()) :: :ok | {:error, Error.t()}
+  def restore(reservation, artifact),
+    do: GenServer.call(__MODULE__, {:restore, reservation, artifact})
+
+  @doc "Seeds revision high-water marks, including parseable quarantined definitions."
+  @spec seed_revisions(%{String.t() => pos_integer()}) :: :ok
+  def seed_revisions(revisions), do: GenServer.call(__MODULE__, {:seed_revisions, revisions})
+
   @doc "Fetches immutable internal source, bytecode and metadata by opaque artifact ID."
   @spec fetch(String.t()) :: {:ok, artifact()} | {:error, Error.t()}
   def fetch(id), do: GenServer.call(__MODULE__, {:fetch, id})
@@ -91,6 +100,33 @@ defmodule ElixirMixir.Runtime.ArtifactRegistry do
       }
 
       {:reply, :ok, state}
+    else
+      {:reply, {:error, Error.new("INVALID_ARGUMENT")}, state}
+    end
+  end
+
+  def handle_call({:seed_revisions, revisions}, _from, state) do
+    revisions = Map.merge(state.revisions, revisions, fn _key, a, b -> max(a, b) end)
+    {:reply, :ok, %{state | revisions: revisions}}
+  end
+
+  def handle_call({:restore, reservation, artifact}, _from, state) do
+    if Map.get(state.reservations, reservation.slot) == reservation and
+         artifact.module == reservation.module and not Map.has_key?(state.artifacts, artifact.id) do
+      next = %{
+        state
+        | artifacts: Map.put(state.artifacts, artifact.id, artifact),
+          reservations: Map.delete(state.reservations, reservation.slot),
+          revisions:
+            Map.update(
+              state.revisions,
+              artifact.logical_name,
+              artifact.revision,
+              &max(&1, artifact.revision)
+            )
+      }
+
+      {:reply, :ok, next}
     else
       {:reply, {:error, Error.new("INVALID_ARGUMENT")}, state}
     end

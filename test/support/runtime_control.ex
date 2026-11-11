@@ -28,6 +28,28 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "durability_barrier", "phase" => phase}) do
+    hook = fn reached ->
+      if Atom.to_string(reached) == phase, do: CallbackBarrier.wait(phase)
+      :ok
+    end
+
+    :sys.replace_state(Manager, &%{&1 | durability_barrier: hook})
+    %{"phase" => phase}
+  end
+
+  def request(%{"op" => "durable_records"}) do
+    records = Store.snapshot(Store)
+
+    %{
+      "artifacts" =>
+        for({{:artifact, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "requests" =>
+        for({{:request, id}, record} <- records, do: %{"id" => id, "record" => record}),
+      "meta" => records[:meta]
+    }
+  end
+
   def request(%{"op" => "publication_barrier", "enabled" => enabled}) do
     hook = if enabled, do: fn -> CallbackBarrier.wait("publication") end, else: fn -> :ok end
     :sys.replace_state(Manager, &%{&1 | before_publish: hook})
@@ -77,6 +99,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
           "id" => artifact.id,
           "module" => Atom.to_string(artifact.module),
           "source_hash" => artifact.source_hash,
+          "source" => artifact.source,
           "revision" => artifact.revision,
           "state_schema" => artifact.state_schema,
           "beam_bytes" => byte_size(artifact.beam),

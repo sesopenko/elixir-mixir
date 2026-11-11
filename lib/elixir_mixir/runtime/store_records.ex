@@ -77,7 +77,7 @@ defmodule ElixirMixir.Runtime.StoreRecords do
 
   defp valid_key?(_key), do: false
 
-  defp record_bytes({:artifact, _}, limits), do: limits.source_bytes + limits.metadata_bytes
+  defp record_bytes({:artifact, _}, limits), do: limits.source_bytes * 6 + limits.metadata_bytes
   defp record_bytes({:state, _}, limits), do: limits.state_bytes + limits.metadata_bytes
   defp record_bytes({:worker, _}, limits), do: limits.config_bytes + limits.metadata_bytes
   defp record_bytes({:request, _}, limits), do: limits.response_bytes + limits.metadata_bytes

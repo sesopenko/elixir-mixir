@@ -33,7 +33,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
   setup ctx do
     start_supervised!(CallbackBarrier)
     manager = start_supervised!({Manager, name: nil, limits: Map.get(ctx, :limits, %{})})
-    worker = unique()
+    worker = Map.get(ctx, :worker_id, unique())
 
     {:ok, first} =
       Manager.start_worker(
@@ -41,7 +41,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
           "worker_id" => worker,
           "artifact_id" => ctx.artifacts[1]["artifact_id"],
           "config" => %{"migration" => Map.get(ctx, :migration, "ok")},
-          "request_id" => unique()
+          "request_id" => if(Map.has_key?(ctx, :worker_id), do: "s", else: unique())
         },
         manager
       )
@@ -259,7 +259,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
     assert {:ok, %{"reply" => 1}} = invoke(ctx, %{})
   end
 
-  @tag limits: %{response_bytes: 1_024}
+  @tag limits: %{response_bytes: 1_024}, worker_id: String.duplicate("w", 64)
   test "complete response rejection leaves the old host artifact and data unchanged", ctx do
     [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     {:ok, before} = ProcessHost.snapshot(pid)

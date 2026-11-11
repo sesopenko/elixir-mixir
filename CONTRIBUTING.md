@@ -119,8 +119,9 @@ ElixirMixir.Runtime.Manager.inspect_runtime(%{})
 The result includes API version `"1"`, generation zero on startup (advancing on committed mutations/lifecycle changes),
 health, worker summaries and resource/ledger retention limits. Use worker_id and
 detail state for committed state. Artifacts can be defined and workers started/stopped;
-invocation commits bounded atomic transitions; automatic recovery and asynchronous emit/schedule/log effects are bounded per worker and runtime. Definitions and request outcomes will
-remain in memory only; stopping the BEAM loses them.
+invocation commits bounded atomic transitions; automatic recovery and asynchronous emit/schedule/log effects are bounded per worker and runtime. In default memory mode, definitions and request outcomes
+remain in memory only; stopping the BEAM loses them. Durable definition support is
+described below.
 
 Configure downward resource overrides before starting the application, for example
 in `config/config.exs`:
@@ -302,10 +303,11 @@ own temporary directories; the subprocess fixtures clear inherited storage and p
 environment variables. CubDB 2.0.2 is locked with synchronous writes and automatic
 compaction enabled. Loss of the authoritative store shuts down the kernel.
 
-This checkpoint provides the store and restart fixture, but generated artifacts,
-workers and effects are not yet integrated with it. In durable mode all mutation
-tools return `DURABILITY_UNAVAILABLE` before executing generated code. Inspection
-and HTTP readiness remain available. Use memory mode for current experiments.
+Durable source definitions and their outcomes are integrated with the store.
+Worker state and effects are still pending. In durable mode, worker mutation
+tools return `DURABILITY_UNAVAILABLE` before executing callbacks. Inspection
+remains available after recovery; health is 503 during boot reconstruction.
+Use memory mode for current running-application experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
 
 Worker staging tests exercise prepare/publish/abort directly with a trusted host
@@ -321,3 +323,22 @@ then disconnects/reconnects the client and verifies one published transition and
 one delivered effect. These controls are compiled only for tests and add no MCP
 tools. Candidate expiry, dispatcher lease expiry, owner death and host death all
 have focused capacity-cleanup coverage.
+
+Durable mode now accepts source definitions. The independent restart suite defines
+through real HTTP, kills the actual BEAM with SIGKILL at admission/preparation/commit
+boundaries, and reopens the same temporary store without a client. It verifies source,
+hash, identity, revision, exact retained outcomes, readiness, source quarantine and
+request expiry across downtime:
+
+```sh
+mix test test/runtime/durable_artifacts_test.exs test/runtime/durable_requests_test.exs --warnings-as-errors
+mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
+```
+
+Only inactive source definitions are integrated so far; worker mutations remain
+unavailable in durable mode. Wait for `/health` before connecting. Recompilation can
+execute compile-time IO again, so the same trusted-code isolation requirements
+apply after restart. Definition response module strings can describe an old slot;
+artifact IDs and current inspection are authoritative. Request replay retention
+includes downtime and expired IDs can execute again. See the
+[runtime API](docs/runtime-api.md#durable-source-definitions-and-request-replay).

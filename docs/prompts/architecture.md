@@ -1,4 +1,4 @@
-# Living BEAM — Architecture & Implementation Plan
+# elixir-mixir — Architecture & Implementation Plan
 
 **Status:** Proposed architecture  
 **Version:** 0.1  
@@ -12,13 +12,13 @@
 
 ## 1. Executive Summary
 
-Living BEAM is an experimental software runtime in which an AI agent can create, execute, inspect, connect, and replace running Elixir processes without following a traditional source-code-to-deployment workflow.
+elixir-mixir is an experimental software runtime in which an AI agent can create, execute, inspect, connect, and replace running Elixir processes without following a traditional source-code-to-deployment workflow.
 
 The system begins as a small, conventional Elixir/OTP application containing a stable runtime kernel and an MCP server.
 
 A connected LLM, initially operating through Codex CLI, uses MCP tools to progressively construct a running application. It can introduce new behavior, create supervised processes, connect processes through messages, observe their execution, and replace implementations while the runtime remains operational.
 
-Rather than treating source repositories, commits, pull requests, and deployment artifacts as the primary representation of software, Living BEAM treats a **dynamic graph of executable processes and their behavior as the primary application model**.
+Rather than treating source repositories, commits, pull requests, and deployment artifacts as the primary representation of software, elixir-mixir treats a **dynamic graph of executable processes and their behavior as the primary application model**.
 
 The ultimate vision is a system that can receive a high-level objective, develop software to achieve that objective, observe the results of its execution, and continuously modify itself to improve those results.
 
@@ -41,7 +41,7 @@ Traditional software delivery follows a sequence:
 4. The artifact is installed into a runtime.
 5. The system begins executing the new behavior.
 
-Living BEAM explores an alternative model:
+elixir-mixir explores an alternative model:
 
 1. An agent observes an existing running system.
 2. The agent identifies a capability or behavioral change it wants to introduce.
@@ -52,7 +52,7 @@ Living BEAM explores an alternative model:
 
 The distinction is fundamental.
 
-A traditional application is largely constructed before execution. A Living BEAM application is progressively constructed and evolved during execution.
+A traditional application is largely constructed before execution. An elixir-mixir application is progressively constructed and evolved during execution.
 
 ### 2.2 Long-term autonomous control loop
 
@@ -144,7 +144,7 @@ flowchart TB
         Codex["Codex CLI / LLM"]
     end
 
-    subgraph Kernel["Living BEAM Kernel"]
+    subgraph Kernel["elixir-mixir Kernel"]
         MCP["MCP Server"]
         Manager["Runtime Manager"]
         Compiler["Artifact Compiler / Registry"]
@@ -282,9 +282,9 @@ The contract is an organizational boundary, not a security boundary: dynamically
 Example:
 
 ```elixir
-LivingBeam.Generated.Counter.V1
-LivingBeam.Generated.Counter.V2
-LivingBeam.Generated.Counter.V3
+ElixirMixir.Generated.Counter.V1
+ElixirMixir.Generated.Counter.V2
+ElixirMixir.Generated.Counter.V3
 ```
 
 The actual implementation should use collision-resistant, validated revision identifiers rather than trusting arbitrary module names supplied by the LLM.
@@ -445,7 +445,7 @@ Illustrative process-host state:
 ```elixir
 %{
   id: "counter",
-  implementation: LivingBeam.Generated.Counter.V2,
+  implementation: ElixirMixir.Generated.Counter.V2,
   implementation_version: 2,
   data: %{"count" => 42},
   status: :running
@@ -457,7 +457,7 @@ The process host is a conventional kernel-owned `GenServer`.
 Generated modules implement a behavior such as:
 
 ```elixir
-defmodule LivingBeam.Behavior do
+defmodule ElixirMixir.Behavior do
   @callback init(config :: map()) ::
               {:ok, state :: map()}
 
@@ -991,7 +991,7 @@ A broken generated application must not make its durable description impossible 
 
 ### 10.8 Phase 2 demonstration
 
-1. Start Living BEAM with an empty durable store.
+1. Start elixir-mixir with an empty durable store.
 2. Connect Codex CLI.
 3. Have Codex recreate the Phase 1 counter and aggregator system.
 4. Send enough events to accumulate meaningful state.
@@ -999,7 +999,7 @@ A broken generated application must not make its durable description impossible 
 6. Confirm the new behavior and retained state.
 7. Disconnect Codex.
 8. Abruptly terminate the entire BEAM VM.
-9. Restart Living BEAM using the same persistent store, without Codex.
+9. Restart elixir-mixir using the same persistent store, without Codex.
 10. Verify that all intended workers are reconstructed.
 11. Verify that active implementation revisions are correct.
 12. Verify restored counter and aggregator state.
@@ -1033,7 +1033,7 @@ Phase 2 succeeds when the runtime can be terminated without warning and restarte
 The proposed OTP supervision structure is:
 
 ```text
-LivingBeam.Application
+ElixirMixir.Application
 |
 +-- Runtime.Store                  (Phase 2)
 +-- Runtime.ArtifactRegistry
@@ -1199,7 +1199,7 @@ The important experiment is the runtime itself, not the surrounding framework ec
 ## 15. Suggested Project Structure
 
 ```text
-living_beam/
+elixir-mixir/
 ├── mix.exs
 ├── mix.lock
 ├── README.md
@@ -1209,7 +1209,7 @@ living_beam/
 │   ├── config.exs
 │   └── runtime.exs
 ├── lib/
-│   ├── living_beam/
+│   ├── elixir_mixir/
 │   │   ├── application.ex
 │   │   ├── behavior.ex
 │   │   ├── runtime/
@@ -1228,7 +1228,7 @@ living_beam/
 │   │   └── mcp/
 │   │       ├── server.ex
 │   │       └── tools/
-│   └── living_beam.ex
+│   └── elixir_mixir.ex
 ├── test/
 │   ├── runtime/
 │   ├── mcp/
@@ -1253,7 +1253,7 @@ There are two distinct uses of Codex in this project.
 
 ### 16.1 Codex as the build agent
 
-Codex first implements the Living BEAM kernel in a conventional local repository.
+Codex first implements the elixir-mixir kernel in a conventional local repository.
 
 It is allowed to create source files, execute Mix commands, write tests, and modify the kernel during development.
 
@@ -1284,7 +1284,7 @@ The runtime should expose its configured MCP endpoint and confirm readiness.
 In a separate terminal, register the MCP server with Codex:
 
 ```bash
-codex mcp add living_beam --url http://127.0.0.1:4100/mcp
+codex mcp add elixir-mixir --url http://127.0.0.1:4100/mcp
 ```
 
 Verify registration:
@@ -1516,7 +1516,7 @@ The following section is intended to be given directly to Codex when beginning i
 
 ### Build Agent Assignment
 
-Implement Living BEAM as an experimental Elixir/OTP application according to this architecture document.
+Implement elixir-mixir as an experimental Elixir/OTP application according to this architecture document.
 
 **Primary objective:** Build the smallest viable runtime that allows Codex to create and evolve a live Elixir application through MCP.
 
@@ -1601,4 +1601,4 @@ The build agent should verify implementation details against the following sourc
 
 ---
 
-*Living BEAM — Architecture proposal, version 0.1. This document defines the intended design and proof-of-concept acceptance criteria; it does not imply that the system has already been implemented or tested.*
+*elixir-mixir — Architecture proposal, version 0.1. This document defines the intended design and proof-of-concept acceptance criteria; it does not imply that the system has already been implemented or tested.*

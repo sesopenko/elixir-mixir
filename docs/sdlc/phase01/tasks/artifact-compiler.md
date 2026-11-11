@@ -1,0 +1,95 @@
+# artifact-compiler: Generated contract and immutable artifact compilation
+
+## Startup and context recovery
+
+Assignment snapshot: [phase01-planning.md](../../../prompts/phase01-planning.md).
+Governing plan: [plan.md](../plan.md). Current task: this document.
+Before starting this subtask and after every compaction, both planning and
+implementation agents must reread the complete snapshot, governing plan, this task,
+and separately recorded approved amendments. A compaction summary does not replace
+these reads. Save complete new assignment instructions under `docs/prompts/` before
+other work and identify that snapshot in its work plan; preserve originals and put
+approved amendments in separate files. If documents are absent, read available
+governing documents and partial drafts. Also read `AGENTS.md`, `CONTRIBUTING.md`,
+and ADR-001. After a full context clear or new session, inspect `git status --short`,
+`git log --oneline -15`, relevant commits and verification evidence to determine
+progress from repository state and committed work. If task selection is unclear,
+use the plan execution order and verify completed prerequisites first. Preserve
+unrelated changes, including `scripts/codex.sh`.
+
+## Objective and observable outcome
+
+Valid template source becomes a uniquely addressed inactive immutable artifact with verified callbacks and schema; rejected definitions cannot change existing artifacts.
+
+## Prerequisites and required outputs
+
+Prerequisite IDs: kernel-api
+
+- [kernel-api](kernel-api.md): bounded values/errors, request ledger, Manager sequencing/status.
+
+A prerequisite is complete only after its focused verification, full `mix check`,
+and working commit through the installed hook. Read the plan's resolved contracts;
+this task refines those contracts and does not authorize architectural alternatives.
+
+## Concrete implementation steps and components
+
+Create `ElixirMixir.Behavior` and runtime Compiler/ArtifactRegistry. Implement all four callback signatures from the plan, including mandatory migrate and state_schema, with executable examples and documented JSON constraints. Start compiler Task.Supervisor and registry before Manager.
+Add Manager.define/1 with request-ledger semantics. Reserve a non-reusable lifetime slot before parsing; preallocate the 128 fixed generated module names. Validate one outer Generated template, rewrite its alias, reject nested/dynamic module construction, compile quoted AST in an unlinked monitored task with a synthetic filename and Code.with_diagnostics. Bound source, attempts, duration, diagnostics, and compiler-task heap (64 MiB compiler, 8 MiB callback; convert bytes to VM words for max_heap_size before user work). Validate exactly one output module, exported callbacks, and bounded positive schema callback.
+Registry is append-only: store source/hash/BEAM/module/logical name/revision/contract/schema and diagnostics only on success. Consume failed slots and never reuse or purge artifacts in Phase 1. Compilation failure must neither activate code nor advance generation. Do not add dynamic dependency resolution or write generated source into lib/. Record compile events through a minimal bounded EventLog introduced here, reused in runtime-inspection.
+
+## Interfaces, inputs, outputs and errors
+
+Manager.define/1 inputs and outputs match the runtime_define row in the plan; expected_behavior is exactly elixir_mixir.behavior.v1. ArtifactRegistry.fetch/1 returns {:ok, artifact} or ARTIFACT_NOT_FOUND. Revision increments per logical name on successful registration; reserved module slot is independent of logical revision. Define replay returns the same artifact. Compilation syntax/errors/warnings return COMPILE_FAILED with capped diagnostics; missing exports return CALLBACK_MISSING. Limits return LIMIT_EXCEEDED; timed-out compiler returns COMPILE_FAILED with a timeout diagnostic. All failed attempts consume slots, including parsing failures; limit validation before reservation does not compile.
+Schema callback errors/non-positive return fail validation; compilation alone must not call init or handle_event. Side effects at compile time are outside kernel transactional guarantees and require isolation.
+
+Use the governing plan's exact limits, errors, callback contracts, revision semantics,
+and Phase 1 in-memory boundaries. Document public APIs with accurate docs/specs and
+struct types; do not lower Doctor/Credo/Dialyzer thresholds.
+
+## Focused tests, integration checks and failure scenarios
+
+Create `test/runtime/artifact_compiler_test.exs`, serial: valid counter artifact and exports; original SHA-256; unique slot/revision; inactive compile; malformed source; absent/wrong callback arity; invalid schema/error/timeout; warning capture; extra/nested module rejection; source-byte/capacity boundary; compile timeout via trusted fixture; same request replay/conflict; diagnostics bounded. Compare registry and previous artifact before/after every failed definition. Use separate child BEAMs for slot-exhaustion tests, and share immutable generated fixtures where practical so the ordinary full suite stays within its 128 lifetime attempts. Never reset consumed slots or reuse module names in a live BEAM. Test EventLog ring append/cursor basics here so later readers require no unfinished module.
+
+Tests added here must pass with completed prerequisites alone. Do not reference
+unfinished downstream modules or add intentionally failing tests. For unexpected
+results, investigate root cause and prove it with a test before fixing the system.
+After three unsuccessful fix attempts, stop and ask the user for direction.
+
+## Exact verification and measurable acceptance
+
+Run from the repository root after implementing this task:
+
+```sh
+mix test test/runtime/artifact_compiler_test.exs --warnings-as-errors
+mix check
+git diff --check
+git config --get core.hooksPath
+```
+
+Valid artifacts load once and remain immutable/inactive; every invalid definition leaves prior artifacts intact; attempts, module slots, deadline and diagnostics remain bounded.
+
+The hook path must be `.githooks`; if absent, run
+`./scripts/install-git-hooks.sh` before committing. All tests and the full quality
+gate must pass, with no warnings or suppressed findings. Record actual verification
+commands/results below when executing; do not mark this planned task complete now.
+
+## Documentation and intended commit scope
+
+Document template source, callback behavior, source rewriting, failure slot consumption, and in-VM isolation limitations in `docs/runtime-api.md`. Commit contract/compiler/registry/minimal EventLog and tests as `feat(runtime): bound generated code and retain immutable artifacts`.
+
+Use a Conventional Commit header, blank line, and nonempty explanatory body stating
+why this capability was needed and why the approach fits. Stage only this task's
+verified changes. The commit containing the completed checklist identifies the
+checkpoint; no self-referential commit hash is needed inside the commit.
+
+## Mandatory completion checklist
+
+- [ ] Reread snapshot, governing plan, current task and approved amendments; verify prerequisite commits.
+- [ ] Finish scoped implementation/documentation and focused unit tests, including relevant failure paths (document-only work uses applicable document checks).
+- [ ] Pass focused tests and every task-specific verification above; record commands, results and evidence here.
+- [ ] Pass full `mix check` and resolve every finding; keep the installed pre-commit hook enabled.
+- [ ] Review diff and stage only the intended task changes, tests and documentation.
+- [ ] Commit the verified task through the normal hook with Conventional Commit header and explanatory body.
+- [ ] Only after that working commit exists, select the next task in the plan; this gate also applies to tasks without dependents.
+
+Execution evidence: pending implementation.

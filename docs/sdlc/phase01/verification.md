@@ -1,8 +1,9 @@
 # Phase 1 implementation verification
 
-This records incremental implementation evidence. The actual Codex-created
-counter/aggregator demonstration is pending; automated HTTP tests do not establish
-that demonstration. Checkpoint commits are identified by their checked task documents.
+This records incremental implementation evidence and the completed actual
+Codex-created counter/aggregator demonstration. The codex-demo section records
+that demonstration separately from automated HTTP tests. Checkpoint commits are
+identified by their checked task documents.
 
 ## kernel-api
 

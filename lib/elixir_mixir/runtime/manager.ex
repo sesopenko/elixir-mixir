@@ -15,6 +15,7 @@ defmodule ElixirMixir.Runtime.Manager do
   alias ElixirMixir.Runtime.DurableLifecycle
   alias ElixirMixir.Runtime.DurableOperations
   alias ElixirMixir.Runtime.DurableRecovery
+  alias ElixirMixir.Runtime.DurableReplacement
   alias ElixirMixir.Runtime.DurableRequests
   alias ElixirMixir.Runtime.DurableTransitions
   alias ElixirMixir.Runtime.EffectDispatcher
@@ -227,6 +228,16 @@ defmodule ElixirMixir.Runtime.Manager do
     with :ok <- mutation_arguments(args, state.limits),
          :ok <- DurableTransitions.validate(args, state.limits) do
       {result, next} = DurableTransitions.execute(args, state)
+      {:reply, result, next}
+    else
+      {:error, error} -> {:reply, failure(error, nil, state), state}
+    end
+  end
+
+  def handle_call({:worker, :replace, args}, _from, %{storage: %{mode: :durable}} = state) do
+    with :ok <- mutation_arguments(args, state.limits),
+         :ok <- DurableReplacement.validate(args) do
+      {result, next} = DurableReplacement.execute(args, state)
       {:reply, result, next}
     else
       {:error, error} -> {:reply, failure(error, nil, state), state}

@@ -50,21 +50,29 @@ defmodule ElixirMixir.Runtime.DurableTransitions do
              context,
              state.limits.operation_timeout_ms
            ) do
-      case ProcessHost.prepared_snapshot(worker.pid, ticket) do
-        {:ok, snapshot} ->
-          candidate(args, worker, entry, data, ticket, snapshot, state)
+      prepared_change(args, worker, entry, data, ticket, state)
+    end
+  end
 
-        {:error, _error} = error ->
-          ProcessHost.abort(worker.pid, ticket)
-          error
-      end
+  @doc "Builds one atomic state/selection change from an owner-bound prepared host checkpoint."
+  @spec prepared_change(map(), map(), map(), map(), map(), map()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def prepared_change(args, worker, entry, data, ticket, state) do
+    case ProcessHost.prepared_snapshot(worker.pid, ticket) do
+      {:ok, snapshot} ->
+        candidate(args, worker, entry, data, ticket, snapshot, state)
+
+      {:error, _error} = error ->
+        ProcessHost.abort(worker.pid, ticket)
+        error
     end
   end
 
   defp candidate(args, worker, entry, data, ticket, snapshot, state) do
     next = %{
       worker
-      | committed_data: snapshot.data,
+      | artifact: snapshot.artifact,
+        committed_data: snapshot.data,
         state_revision: snapshot.state_revision,
         worker_revision: snapshot.worker_revision,
         request_id: args["request_id"]

@@ -487,8 +487,7 @@ Runtime summary inspection adds `storage.mode` (`memory` or `durable`) and
 `storage.format_version` (null in memory, currently 1 in durable mode). Absolute
 host paths are omitted. Durable mode supports source definitions and retained
 outcomes, start/stop and effect-free event state recovery as described below.
-Durable replacement still fails with `DURABILITY_UNAVAILABLE` before callbacks;
-nonempty effects are rejected before state commit. Memory tools keep their existing
+Durable replacement is supported; nonempty effects are rejected before state commit. Memory tools keep their existing
 behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
 
@@ -508,7 +507,8 @@ the Registry value after init and response preflight, and removes that route on
 stop or host death. The Registry registrant is the Manager, so kernel lookups must
 use the explicit value. Owner death terminates candidates and releases reserved
 capacity. Durable lifecycle operations use the same unrouted candidate boundary;
-durable replacement and nonempty effect batches retain the restriction above.
+durable replacement uses that same commit boundary; nonempty effect batches retain
+the restriction above.
 
 ### Durable source definitions and request replay
 
@@ -517,7 +517,7 @@ with a unique operation ID, compiles without publishing the registry entry, then
 atomically stores the source, hash, logical revision, exact response and bounded
 audit record. Registry publication follows that commit. Source artifacts and
 completed definition errors survive abrupt BEAM termination. Start/stop and initial
-state recovery and effect-free invocation are integrated; replacement remains disabled in durable mode.
+state recovery, effect-free invocation and replacement are integrated.
 
 Boot validates retained hashes/contracts and recompiles valid definitions in
 artifact-ID order using fresh slots from the fixed module pool. Artifact IDs are
@@ -533,8 +533,8 @@ return `RUNTIME_RECOVERING` before admitting mutations. Summary inspection inclu
 `recovery.status`, artifact counts, `degraded`, bounded diagnostics, `boot_id` and `lineage_id`.
 The lineage stays with the store; each Manager boot gets a new boot ID. Absolute
 storage paths and source text remain omitted from public inspection. Desired worker
-definitions and committed event state restore as described below; replacement and
-effect durability remain pending.
+definitions, selected implementations and committed state restore as described
+below; effect durability remains pending.
 
 An admitted definition or lifecycle operation with no committed outcome becomes a retained
 `OPERATION_INTERRUPTED` error on restart without changing generation. A new request
@@ -588,9 +588,8 @@ to repair one; recovery never silently migrates stored state.
 Readiness stays closed through worker validation, reconstruction and routing.
 Reads and mutations return `RUNTIME_RECOVERING` before admission even if Manager
 is occupied reconstructing hosts. Wait for health 200, then initialize a new MCP
-session. No client is needed to perform reconstruction. Replacement and
-effect durability are still pending. Durable replacement and nonempty effect
-batches remain gated at this stage.
+session. No client is needed to perform reconstruction. Durable replacement is
+integrated; nonempty effect batches remain gated at this stage.
 
 
 ### Durable event transitions
@@ -623,3 +622,27 @@ state without init/migration or a new state revision. Lifecycle crash/retry revi
 and budget changes remain durable. Generated direct IO is outside this boundary:
 callbacks retain trusted VM privileges and their external effects cannot be rolled
 back or made exactly-once by committing kernel state.
+
+
+### Durable implementation replacement
+
+`runtime_replace` now commits the selected artifact, state/schema/revisions, exact
+outcome, generation and audit atomically. Expected revision is the inspected
+`worker_revision`. Migration runs only when schemas differ, under the existing
+callback heap/deadline and result limits. A matching schema preserves state and its
+state revision. The prepared candidate stays hidden until its durable commit, then
+publishes inside the same host; uninterrupted live replacement retains that PID.
+
+After a VM restart, the selected artifact recompiles and the committed schema/state
+inject directly into a fresh host, with no migration callback. Retained replacement
+requests replay their exact historical result, including old PID diagnostics.
+Current inspection and boot identity describe the new process lifetime.
+
+Bad source/contract, missing artifacts, stale revisions, invalid or failing migration,
+timeout and response-budget failure leave prior selection/state/revisions intact.
+The same Store-uncertainty/publication-failure shutdown protocol applies. Before-
+commit interruption restores the old selection/state; after commit it restores the
+new pair even if publication or response was interrupted. Direct migration IO may
+already have happened before an uncommitted interruption and cannot be undone by
+kernel transactions. Replacement preserves pending work; no durable effect batches
+are accepted until the outbox checkpoint.

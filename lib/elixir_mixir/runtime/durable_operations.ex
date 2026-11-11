@@ -111,7 +111,7 @@ defmodule ElixirMixir.Runtime.DurableOperations do
     state.durability_barrier.(:before_response)
 
     EventLog.append(%{
-      "type" => event_type(operation, status),
+      "type" => event_type(operation, status, data),
       "logical_id" => args["logical_name"] || args["worker_id"],
       "worker_id" => args["worker_id"],
       "artifact_revision" => data["revision"],
@@ -123,8 +123,13 @@ defmodule ElixirMixir.Runtime.DurableOperations do
     {result, %{next | generation: generation}}
   end
 
+  defp event_type("replace", :error, %{"code" => "MIGRATION_FAILED"}), do: "migration_failed"
+  defp event_type(operation, status, _data), do: event_type(operation, status)
+
   defp event_type("define", :ok), do: "compile_succeeded"
   defp event_type("define", :error), do: "compile_failed"
+  defp event_type("replace", :ok), do: "implementation_replaced"
+  defp event_type("replace", :error), do: "replacement_failed"
   defp event_type("invoke", :ok), do: "event_delivered"
   defp event_type("invoke", :error), do: "event_failed"
   defp event_type("start", :ok), do: "worker_started"

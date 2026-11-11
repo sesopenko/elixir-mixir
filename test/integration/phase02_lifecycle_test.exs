@@ -91,8 +91,8 @@ defmodule ElixirMixir.Integration.Phase02LifecycleTest do
              "worker_id" => "source",
              "artifact_id" => artifact["artifact_id"],
              "expected_revision" => 1,
-             "request_id" => "gated"
-           })["code"] == "DURABILITY_UNAVAILABLE"
+             "request_id" => "compatible"
+           })["migration_result"] == "preserved"
   end
 
   for operation <- ~w(start stop), phase <- ~w(after_admission after_prepare after_commit) do

@@ -145,8 +145,8 @@ Live replacement and reconnecting from a fresh Codex session are implemented and
 tested. The default memory mode keeps the application running when Codex closes,
 but restarting the runtime or container loses its workers, code, state and history.
 A crashed worker can restart under supervision, starting from its initial state.
-Optional durable workers and event state are described below; durable replacement
-and effect recovery are still being implemented. There is no autonomous controller yet.
+Optional durable workers, event state and replacement are described below; durable
+effect recovery is still being implemented. There is no autonomous controller yet.
 
 When you're finished, remove the container. This discards the application you built:
 
@@ -167,9 +167,9 @@ Durable mode retains source artifacts, running and stopped worker definitions,
 configuration, committed event state and request outcomes across abrupt BEAM
 termination.
 It reconstructs running workers without a client and keeps stopped workers stopped.
-Effect-free event invocation is supported. Durable replacement and effects are
-still being implemented; use the default memory mode for the full application
-experiments above.
+Effect-free event invocation and implementation replacement are supported. Durable
+effects are still being implemented; use the default memory mode for the full
+counter/aggregator experiments above.
 
 To try durable worker definitions from the repository root, use a local directory
 owned exclusively by this runtime:
@@ -193,13 +193,21 @@ For a new, empty directory, ask the connected agent:
 > amount from an event, return the resulting count, and produce no effects.
 > Invoke it with amount 3 and inspect its state to confirm count 10.
 
-`runtime_define`, `runtime_start`, `runtime_stop` and accepted effect-free invocations
-survive restart using that same directory. Boot restores the committed state
+If that prompt created the counter and confirmed count 10, try:
+
+> Replace durable_counter's implementation so each event adds twice its amount.
+> Keep the same state schema, current count and live PID. Use the worker revision
+> from current inspection. Invoke amount 2 and confirm count 14.
+
+`runtime_define`, `runtime_start`, `runtime_stop`, `runtime_replace` and accepted
+effect-free invocations survive restart using that same directory. Boot restores the committed state
 into fresh processes without rerunning generated init or migration callbacks.
 An explicit start after stop initializes from the supplied configuration again.
 Use a fresh MCP session after restart and wait for health before reconnecting.
-Durable replacement and events returning effects currently return
-`DURABILITY_UNAVAILABLE` without changing committed state. Successful invocation
+Live replacement retains its host PID; VM recovery creates a fresh host and restores
+the selected implementation and committed state without repeating migration.
+Events returning effects currently return `DURABILITY_UNAVAILABLE` without changing
+committed state. Successful invocation
 commits state and the exact result before acknowledging it. After an uncertain
 response, retry the identical request ID and arguments to replay that result.
 A pending mutation interrupted before commit replays `OPERATION_INTERRUPTED`;

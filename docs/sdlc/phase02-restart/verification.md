@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation through durable-transitions verified; remaining checkpoints and application recovery
+Status: store-foundation through durable-replacement verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -243,7 +243,50 @@ IO. Replacement and durable effect acceptance/delivery remain pending.
 
 ## durable-replacement
 
-Pending. Owning [task](tasks/durable-replacement.md). No execution evidence yet.
+Verified 2026-11-11 after prerequisite `a0114e0` was committed and pushed.
+Milestone 6's automated exit condition is met by this checkpoint.
+
+- `mix test test/runtime/durable_replacement_test.exs --warnings-as-errors`: 4 passed.
+- `mix test test/integration/phase02_replacement_test.exs --warnings-as-errors`: 7 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 90 passed.
+- Full `mix check`: 223 tests, 2 doctests; warnings-as-errors clean, strict Credo
+  clean, Doctor 100%, Dialyzer zero errors/skips. Plan verifier and diff checks pass;
+  the installed `.githooks` hook reruns the full gate before commit.
+
+A real HTTP counter invokes v1 to 3, preserves its live PID/state on compatible v2
+replacement, invokes v2 to 7, migrates once to schema 2 in v3, and invokes v3 to 17.
+The migration writes a marker and raises on its second execution. After SIGKILL and
+same-directory boot without a client, selected artifact/schema/state/revisions and
+all stored records match. Historical replacement replay is exact and a new v3
+invocation reaches 27, proving the recovered selection is executable. The marker
+stays unchanged and the worker runs, proving boot did not repeat migration. PID
+continuity is asserted only inside an uninterrupted VM; a new OS PID proves reboot.
+
+Five actual SIGKILL cases pause after migration/preparation, before commit, after
+commit, before publication and before response. All durable worker/state records
+contain either old selection/schema/count 5 or new selection/schema/value 5. Live
+selection stays old until publication. After restart the old pair returns
+`OPERATION_INTERRUPTED`, or the new pair replays the exact completed result. A
+fresh invocation continues to 6 under v1 or 15 under v3. The migration marker can
+exist even on an uncommitted interruption, demonstrating the documented direct-IO
+boundary rather than assuming kernel rollback can undo it.
+
+Focused failures include invalid/missing definitions and callbacks, stale worker
+revision, error/raise/exit/deadline/late/malformed/non-JSON/oversized/heap migrations,
+and full response preflight. They preserve prior selection/state/revisions and
+retain exact failure replay. A history regression first showed a generic
+`replacement_failed` event for `MIGRATION_FAILED`; the shared coordinator now emits
+the documented `migration_failed` event, with focused coverage. Initial fixture
+invocations reused definition request IDs and correctly hit conflict; distinct
+mutation IDs fixed the fixture.
+
+Replacement reuses the established owner-bound prepared checkpoint and atomic
+outcome path, updating selected artifact and state in one Store transaction before
+same-host publication. Matching schema preserves state revision; explicit migration
+advances it. Pending records are untouched. README, contributor and API guidance
+now cover durable replacement, recovered selection, current versus historical PID
+diagnostics, failure semantics and the migration IO limitation. Nonempty durable
+effects remain disabled until the outbox/delivery tasks.
 
 ## durable-outbox
 
@@ -272,10 +315,11 @@ Pending. Owning [task](tasks/evidence-review.md). No execution evidence yet.
 ## Acceptance and milestone evidence
 
 Source recovery evidence for A01, desired definitions/logical identities/fresh hosts
-for A02/A05/A06, committed event-state evidence for A04, automated no-client recovery
-for A07, and source/lifecycle/event boundary evidence for A08/A09/A14 are recorded above. Milestone 5's automated exit is verified.
-Full acceptance reconciliation, the actual-client portion of A07, and milestones
-6–7 remain pending. Add an evidence table mapping
+for A02/A05/A06, selected implementation evidence for A03, committed event-state
+evidence for A04, automated no-client recovery
+for A07, and source/lifecycle/event boundary evidence for A08/A09/A14 are recorded above. Milestones 5 and 6 have verified automated exits.
+Full acceptance reconciliation, the actual-client portion of A07, and milestone 7
+remain pending. Add an evidence table mapping
 each criterion to exact tests/results and committed artifacts as features land.
 The final evidence-review reconciles these existing records; it does not create
 missing runtime coverage.

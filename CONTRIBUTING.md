@@ -305,7 +305,7 @@ compaction enabled. Loss of the authoritative store shuts down the kernel.
 
 Durable source definitions, desired workers, initial state and request outcomes
 are integrated with the store, together with effect-free event transitions.
-Durable replacement is still disabled. A nonempty kernel effect batch returns
+Durable replacement is integrated. A nonempty kernel effect batch returns
 `DURABILITY_UNAVAILABLE` without committing state or dispatching effects. Inspection
 remains available after recovery; health is 503 during boot reconstruction.
 Use memory mode for current running-application experiments.
@@ -336,8 +336,8 @@ mix test test/runtime/durable_artifacts_test.exs test/runtime/durable_requests_t
 mix test test/integration/phase02_artifacts_test.exs --warnings-as-errors
 ```
 
-Durable start/stop, initial state and event state recovery are integrated. Only
-replacement remains unavailable in durable mode. Effect-free invoke is supported.
+Durable start/stop, event state recovery and replacement are integrated.
+Effect-free invoke is supported; durable effect delivery remains pending.
 Wait for `/health` before connecting. Recompilation can
 execute compile-time IO again, so the same trusted-code isolation requirements
 apply after restart. Definition response module strings can describe an old slot;
@@ -390,3 +390,22 @@ committed event state without reinitializing or advancing its state revision.
 Nonempty emit/schedule/log batches remain disabled in durable mode; memory mode
 keeps its existing effects. Direct callback IO has VM privileges and cannot be
 rolled back or deduplicated by kernel state transactions.
+
+
+Durable replacement reuses the prepared host checkpoint and atomic outcome path.
+The selected artifact, migrated/preserved state, schema and revisions commit together
+before publication in the original live host. Boot restores that checkpoint directly;
+it never reruns migration. The migration interruption suite includes a callback that
+raises on its second execution and actual SIGKILL around the commit:
+
+```sh
+mix test test/runtime/durable_replacement_test.exs --warnings-as-errors
+mix test test/integration/phase02_replacement_test.exs --warnings-as-errors
+```
+
+Matching schemas preserve state revision; explicit schema-changing migration
+advances it. Live PID continuity applies within one uninterrupted VM, while boot
+creates fresh hosts. Invalid candidates, stale expected revisions, migration
+failures/deadlines and response-size errors leave the old selection/state intact.
+Kernel state transactions do not undo direct migration IO. Durable effects remain
+unavailable until the outbox/delivery checkpoints are integrated.

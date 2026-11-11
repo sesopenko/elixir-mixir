@@ -29,7 +29,7 @@ defmodule ElixirMixir.Integration.Phase02StoreTest do
              %{"kernel_down" => true, "manager_alive" => false}
   end
 
-  test "SIGKILL retains the atomic store while HTTP rejects unsupported durable mutations" do
+  test "SIGKILL retains the atomic store while HTTP rejects an unknown replacement target" do
     dir = Path.join(System.tmp_dir!(), "mixir-restart-#{System.unique_integer([:positive])}")
     on_exit(fn -> File.rm_rf!(dir) end)
     fixture = start_supervised!({RuntimeFixture, data_dir: dir})
@@ -49,7 +49,7 @@ defmodule ElixirMixir.Integration.Phase02StoreTest do
         "expected_revision" => 1
       })
 
-    assert response.data["result"]["structuredContent"]["code"] == "DURABILITY_UNAVAILABLE"
+    assert response.data["result"]["structuredContent"]["code"] == "WORKER_NOT_FOUND"
 
     assert RuntimeFixture.control(fixture, %{"op" => "registry_status"}) == %{
              "artifacts" => 0,

@@ -44,7 +44,8 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert result["state_revision"] == 1
     assert result["generation"] == 1
     assert result["status"] == "running"
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{manager, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    assert manager == ctx.manager
     assert inspect(pid) == result["pid"]
     assert Enum.any?(children(), fn {_, child, _, _} -> child == pid end)
     assert {:ok, inspected} = inspect_worker(ctx)
@@ -57,6 +58,19 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     assert {:error, %{"code" => "INVALID_ARGUMENT"}} = ProcessHost.stop(pid)
     assert {:ok, snapshot} = ProcessHost.snapshot(pid)
     assert snapshot.data == %{"count" => 7}
+  end
+
+  @tag :route_collision
+  test "a conflicting logical route rejects the candidate without losing either Manager", ctx do
+    other = start_supervised!({Manager, name: nil}, id: :other_manager)
+    args = start_args(ctx, %{})
+    assert {:ok, started} = Manager.start_worker(args, ctx.manager)
+    assert {:error, %{"code" => "WORKER_EXISTS"}} = Manager.start_worker(args, other)
+    assert Process.alive?(other)
+    assert length(children()) == 1
+    manager = ctx.manager
+    assert [{^manager, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    assert inspect(pid) == started["pid"]
   end
 
   test "start replay cannot create another host and payload reuse conflicts", ctx do
@@ -212,7 +226,7 @@ defmodule ElixirMixir.Runtime.WorkerStartTest do
     {:ok, first} = Manager.start_worker(start_args(ctx, %{"count" => 1}), ctx.manager)
     peer = %{ctx | worker: unique()}
     {:ok, healthy} = Manager.start_worker(start_args(peer, %{"count" => 2}), ctx.manager)
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}

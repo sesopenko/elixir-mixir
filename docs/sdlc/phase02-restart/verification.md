@@ -1,6 +1,6 @@
 # Phase 2 implementation verification
 
-Status: store-foundation verified; remaining checkpoints and application recovery
+Status: store-foundation and staged-hosts verified; remaining checkpoints and application recovery
 evidence are pending. Planning results belong in [planning-verification](planning-verification.md).
 Governing [plan](plan.md); [assignment snapshot](../../prompts/phase02-restart-planning.md).
 
@@ -51,7 +51,34 @@ README, CONTRIBUTING and runtime API describe this boundary.
 
 ## staged-hosts
 
-Pending. Owning [task](tasks/staged-hosts.md). No execution evidence yet.
+Verified 2026-11-11, prerequisite `b9dea1a` committed and pushed before work.
+This checkpoint preserves memory behavior and keeps durable mutations disabled.
+
+- `mix test test/runtime/staged_hosts_test.exs test/runtime/worker_invoke_test.exs test/runtime/replacement_test.exs --warnings-as-errors`: 25 passed.
+- `mix test test/integration/phase02_staging_test.exs --warnings-as-errors`: 1 passed.
+- `mix test test/mcp test/integration --warnings-as-errors`: 58 passed.
+- Full `mix check`: 168 tests, 2 doctests; strict Credo clean, Doctor 100%,
+  Dialyzer zero errors/skips. Plan verifier and diff checks passed. The installed
+  `.githooks` hook reruns the full gate for the checkpoint commit.
+
+Prepared invoke/replacement leaves committed snapshots unchanged; candidates have
+no Registry route. Tests cover abort and real candidate/dispatcher-lease expiry,
+one candidate per host, caller ownership, stale revision/incarnation/ticket
+rejection, repeated publication without repeating generated callbacks, same-host
+replacement, owner/host death and capacity release. Publication pins the effect
+reservation before exposing state so a lease cannot expire between publication
+and Manager batch commit. A route-collision regression first demonstrated a
+Manager crash; failed registration now closes the candidate and preserves the
+original route plus both Managers.
+
+The independent HTTP fixture pauses the coordinator at its injected trusted
+`before_publish` hook. Direct host snapshots show the original source and peer
+state, while the dispatcher shows one reserved effect and zero pending work.
+Physical client disconnect leaves the accepted operation running; after release,
+a fresh session replays exactly one committed source transition and the peer
+receives exactly one effect (total 7, count 1). Existing host-kill/reconnect tests
+also pass with explicit `{manager_pid, host_pid}` Registry values. No application
+restart recovery is claimed at this checkpoint.
 
 ## durable-artifacts
 

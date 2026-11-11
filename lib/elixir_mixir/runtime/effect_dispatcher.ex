@@ -22,6 +22,11 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   def reserve_batch(server, effects, context, limits),
     do: GenServer.call(server, {:reserve, effects, context, limits}, limits.operation_timeout_ms)
 
+  @doc "Pins an unexpired reservation during host publication; only its preparing host can pin it."
+  @spec hold_batch(GenServer.server(), reference() | :none) :: :ok | {:error, Error.t()}
+  def hold_batch(_server, :none), do: :ok
+  def hold_batch(server, token), do: GenServer.call(server, {:hold, token})
+
   @doc "Publishes one reserved batch only for its Manager; repeated commit is rejected."
   @spec commit_batch(GenServer.server(), reference() | :none) :: :ok | {:error, Error.t()}
   def commit_batch(_server, :none), do: :ok
@@ -84,6 +89,7 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
         end)
 
       batch = %{
+        held: false,
         host: host,
         monitor: monitor,
         expiry: expiry,
@@ -98,6 +104,18 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
     else
       false -> {:reply, {:error, Error.new("LIMIT_EXCEEDED")}, state}
       error -> {:reply, error, state}
+    end
+  end
+
+  def handle_call({:hold, token}, {host, _}, state) do
+    case Map.get(state.reservations, token) do
+      %{host: ^host} = batch ->
+        Process.cancel_timer(batch.expiry)
+        batch = %{batch | held: true}
+        {:reply, :ok, %{state | reservations: Map.put(state.reservations, token, batch)}}
+
+      _missing ->
+        {:reply, {:error, Error.new("CALLBACK_FAILED")}, state}
     end
   end
 
@@ -193,7 +211,12 @@ defmodule ElixirMixir.Runtime.EffectDispatcher do
   end
 
   @impl true
-  def handle_info({:expire, token}, state), do: {:noreply, discard_reservation(state, token)}
+  def handle_info({:expire, token}, state) do
+    case Map.get(state.reservations, token) do
+      %{held: true} -> {:noreply, state}
+      _missing -> {:noreply, discard_reservation(state, token)}
+    end
+  end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
     tokens = for {token, batch} <- state.reservations, batch.monitor == ref, do: token

@@ -489,3 +489,21 @@ application behavior. All durable-mode mutations currently fail with
 `DURABILITY_UNAVAILABLE` before compilation or callbacks; memory tools keep their
 existing behavior. This intermediate boundary will be extended by the
 [Phase 2 checkpoints](sdlc/phase02-restart/plan.md).
+
+### Preparing worker changes
+
+In memory mode, the coordinator prepares invocation and replacement results inside
+the existing host, validates the complete response and reserves effect capacity,
+then publishes the candidate and releases the batch for dispatch. Reads of a host
+continue to return its committed state while a candidate is prepared. Aborting or
+expiring a candidate leaves the old implementation, state and revisions intact.
+Only the owning Manager may prepare, publish or abort; publication tickets bind
+an operation to base revisions and a particular host incarnation. Repeating the
+last publication does not rerun generated callbacks.
+
+Candidate startup has no logical route. Manager registers the live host PID as
+the Registry value after init and response preflight, and removes that route on
+stop or host death. The Registry registrant is the Manager, so kernel lookups must
+use the explicit value. Owner death terminates candidates and releases reserved
+capacity. This protocol adds no application restart guarantee yet; durable-mode
+mutations retain the storage-foundation restriction above.

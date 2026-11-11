@@ -19,6 +19,8 @@ defmodule ElixirMixir.Runtime.WorkerRecovery do
         {workers, false}
 
       {id, worker} ->
+        Registry.unregister(ElixirMixir.Runtime.ProcessRegistry, id)
+
         next = %{
           worker
           | status: "restarting",
@@ -66,7 +68,7 @@ defmodule ElixirMixir.Runtime.WorkerRecovery do
     record("worker_restart_attempt", worker, %{"attempt" => length(worker.restarts)})
     opts = %{worker | state_revision: worker.state_revision + 1}
 
-    case DynamicSupervisor.start_child(ElixirMixir.Runtime.WorkerSupervisor, {ProcessHost, opts}) do
+    case start_candidate(opts) do
       {:ok, pid} ->
         next = %{opts | status: "running", pid: pid, monitor: Process.monitor(pid)}
         record("worker_restarted", next, %{})
@@ -75,6 +77,24 @@ defmodule ElixirMixir.Runtime.WorkerRecovery do
       {:error, _reason} ->
         record("worker_restart_failed", worker, %{})
         schedule(worker, policy)
+    end
+  end
+
+  defp start_candidate(opts) do
+    with {:ok, pid} <-
+           DynamicSupervisor.start_child(
+             ElixirMixir.Runtime.WorkerSupervisor,
+             {ProcessHost, opts}
+           ) do
+      case Registry.register(ElixirMixir.Runtime.ProcessRegistry, opts.worker_id, pid) do
+        {:ok, _} ->
+          {:ok, pid}
+
+        {:error, _} = error ->
+          ProcessHost.stop(pid)
+          DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, pid)
+          error
+      end
     end
   end
 

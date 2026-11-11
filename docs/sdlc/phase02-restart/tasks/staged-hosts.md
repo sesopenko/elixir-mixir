@@ -1,6 +1,6 @@
 # staged-hosts: Prepare transitions before publishing live state
 
-Status: pending implementation.
+Status: verified in this checkpoint commit.
 
 ## Startup and context recovery
 
@@ -90,15 +90,20 @@ the checkpoint; no self-referential hash is required inside it.
 
 ## Completion checklist
 
-- [ ] Reread governing instructions and verify prerequisite commits.
-- [ ] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
-- [ ] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
-- [ ] Pass full `mix check` without suppressions and verify local links/diff.
-- [ ] Update public guidance when behavior changes and reconcile this task's verification entry.
-- [ ] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
-- [ ] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
+- [x] Reread governing instructions and verify prerequisite commits.
+- [x] Complete scoped changes and focused unit tests, including relevant failures; documentation-only work uses document checks.
+- [x] Pass task-specific verification and the growing HTTP integration suite; record actual evidence.
+- [x] Pass full `mix check` without suppressions and verify local links/diff.
+- [x] Update public guidance when behavior changes and reconcile this task's verification entry.
+- [x] Commit only the verified task through the installed pre-commit hook using a Conventional Commit header and explanatory body.
+- [x] Only after that working commit exists, select the next task; this gate also applies to tasks without dependents.
 
-Execution evidence: pending implementation.
+Execution evidence: 2026-11-11, prerequisite `b9dea1a` verified and pushed.
+Focused staged-host/invoke/replacement tests passed (25 tests), HTTP staging test
+passed (1 test), growing MCP/integration suite passed (58 tests), and full
+`mix check` passed (168 tests, 2 doctests, strict Credo, Doctor 100%, Dialyzer zero
+findings). The [evidence entry](../verification.md#staged-hosts) records interruption,
+reservation expiry, routing and callback-count assertions.
 
 ## Relative size
 

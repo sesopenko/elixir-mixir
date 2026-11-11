@@ -64,15 +64,15 @@ defmodule ElixirMixir.Runtime.Workers do
   end
 
   @doc "Replaces a running implementation only after the same live host confirms the committed candidate."
-  @spec replace(map(), definitions(), Limits.t(), non_neg_integer()) :: mutation()
-  def replace(args, workers, limits, generation) do
+  @spec replace(map(), definitions(), Limits.t(), non_neg_integer(), map()) :: mutation()
+  def replace(args, workers, limits, generation, hooks \\ %{}) do
     with :ok <- keys(args, ~w(worker_id artifact_id expected_revision request_id)),
          true <- Values.valid_id?(args["worker_id"]) and is_binary(args["artifact_id"]),
          true <- is_integer(args["expected_revision"]) and args["expected_revision"] > 0,
          {:ok, worker} <- find(workers, args["worker_id"]),
          :ok <- running(worker),
          {:ok, artifact} <- ArtifactRegistry.fetch(args["artifact_id"]) do
-      replace_host(args, worker, workers, artifact, limits, generation)
+      replace_host(args, worker, workers, artifact, limits, generation, hooks)
     else
       false -> {:error, Error.new("INVALID_ARGUMENT")}
       error -> error
@@ -147,7 +147,8 @@ defmodule ElixirMixir.Runtime.Workers do
 
     data = public(worker)
 
-    if preflight(data, args["request_id"], generation, opts.limits) do
+    with true <- preflight(data, args["request_id"], generation, opts.limits),
+         {:ok, _} <- Registry.register(ElixirMixir.Runtime.ProcessRegistry, worker.worker_id, pid) do
       worker = %{worker | monitor: Process.monitor(pid)}
 
       if not Map.has_key?(workers, worker.worker_id),
@@ -156,9 +157,11 @@ defmodule ElixirMixir.Runtime.Workers do
       record("worker_started", worker, args["request_id"], %{})
       {:commit, data, Map.put(workers, worker.worker_id, worker)}
     else
-      ProcessHost.stop(pid)
-      DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, pid)
-      {:error, Error.new("LIMIT_EXCEEDED")}
+      failure ->
+        ProcessHost.stop(pid)
+        DynamicSupervisor.terminate_child(ElixirMixir.Runtime.WorkerSupervisor, pid)
+        code = if failure == false, do: "LIMIT_EXCEEDED", else: "WORKER_EXISTS"
+        {:error, Error.new(code)}
     end
   end
 
@@ -175,6 +178,7 @@ defmodule ElixirMixir.Runtime.Workers do
     data = stopped(next)
 
     if preflight(data, args["request_id"], generation, limits) do
+      Registry.unregister(ElixirMixir.Runtime.ProcessRegistry, worker.worker_id)
       next = WorkerRecovery.cancel(next)
       EffectDispatcher.cancel_source(worker.dispatcher, worker.worker_id)
       if worker.monitor, do: Process.demonitor(worker.monitor, [:flush])
@@ -210,10 +214,22 @@ defmodule ElixirMixir.Runtime.Workers do
         inherited
       )
 
-    case ProcessHost.invoke(worker.pid, args["event"], context, limits.operation_timeout_ms) do
-      {:ok, data, token} ->
-        confirm_batch(worker, data, token)
+    outcome =
+      with {:ok, data, ticket} <-
+             ProcessHost.prepare_invoke(
+               worker.pid,
+               args["event"],
+               context,
+               limits.operation_timeout_ms
+             ),
+           :ok <- before_publish(inherited),
+           {:ok, ^data, token} <- ProcessHost.publish(worker.pid, ticket),
+           :ok <- confirm_batch(worker, data, token) do
+        {:ok, data}
+      end
 
+    case outcome do
+      {:ok, data} ->
         worker = %{
           worker
           | worker_revision: data["worker_revision"],
@@ -233,19 +249,20 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
-  defp replace_host(args, worker, workers, artifact, limits, generation) do
+  defp replace_host(args, worker, workers, artifact, limits, generation, hooks) do
     candidate = Map.take(artifact, [:id, :module, :revision, :state_schema])
     context = %{generation: generation, request_id: args["request_id"]}
 
     outcome =
-      with {:ok, data} <-
-             ProcessHost.replace(
+      with {:ok, data, ticket} <-
+             ProcessHost.prepare_replace(
                worker.pid,
                candidate,
                args["expected_revision"],
                context,
                limits.operation_timeout_ms
              ),
+           :ok <- publish_replacement(worker, ticket, hooks),
            :ok <- confirm_replacement(worker, candidate, data) do
         {:ok, data}
       end
@@ -282,6 +299,17 @@ defmodule ElixirMixir.Runtime.Workers do
     end
   end
 
+  defp before_publish(hooks), do: Map.get(hooks, :before_publish, fn -> :ok end).()
+
+  defp publish_replacement(worker, ticket, hooks) do
+    before_publish(hooks)
+
+    case ProcessHost.publish(worker.pid, ticket) do
+      {:ok, _data, :none} -> :ok
+      {:error, _error} = error -> error
+    end
+  end
+
   defp confirm_replacement(worker, candidate, data) do
     with {:ok, snapshot} <- ProcessHost.snapshot(worker.pid),
          true <-
@@ -304,6 +332,7 @@ defmodule ElixirMixir.Runtime.Workers do
 
       _unavailable ->
         EffectDispatcher.release(worker.dispatcher, token)
+        {:error, Error.new("CALLBACK_FAILED")}
     end
   end
 

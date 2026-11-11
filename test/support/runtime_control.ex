@@ -5,6 +5,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   alias ElixirMixir.Runtime.EffectDispatcher
   alias ElixirMixir.Runtime.EventLog
   alias ElixirMixir.Runtime.Manager
+  alias ElixirMixir.Runtime.ProcessHost
   alias ElixirMixir.Runtime.Store
   alias ElixirMixir.TestSupport.CallbackBarrier
 
@@ -27,6 +28,24 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   @doc "Runs an explicit read/control operation in the fixture; never evaluates submitted code."
   @spec request(map()) :: map()
+  def request(%{"op" => "publication_barrier", "enabled" => enabled}) do
+    hook = if enabled, do: fn -> CallbackBarrier.wait("publication") end, else: fn -> :ok end
+    :sys.replace_state(Manager, &%{&1 | before_publish: hook})
+    %{"enabled" => enabled}
+  end
+
+  def request(%{"op" => "host_state", "id" => id}) do
+    [{_manager, host}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    {:ok, snapshot} = ProcessHost.snapshot(host)
+
+    %{
+      "state" => snapshot.data,
+      "worker_revision" => snapshot.worker_revision,
+      "state_revision" => snapshot.state_revision,
+      "artifact_id" => snapshot.artifact.id
+    }
+  end
+
   def request(%{"op" => "store_commit", "value" => value}) do
     store = Store
     records = store.snapshot(store)
@@ -74,7 +93,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
 
   def request(%{"op" => "worker_membership", "id" => id}) do
     case Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id) do
-      [{pid, _}] ->
+      [{_, pid}] ->
         supervised =
           Enum.any?(DynamicSupervisor.which_children(ElixirMixir.Runtime.WorkerSupervisor), fn {_,
                                                                                                 child,
@@ -103,7 +122,7 @@ defmodule ElixirMixir.TestSupport.RuntimeControl do
   end
 
   def request(%{"op" => "kill_host", "id" => id}) do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
 

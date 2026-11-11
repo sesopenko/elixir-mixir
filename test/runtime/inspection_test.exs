@@ -85,7 +85,7 @@ defmodule ElixirMixir.Runtime.InspectionTest do
        ctx do
     id = ctx.prefix
     first = start(ctx, id)
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
     {:ok, actual} = ProcessHost.snapshot(pid)
     data = inspect_worker(ctx, id)
     assert data["state"] == actual.data
@@ -114,7 +114,7 @@ defmodule ElixirMixir.Runtime.InspectionTest do
   test "stopped, unavailable and exhausted workers report honest state and revisions", ctx do
     id = ctx.prefix
     start(ctx, id)
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
     :sys.suspend(pid)
 
     try do
@@ -224,7 +224,7 @@ defmodule ElixirMixir.Runtime.InspectionTest do
         do: assert(byte_size(Result.encode(Result.tool({:ok, page}, 1), 1)) <= 65_536)
 
     assert Enum.any?(workers, & &1["truncated"])
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, hd(workers)["worker_id"])
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, hd(workers)["worker_id"])
     assert {:ok, %{data: %{"payload" => ^payload}}} = ProcessHost.snapshot(pid)
   end
 
@@ -390,7 +390,7 @@ defmodule ElixirMixir.Runtime.InspectionTest do
   end
 
   defp kill(id) do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, id)
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}

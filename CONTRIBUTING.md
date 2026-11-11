@@ -307,3 +307,17 @@ workers and effects are not yet integrated with it. In durable mode all mutation
 tools return `DURABILITY_UNAVAILABLE` before executing generated code. Inspection
 and HTTP readiness remain available. Use memory mode for current experiments.
 The [restart plan](docs/sdlc/phase02-restart/plan.md) tracks the remaining work.
+
+Worker staging tests exercise prepare/publish/abort directly with a trusted host
+owner. `ProcessHost.snapshot/2` reports only published state. Logical Registry
+lookups return `{manager_pid, host_pid}`; use the value for host inspection or kill
+controls. Unrouted candidates are supervised but are unavailable for logical
+invocation until Manager publishes their route.
+
+The independent HTTP staging test uses the internal Manager `before_publish:`
+constructor hook and the test-only stdin controls to pause an accepted transition
+after preparation. It checks source and peer state plus dispatcher reservations,
+then disconnects/reconnects the client and verifies one published transition and
+one delivered effect. These controls are compiled only for tests and add no MCP
+tools. Candidate expiry, dispatcher lease expiry, owner death and host death all
+have focused capacity-cleanup coverage.

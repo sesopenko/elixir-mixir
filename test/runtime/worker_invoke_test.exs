@@ -186,10 +186,10 @@ defmodule ElixirMixir.Runtime.WorkerInvokeTest do
 
   test "unknown/stopped workers and direct non-Manager messages do not run generated events",
        ctx do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
 
     assert {:error, %{"code" => "INVALID_ARGUMENT"}} =
-             ProcessHost.invoke(pid, %{}, %{generation: 2, request_id: unique()}, 1_000)
+             ProcessHost.prepare_invoke(pid, %{}, %{generation: 2, request_id: unique()}, 1_000)
 
     assert {:ok, %{"state_revision" => 1}} = snapshot(ctx)
 

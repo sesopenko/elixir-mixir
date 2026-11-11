@@ -1,6 +1,6 @@
 # Phase 2 restart feature plan — Durable Genesis
 
-Status: store-foundation verified; remaining implementation tasks are pending.
+Status: store-foundation and staged-hosts verified; remaining implementation tasks are pending.
 Governing assignment: [immutable snapshot](../../prompts/phase02-restart-planning.md).
 Implementation assignment: [snapshot](../../prompts/phase02-restart-implementation.md).
 Architecture: [ADR-001](../../adr/001-architecture-initial-phases.md), section 10 and
@@ -66,7 +66,7 @@ effects and machine power-loss certification are outside this proof.
 ## Task index and deterministic execution order
 
 Execute in numeric order; dependencies below are also the full graph edge set.
-Store-foundation is verified in its checkpoint commit. Remaining tasks are pending. Sizes are relative, not hours.
+Store-foundation (`b9dea1a`) and staged-hosts are verified in their checkpoint commits. Remaining tasks are pending. Sizes are relative, not hours.
 
 | Order | Task ID and document | Outcome | Prerequisites | Size | Milestone |
 | --- | --- | --- | --- | --- | --- |

@@ -101,6 +101,7 @@ defmodule ElixirMixir.Runtime.Manager do
        ledger: RequestLedger.new(limits),
        generation: 0,
        workers: %{},
+       before_publish: Keyword.get(opts, :before_publish, fn -> :ok end),
        event_log: Keyword.get(opts, :event_log, EventLog),
        inspection_id: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false),
        dispatcher: GenServer.whereis(Keyword.get(opts, :dispatcher, EffectDispatcher)),
@@ -185,10 +186,16 @@ defmodule ElixirMixir.Runtime.Manager do
     do: Workers.stop(args, state.workers, state.limits, generation)
 
   defp worker_operation(:invoke, args, state, generation),
-    do: Workers.invoke(args, state.workers, state.limits, generation)
+    do:
+      Workers.invoke(args, state.workers, state.limits, generation, %{
+        before_publish: state.before_publish
+      })
 
   defp worker_operation(:replace, args, state, generation),
-    do: Workers.replace(args, state.workers, state.limits, generation)
+    do:
+      Workers.replace(args, state.workers, state.limits, generation, %{
+        before_publish: state.before_publish
+      })
 
   defp mutation_arguments(args, limits) when is_map(args) do
     if Values.valid_id?(args["request_id"]) do

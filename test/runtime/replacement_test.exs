@@ -59,7 +59,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
        ctx do
     assert {:ok, %{"reply" => 3}} = invoke(ctx, %{"amount" => 3})
     before = snapshot(ctx)
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     monitor = Process.monitor(pid)
     {:ok, old_artifact} = ArtifactRegistry.fetch(ctx.artifacts[1]["artifact_id"])
     assert {:ok, result} = replace(ctx, 2, before["worker_revision"])
@@ -242,7 +242,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
   @tag migration: "controlled"
   test "host death during staging returns cached failure and recovery retains the old artifact",
        ctx do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     args = replace_args(ctx, 3, 1)
     pending = Task.async(fn -> Manager.replace(args, ctx.manager) end)
     await(fn -> CallbackBarrier.status("replace")["waiting"] end)
@@ -261,7 +261,7 @@ defmodule ElixirMixir.Runtime.ReplacementTest do
 
   @tag limits: %{response_bytes: 1_024}
   test "complete response rejection leaves the old host artifact and data unchanged", ctx do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     {:ok, before} = ProcessHost.snapshot(pid)
     args = Map.put(replace_args(ctx, 2, 1), "request_id", String.duplicate("r", 64))
     assert {:error, %{"code" => "LIMIT_EXCEEDED"}} = Manager.replace(args, ctx.manager)

@@ -276,7 +276,7 @@ defmodule ElixirMixir.Runtime.EventEffectsTest do
              ])
 
     assert_receive {:timer, message, 100}
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.target)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.target)
     Process.exit(pid, :kill)
 
     await(fn ->

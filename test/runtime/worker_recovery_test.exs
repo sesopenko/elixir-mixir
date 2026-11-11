@@ -80,7 +80,7 @@ defmodule ElixirMixir.Runtime.WorkerRecoveryTest do
     assert next["worker_revision"] > first["worker_revision"]
     assert next["restart_count"] == 1
     assert next["artifact_id"] == first["artifact_id"]
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     assert pid != old
     assert inspect(pid) == next["pid"]
     assert snapshot(peer)["pid"] == healthy["pid"]
@@ -213,7 +213,7 @@ defmodule ElixirMixir.Runtime.WorkerRecoveryTest do
 
   test "stop invalidates a pending retry and stale monitor/timer messages", ctx do
     start(ctx)
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     worker = :sys.get_state(ctx.manager).workers[ctx.worker]
     kill(ctx)
     assert_receive {:scheduled, message}
@@ -251,7 +251,7 @@ defmodule ElixirMixir.Runtime.WorkerRecoveryTest do
   end
 
   defp kill(ctx) do
-    [{pid, _}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
+    [{_, pid}] = Registry.lookup(ElixirMixir.Runtime.ProcessRegistry, ctx.worker)
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}
